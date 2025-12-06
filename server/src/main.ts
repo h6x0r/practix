@@ -1,0 +1,20 @@
+import { NestFactory } from '@nestjs/core';
+import { AppModule } from './app.module';
+import { ValidationPipe } from '@nestjs/common';
+
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule);
+  
+  // Enable validation for DTOs
+  app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+  
+  // Allow frontend to talk to backend
+  app.enableCors({
+    origin: '*', // In production, change to specific domain
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+  });
+
+  await app.listen(8080);
+  console.log(`🚀 Server running on http://localhost:8080`);
+}
+bootstrap();
