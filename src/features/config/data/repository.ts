@@ -1,14 +1,17 @@
 
-import { NavItemConfig } from '../../../types';
+import { NavItemConfig } from '@/types';
 
 export const MOCK_NAV_ITEMS: NavItemConfig[] = [
-  { label: 'Dashboard', path: '/', iconKey: 'dashboard' },
-  { label: 'Courses', path: '/courses', iconKey: 'book' },
-  { label: 'Roadmap', path: '/roadmap', iconKey: 'map' },
-  { label: 'My Tasks', path: '/my-tasks', iconKey: 'code' },
-  { label: 'Analytics', path: '/analytics', iconKey: 'chart' },
-  { label: 'Payments', path: '/premium', iconKey: 'creditCard' },
-  { label: 'Settings', path: '/settings', iconKey: 'settings' },
+  { label: 'Dashboard', path: '/', iconKey: 'dashboard', translationKey: 'nav.dashboard' },
+  { label: 'Courses', path: '/courses', iconKey: 'book', translationKey: 'nav.courses' },
+  { label: 'Playground', path: '/playground', iconKey: 'terminal', translationKey: 'nav.playground' },
+  { label: 'Roadmap', path: '/roadmap', iconKey: 'map', translationKey: 'nav.roadmap' },
+  { label: 'Leaderboard', path: '/leaderboard', iconKey: 'trophy', translationKey: 'nav.leaderboard' },
+  { label: 'My Tasks', path: '/my-tasks', iconKey: 'code', translationKey: 'nav.myTasks' },
+  { label: 'Analytics', path: '/analytics', iconKey: 'chart', translationKey: 'nav.analytics' },
+  { label: 'Payments', path: '/premium', iconKey: 'creditCard', translationKey: 'nav.payments', authRequired: true },
+  { label: 'Settings', path: '/settings', iconKey: 'settings', translationKey: 'nav.settings', authRequired: true },
+  { label: 'Admin', path: '/admin', iconKey: 'chart', translationKey: 'nav.admin', adminOnly: true },
 ];
 
 export const MOCK_PROMPTS = {

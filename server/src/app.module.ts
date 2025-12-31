@@ -1,25 +1,62 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { PrismaModule } from './prisma/prisma.module';
+import { CacheModule } from './cache/cache.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { TasksModule } from './tasks/tasks.module';
 import { SubmissionsModule } from './submissions/submissions.module';
-import { JudgeModule } from './judge/judge.module';
 import { AiModule } from './ai/ai.module';
 import { CoursesModule } from './courses/courses.module';
+import { UserCoursesModule } from './user-courses/user-courses.module';
+import { RoadmapsModule } from './roadmaps/roadmaps.module';
+import { BugReportsModule } from './bugreports/bugreports.module';
+import { SubscriptionsModule } from './subscriptions/subscriptions.module';
+import { GamificationModule } from './gamification/gamification.module';
+import { SessionsModule } from './sessions/sessions.module';
+import { AdminModule } from './admin/admin.module';
+import { SentryModule } from './common/sentry/sentry.module';
+import { LoggerModule } from './common/logger/logger.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    LoggerModule,
+    SentryModule,
+    // Rate limiting configuration
+    ThrottlerModule.forRoot([
+      {
+        name: 'short',
+        ttl: 1000,    // 1 second
+        limit: 3,      // 3 requests per second
+      },
+      {
+        name: 'medium',
+        ttl: 10000,   // 10 seconds
+        limit: 20,     // 20 requests per 10 seconds
+      },
+      {
+        name: 'long',
+        ttl: 60000,   // 1 minute
+        limit: 60,     // 60 requests per minute
+      },
+    ]),
     PrismaModule,
+    CacheModule,
     AuthModule,
     UsersModule,
     TasksModule,
     SubmissionsModule,
-    JudgeModule,
     AiModule,
-    CoursesModule
+    CoursesModule,
+    UserCoursesModule,
+    RoadmapsModule,
+    BugReportsModule,
+    SubscriptionsModule,
+    GamificationModule,
+    SessionsModule,
+    AdminModule,
   ],
   controllers: [],
   providers: [],

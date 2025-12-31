@@ -1,0 +1,1 @@
+export { configManagementModule } from './module';

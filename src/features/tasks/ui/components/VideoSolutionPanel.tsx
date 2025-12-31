@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { IconChevronDown, IconPlay } from '../../../../components/Icons';
+import { IconChevronDown, IconPlay } from '@/components/Icons';
 
 interface VideoSolutionPanelProps {
   videoUrl?: string;

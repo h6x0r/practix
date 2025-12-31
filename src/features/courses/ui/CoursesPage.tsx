@@ -1,82 +1,289 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { COURSES } from '../data/mockData';
-import { getCourseTheme } from '../../../utils/themeUtils';
-import { CourseCategory } from '../../../types';
-import { IconClock, IconCode, IconBook, IconLayers } from '../../../components/Icons';
+import { courseService } from '../api/courseService';
+import { userCoursesService, UserCourse } from '../api/userCoursesService';
+import { getCourseTheme } from '@/utils/themeUtils';
+import { Course } from '@/types';
+import { IconClock } from '@/components/Icons';
+import { useLanguage, useUITranslation } from '@/contexts/LanguageContext';
+import { AuthContext } from '@/components/Layout';
+import { createLogger } from '@/lib/logger';
+
+const log = createLogger('Courses');
+
+type CourseFilter =
+  | 'all'
+  // Languages
+  | 'go' | 'java' | 'python'
+  // CS Fundamentals
+  | 'algo_ds' | 'patterns_se'
+  // Applied
+  | 'ml_ai';
 
 const CoursesPage = () => {
   const navigate = useNavigate();
-  const [startedCourses, setStartedCourses] = useState<string[]>([]);
-  const [activeTab, setActiveTab] = useState<'all' | CourseCategory>('all');
+  const { t } = useLanguage();
+  const { tUI, formatTimeLocalized, plural } = useUITranslation();
+  const { user } = useContext(AuthContext);
+  const [rawCourses, setRawCourses] = useState<Course[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [startedCourseSlugs, setStartedCourseSlugs] = useState<string[]>([]);
+  const [activeTab, setActiveTab] = useState<CourseFilter>('all');
+
+  // Apply translations to courses and their sample topics
+  const courses = useMemo(() => rawCourses.map(c => ({
+    ...t(c),
+    sampleTopics: c.sampleTopics?.map(topic => t(topic)) || []
+  })), [rawCourses, t]);
+
+  // Fetch user's started courses from API
+  useEffect(() => {
+    const fetchStartedCourses = async () => {
+      if (!user) {
+        setStartedCourseSlugs([]);
+        return;
+      }
+      try {
+        const userCourses = await userCoursesService.getStartedCourses();
+        setStartedCourseSlugs(userCourses.map(c => c.slug));
+      } catch (error) {
+        log.error('Failed to load started courses', error);
+      }
+    };
+    fetchStartedCourses();
+  }, [user]);
 
   useEffect(() => {
-    const saved = localStorage.getItem('kodla_started_courses');
-    if (saved) {
-      setStartedCourses(JSON.parse(saved));
-    }
+    const fetchCourses = async () => {
+      try {
+        setLoading(true);
+        const data = await courseService.getAllCourses();
+        setRawCourses(data);
+      } catch (error) {
+        log.error('Failed to load courses', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCourses();
   }, []);
 
-  const handleStartCourse = (e: React.MouseEvent, courseId: string) => {
+  const handleStartCourse = async (e: React.MouseEvent, courseSlug: string) => {
     // Prevent bubbling if wrapped in link
     e.preventDefault();
     e.stopPropagation();
-    
-    if (!startedCourses.includes(courseId)) {
-      const updated = [...startedCourses, courseId];
-      setStartedCourses(updated);
-      localStorage.setItem('kodla_started_courses', JSON.stringify(updated));
+
+    if (user && !startedCourseSlugs.includes(courseSlug)) {
+      try {
+        await userCoursesService.startCourse(courseSlug);
+        setStartedCourseSlugs(prev => [...prev, courseSlug]);
+      } catch (error) {
+        log.error('Failed to start course', error);
+      }
     }
-    navigate(`/course/${courseId}`);
+    navigate(`/course/${courseSlug}`);
   };
 
-  const filteredCourses = activeTab === 'all' 
-    ? COURSES 
-    : COURSES.filter(c => c.category === activeTab);
+  // Filter courses based on course ID patterns (kebab-case slugs)
+  const filterCourse = (course: Course, filter: CourseFilter): boolean => {
+    const id = course.id.toLowerCase();
+    switch (filter) {
+      case 'all':
+        return true;
+      case 'go':
+        // Go language courses (excluding ML/design patterns which have their own filters)
+        return id.startsWith('go-') && !id.includes('design-patterns');
+      case 'java':
+        // Java language courses (excluding ML/NLP/design patterns)
+        return id.startsWith('java-') && !id.includes('design-patterns');
+      case 'python':
+        // Python courses
+        return id.startsWith('python-');
+      case 'algo_ds':
+        // Algorithms & Data Structures
+        return id.startsWith('algo-');
+      case 'patterns_se':
+        // Design Patterns & Software Engineering
+        return id.includes('design-patterns') || id === 'software-engineering';
+      case 'ml_ai':
+        // ML/AI courses across all languages
+        return id.includes('-ml') || id.includes('-nlp') || id.includes('ml-') ||
+               id.includes('deep-learning') || id.includes('-llm');
+      default:
+        return true;
+    }
+  };
 
-  const tabs = [
-    { id: 'all', label: 'All Tracks' },
-    { id: 'language', label: 'Programming Languages' },
-    { id: 'cs', label: 'Computer Science' },
-    { id: 'interview', label: 'Interview Prep' }
+  const filteredCourses = courses.filter(c => filterCourse(c, activeTab));
+
+  // Get course badge based on ID (kebab-case slugs)
+  const getCourseBadge = (courseId: string): { label: string; colorClass: string } => {
+    const id = courseId.toLowerCase();
+
+    // ML/AI courses
+    if (id.includes('-ml') || id.includes('-nlp') || id.includes('ml-') || id.includes('deep-learning') || id.includes('-llm')) {
+      return {
+        label: tUI('courses.mlAi'),
+        colorClass: 'bg-purple-50 text-purple-600 border-purple-100 dark:bg-purple-900/10 dark:text-purple-400 dark:border-purple-900/30'
+      };
+    }
+
+    // Design Patterns
+    if (id.includes('design-patterns')) {
+      return {
+        label: tUI('courses.designPatterns'),
+        colorClass: 'bg-indigo-50 text-indigo-600 border-indigo-100 dark:bg-indigo-900/10 dark:text-indigo-400 dark:border-indigo-900/30'
+      };
+    }
+
+    // Software Engineering
+    if (id === 'software-engineering') {
+      return {
+        label: tUI('courses.softwareEng'),
+        colorClass: 'bg-slate-50 text-slate-600 border-slate-100 dark:bg-slate-900/10 dark:text-slate-400 dark:border-slate-900/30'
+      };
+    }
+
+    // Algorithms
+    if (id.startsWith('algo-')) {
+      return {
+        label: tUI('courses.algoDs'),
+        colorClass: 'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-900/10 dark:text-emerald-400 dark:border-emerald-900/30'
+      };
+    }
+
+    // Go
+    if (id.startsWith('go-')) {
+      return {
+        label: 'Go',
+        colorClass: 'bg-cyan-50 text-cyan-600 border-cyan-100 dark:bg-cyan-900/10 dark:text-cyan-400 dark:border-cyan-900/30'
+      };
+    }
+
+    // Java
+    if (id.startsWith('java-')) {
+      return {
+        label: 'Java',
+        colorClass: 'bg-orange-50 text-orange-600 border-orange-100 dark:bg-orange-900/10 dark:text-orange-400 dark:border-orange-900/30'
+      };
+    }
+
+    // Python
+    if (id.startsWith('python-')) {
+      return {
+        label: 'Python',
+        colorClass: 'bg-green-50 text-green-600 border-green-100 dark:bg-green-900/10 dark:text-green-400 dark:border-green-900/30'
+      };
+    }
+
+    return {
+      label: tUI('courses.csCore'),
+      colorClass: 'bg-gray-50 text-gray-600 border-gray-100 dark:bg-gray-900/10 dark:text-gray-400 dark:border-gray-900/30'
+    };
+  };
+
+  // Filter groups for organized UI
+  const filterGroups: { label: string; filters: { id: CourseFilter; label: string; icon: string; disabled?: boolean }[] }[] = [
+    {
+      label: tUI('courses.groupLanguages'),
+      filters: [
+        { id: 'go', label: 'Go', icon: '🐹' },
+        { id: 'java', label: 'Java', icon: '☕' },
+        { id: 'python', label: 'Python', icon: '🐍' },
+      ]
+    },
+    {
+      label: tUI('courses.groupCsFundamentals'),
+      filters: [
+        { id: 'algo_ds', label: tUI('courses.filterAlgoDS'), icon: '🧮' },
+        { id: 'patterns_se', label: tUI('courses.filterPatternsSE'), icon: '🏗' },
+      ]
+    },
+    {
+      label: tUI('courses.groupApplied'),
+      filters: [
+        { id: 'ml_ai', label: tUI('courses.filterMlAi'), icon: '🤖' },
+      ]
+    }
   ];
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <div className="text-gray-400 animate-pulse text-lg">{tUI('courses.loading')}</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto pb-12">
       {/* Hero Section */}
       <div className="relative overflow-hidden bg-white dark:bg-dark-surface rounded-3xl p-10 border border-gray-100 dark:border-dark-border shadow-sm">
         <div className="relative z-10">
-          <h1 className="text-4xl font-display font-bold text-gray-900 dark:text-white mb-4">Learning Catalog</h1>
+          <h1 className="text-4xl font-display font-bold text-gray-900 dark:text-white mb-4">{tUI('courses.title')}</h1>
           <p className="text-lg text-gray-500 dark:text-gray-400 max-w-2xl leading-relaxed">
-            Structured learning paths designed by principal engineers. 
-            Choose a language track to master its ecosystem, or dive into core computer science concepts.
+            {tUI('courses.description')}
           </p>
         </div>
         <div className="absolute top-0 right-0 w-96 h-96 bg-brand-500/5 rounded-full blur-3xl transform translate-x-1/3 -translate-y-1/3 pointer-events-none"></div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-2 custom-scrollbar relative z-20">
-        {tabs.map(tab => (
+      {/* Filter Groups */}
+      <div className="bg-white dark:bg-dark-surface rounded-2xl border border-gray-100 dark:border-dark-border p-4 relative z-20">
+        <div className="flex flex-wrap items-start gap-6">
+          {/* All Courses Button */}
           <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
-            className={`px-5 py-2.5 rounded-full text-sm font-bold whitespace-nowrap transition-all ${
-              activeTab === tab.id
+            onClick={() => setActiveTab('all')}
+            className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all ${
+              activeTab === 'all'
                 ? 'bg-gray-900 dark:bg-white text-white dark:text-black shadow-lg'
-                : 'bg-white dark:bg-dark-surface text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-dark-border border border-gray-200 dark:border-dark-border'
+                : 'bg-gray-100 dark:bg-dark-bg text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-dark-border'
             }`}
           >
-            {tab.label}
+            {tUI('courses.allTracks')}
           </button>
-        ))}
+
+          {/* Separator */}
+          <div className="h-10 w-px bg-gray-200 dark:bg-dark-border hidden sm:block" />
+
+          {/* Filter Groups */}
+          {filterGroups.map((group, groupIdx) => (
+            <div key={groupIdx} className="flex flex-col gap-2">
+              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider px-1">
+                {group.label}
+              </span>
+              <div className="flex flex-wrap gap-2">
+                {group.filters.map(filter => (
+                  <button
+                    key={filter.id}
+                    onClick={() => !filter.disabled && setActiveTab(filter.id)}
+                    disabled={filter.disabled}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
+                      filter.disabled
+                        ? 'bg-gray-50 dark:bg-dark-bg text-gray-300 dark:text-gray-600 cursor-not-allowed'
+                        : activeTab === filter.id
+                          ? 'bg-gray-900 dark:bg-white text-white dark:text-black shadow-md'
+                          : 'bg-gray-100 dark:bg-dark-bg text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-dark-border border border-transparent hover:border-gray-300 dark:hover:border-gray-600'
+                    }`}
+                  >
+                    <span>{filter.icon}</span>
+                    <span>{filter.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {filteredCourses.map(course => {
-          const isStarted = startedCourses.includes(course.id);
-          const theme = getCourseTheme(course.id);
+          const isStarted = startedCourseSlugs.includes(course.slug);
+          const theme = getCourseTheme(course.slug);
           return (
             <div 
               key={course.id} 
@@ -91,16 +298,18 @@ const CoursesPage = () => {
                     {course.icon}
                   </div>
                   <div className="flex flex-col gap-2 items-end">
-                     <span className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full border ${
-                        course.category === 'language' ? 'bg-blue-50 text-blue-600 border-blue-100 dark:bg-blue-900/10 dark:text-blue-400 dark:border-blue-900/30' :
-                        'bg-purple-50 text-purple-600 border-purple-100 dark:bg-purple-900/10 dark:text-purple-400 dark:border-purple-900/30'
-                     }`}>
-                        {course.category === 'language' ? 'Language Track' : 'CS Core'}
-                     </span>
+                     {(() => {
+                       const badge = getCourseBadge(course.id);
+                       return (
+                         <span className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full border ${badge.colorClass}`}>
+                           {badge.label}
+                         </span>
+                       );
+                     })()}
                   </div>
                 </div>
 
-                <Link to={`/course/${course.id}`} className="block relative z-20">
+                <Link to={`/course/${course.slug}`} className="block relative z-20">
                     <h3 className="text-2xl font-display font-bold text-gray-900 dark:text-white mb-3 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">
                     {course.title}
                     </h3>
@@ -109,25 +318,29 @@ const CoursesPage = () => {
                     </p>
                 </Link>
 
-                {/* Metrics */}
-                <Link to={`/course/${course.id}`} className="grid grid-cols-2 gap-4 mb-8 relative z-20 cursor-pointer">
-                   <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-dark-bg rounded-xl">
-                      <div className="bg-white dark:bg-dark-surface p-1.5 rounded-lg text-gray-400 shadow-sm">
-                        <IconLayers className="w-4 h-4"/>
-                      </div>
-                      <div>
-                        <div className="text-sm font-bold text-gray-900 dark:text-white">{course.totalTopics}</div>
-                        <div className="text-[10px] uppercase font-bold text-gray-400">Topics</div>
-                      </div>
+                {/* Topic Previews - Fixed height */}
+                <Link to={`/course/${course.slug}`} className="mb-6 relative z-20 cursor-pointer flex-1 flex flex-col">
+                   <div className="flex flex-wrap gap-2 min-h-[72px] content-start">
+                      {course.sampleTopics?.slice(0, 3).map((topic, i) => (
+                        <span
+                          key={i}
+                          className="px-3 py-1.5 bg-gray-50 dark:bg-dark-bg text-gray-600 dark:text-gray-400 text-xs font-medium rounded-lg border border-gray-100 dark:border-dark-border hover:border-gray-300 dark:hover:border-gray-600 transition-colors h-fit"
+                        >
+                          {topic.title}
+                        </span>
+                      ))}
+                      {(course.totalModules > 3) && (
+                        <span className="px-3 py-1.5 bg-gray-100 dark:bg-dark-border text-gray-500 text-xs font-bold rounded-lg h-fit">
+                          +{course.totalModules - 3}
+                        </span>
+                      )}
                    </div>
-                   <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-dark-bg rounded-xl">
-                      <div className="bg-white dark:bg-dark-surface p-1.5 rounded-lg text-gray-400 shadow-sm">
-                        <IconClock className="w-4 h-4"/>
-                      </div>
-                      <div>
-                        <div className="text-sm font-bold text-gray-900 dark:text-white">{course.estimatedTime}</div>
-                        <div className="text-[10px] uppercase font-bold text-gray-400">Duration</div>
-                      </div>
+                   <div className="flex items-center gap-3 mt-auto pt-3 text-xs text-gray-400">
+                     <span className="flex items-center gap-1">
+                       <IconClock className="w-3 h-3"/> {formatTimeLocalized(course.estimatedTime)}
+                     </span>
+                     <span>•</span>
+                     <span>{plural(course.totalModules, 'module')}</span>
                    </div>
                 </Link>
 
@@ -136,25 +349,25 @@ const CoursesPage = () => {
                    {isStarted ? (
                      <div className="flex items-center gap-2 text-green-500 font-bold text-sm">
                        <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                       In Progress ({course.progress}%)
+                       {tUI('courses.inProgress')} ({course.progress}%)
                      </div>
                    ) : (
-                     <div className="text-sm font-bold text-gray-400">Not Started</div>
+                     <div className="text-sm font-bold text-gray-400">{tUI('courses.notStarted')}</div>
                    )}
 
                    {isStarted ? (
-                      <Link 
-                        to={`/course/${course.id}`}
-                        className="px-6 py-2.5 bg-gray-900 dark:bg-white text-white dark:text-black font-bold rounded-xl hover:opacity-90 transition-opacity"
+                      <Link
+                        to={`/course/${course.slug}`}
+                        className="px-6 py-2.5 bg-gradient-to-r from-brand-600 to-purple-600 hover:from-brand-500 hover:to-purple-500 text-white font-bold rounded-xl shadow-lg shadow-brand-500/25 transition-all transform hover:-translate-y-0.5"
                       >
-                        Resume
+                        {tUI('courses.resume')}
                       </Link>
                    ) : (
-                      <button 
-                        onClick={(e) => handleStartCourse(e, course.id)}
-                        className="px-6 py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl shadow-lg shadow-brand-500/20 transition-all transform hover:-translate-y-0.5"
+                      <button
+                        onClick={(e) => handleStartCourse(e, course.slug)}
+                        className="px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-bold rounded-xl shadow-lg shadow-emerald-500/25 transition-all transform hover:-translate-y-0.5"
                       >
-                        Start Learning
+                        {tUI('courses.startLearning')}
                       </button>
                    )}
                 </div>
@@ -171,8 +384,8 @@ const CoursesPage = () => {
       {filteredCourses.length === 0 && (
           <div className="text-center py-20 bg-white dark:bg-dark-surface rounded-3xl border border-gray-100 dark:border-dark-border border-dashed">
               <div className="text-4xl mb-4">🚧</div>
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white">Coming Soon</h3>
-              <p className="text-gray-500">We are crafting new premium content for this category.</p>
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white">{tUI('courses.comingSoon')}</h3>
+              <p className="text-gray-500">{tUI('courses.comingSoonDesc')}</p>
           </div>
       )}
     </div>

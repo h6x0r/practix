@@ -1,0 +1,1 @@
+export { cachingModule } from './module';

@@ -1,6 +1,6 @@
 
-import { User } from '../../../types';
-import { STORAGE_KEYS } from '../../../config/constants';
+import { User } from '@/types';
+import { storage } from '@/lib/storage';
 
 const DEFAULT_PREFERENCES = {
   editorFontSize: 14,
@@ -31,15 +31,15 @@ const DEFAULT_USER: User = {
 
 // Simulate a database by persisting the mock user to local storage
 const loadUserFromStorage = (): User => {
-  const stored = localStorage.getItem(STORAGE_KEYS.USER_MOCK_DB);
+  const stored = storage.getMockUser();
   if (stored) {
-    return JSON.parse(stored);
+    return stored;
   }
   return DEFAULT_USER;
 };
 
 const saveUserToStorage = (user: User) => {
-  localStorage.setItem(STORAGE_KEYS.USER_MOCK_DB, JSON.stringify(user));
+  storage.setMockUser(user);
 };
 
 export const authRepository = {

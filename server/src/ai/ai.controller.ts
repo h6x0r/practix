@@ -1,6 +1,7 @@
 import { Controller, Post, Body, UseGuards, Request } from '@nestjs/common';
 import { AiService } from './ai.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { AskAiDto } from './dto/ai.dto';
 
 @Controller('ai')
 export class AiController {
@@ -9,15 +10,17 @@ export class AiController {
   @UseGuards(JwtAuthGuard)
   @Post('tutor')
   async askTutor(
-    @Request() req, 
-    @Body() body: { taskTitle: string; userCode: string; question: string; language: string }
+    @Request() req,
+    @Body() body: AskAiDto
   ) {
     return this.aiService.askTutor(
         req.user.userId,
+        body.taskId,
         body.taskTitle,
         body.userCode,
         body.question,
-        body.language
+        body.language,
+        body.uiLanguage || 'en'
     );
   }
 }

@@ -1,0 +1,1 @@
+export { panicRecoveryModule } from './module';

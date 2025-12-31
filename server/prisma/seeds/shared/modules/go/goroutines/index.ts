@@ -1,0 +1,1 @@
+export { goroutinesModule } from './module';

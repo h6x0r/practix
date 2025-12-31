@@ -2,6 +2,74 @@ export type RoadmapType = 'backend-go' | 'backend-java' | 'fullstack';
 export type ExperienceLevel = 'junior' | 'mid' | 'senior';
 export type ResourceType = 'video' | 'practice' | 'project';
 
+// ============================================================================
+// NEW: Roadmap Generation Input (Extended Wizard)
+// ============================================================================
+
+export interface RoadmapGenerationInput {
+  // Step 1: Current knowledge (multi-select)
+  knownLanguages: string[];
+  yearsOfExperience: number;
+
+  // Step 2: Interests (multi-select)
+  interests: string[];
+
+  // Step 3: Goal
+  goal: 'find-job' | 'senior' | 'startup' | 'master-skill';
+
+  // Step 4: Time commitment
+  hoursPerWeek: number;
+  targetMonths: number;
+}
+
+// ============================================================================
+// NEW: Roadmap Variant (AI-generated option)
+// ============================================================================
+
+export interface RoadmapVariant {
+  id: string;
+  name: string;                     // "Быстрый старт", "Сбалансированный", etc.
+  description: string;
+  isRecommended: boolean;
+
+  // Metrics
+  totalTasks: number;
+  estimatedHours: number;
+  estimatedMonths: number;
+  salaryRange: { min: number; max: number };
+  targetRole: string;               // "Middle Go Developer"
+  difficulty: 'easy' | 'medium' | 'hard';
+
+  // Content breakdown
+  topics: string[];                 // ["Go Basics", "REST APIs", ...]
+
+  // Sources - which courses contribute tasks
+  sources: {
+    courseSlug: string;
+    courseName: string;
+    icon: string;
+    taskCount: number;
+    percentage: number;
+  }[];
+
+  // Preview of first few tasks
+  previewTasks: {
+    title: string;
+    difficulty: string;
+    fromCourse: string;
+  }[];
+
+  // Full phases (used after selection)
+  phases?: RoadmapPhase[];
+}
+
+export interface RoadmapVariantsResponse {
+  variants: RoadmapVariant[];
+  canRegenerate: boolean;
+  isPremium: boolean;
+  generationCount: number;
+}
+
 /**
  * Represents a specific step in the roadmap.
  */
@@ -56,6 +124,10 @@ export interface UserRoadmap {
   phases: RoadmapPhase[];
   createdAt: string;
   updatedAt: string;
+  // Premium regeneration fields
+  canRegenerate?: boolean;
+  isPremium?: boolean;
+  generationCount?: number;
 }
 
 export type RoadmapEntity = UserRoadmap;

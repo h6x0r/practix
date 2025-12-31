@@ -1,7 +1,8 @@
 
-import React from 'react';
-import { IconSparkles, IconChevronDown } from '../../../../components/Icons';
-import { AiChatMessage } from '../../../../types';
+import React, { memo } from 'react';
+import { IconSparkles, IconChevronDown } from '@/components/Icons';
+import { AiChatMessage } from '@/types';
+import { useUITranslation } from '@/contexts/LanguageContext';
 
 interface AiTutorPanelProps {
   isOpen: boolean;
@@ -14,7 +15,8 @@ interface AiTutorPanelProps {
   isPremium: boolean;
 }
 
-export const AiTutorPanel = ({ isOpen, onToggle, chat, question, onQuestionChange, onSend, isLoading, isPremium }: AiTutorPanelProps) => {
+export const AiTutorPanel = memo(({ isOpen, onToggle, chat, question, onQuestionChange, onSend, isLoading, isPremium }: AiTutorPanelProps) => {
+  const { tUI } = useUITranslation();
   return (
     <div className="border-t border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-black/50 backdrop-blur-sm">
         <button 
@@ -22,8 +24,8 @@ export const AiTutorPanel = ({ isOpen, onToggle, chat, question, onQuestionChang
         className="w-full flex items-center justify-between px-4 py-3 text-xs font-bold text-gray-600 dark:text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors"
         >
         <span className="flex items-center gap-2">
-            <IconSparkles className="w-4 h-4 text-purple-500" /> 
-            <span className="bg-gradient-to-r from-purple-500 to-brand-500 bg-clip-text text-transparent font-black">AI TUTOR</span>
+            <IconSparkles className="w-4 h-4 text-purple-500" />
+            <span className="bg-gradient-to-r from-purple-500 to-brand-500 bg-clip-text text-transparent font-black">{tUI('task.aiTutor').toUpperCase()}</span>
         </span>
         <IconChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
         </button>
@@ -33,7 +35,7 @@ export const AiTutorPanel = ({ isOpen, onToggle, chat, question, onQuestionChang
             {chat.length === 0 && (
                 <div className="h-full flex flex-col items-center justify-center text-center opacity-40">
                 <IconSparkles className="w-10 h-10 mb-3 text-purple-400" />
-                <p className="text-xs max-w-[200px]">Ask for a hint, debugging help, or complexity analysis.</p>
+                <p className="text-xs max-w-[200px]">{tUI('task.aiTutorEmpty')}</p>
                 </div>
             )}
             {chat.map((msg, i) => (
@@ -47,17 +49,17 @@ export const AiTutorPanel = ({ isOpen, onToggle, chat, question, onQuestionChang
                 </div>
                 </div>
             ))}
-            {isLoading && <div className="text-xs text-gray-400 animate-pulse pl-2">Thinking...</div>}
+            {isLoading && <div className="text-xs text-gray-400 animate-pulse pl-2">{tUI('task.aiThinking')}</div>}
             </div>
             <div className="p-3 bg-gray-50 dark:bg-black border-t border-gray-200 dark:border-dark-border">
             <div className="relative">
-                <input 
-                type="text" 
+                <input
+                type="text"
                 value={question}
                 onChange={(e) => onQuestionChange(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && onSend()}
                 disabled={!isPremium || isLoading}
-                placeholder={isPremium ? "Ask AI..." : "Unlock Premium to chat"}
+                placeholder={isPremium ? tUI('task.aiAskPlaceholder') : tUI('task.aiUnlockToChat')}
                 className="w-full bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border rounded-xl pl-4 pr-10 py-3 text-xs focus:ring-2 focus:ring-brand-500 outline-none dark:text-white shadow-sm transition-all"
                 />
                 <button 
@@ -73,4 +75,4 @@ export const AiTutorPanel = ({ isOpen, onToggle, chat, question, onQuestionChang
         )}
     </div>
   );
-};
+});

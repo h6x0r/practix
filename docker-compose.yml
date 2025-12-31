@@ -1,6 +1,12 @@
-version: '3.8'
+################################################################################
+# KODLA Main Stack
+# Usage: docker compose up -d
+################################################################################
 
 services:
+  ##############################################################################
+  # PostgreSQL Database
+  ##############################################################################
   db:
     image: postgres:15-alpine
     container_name: kodla_postgres
@@ -20,6 +26,67 @@ services:
       retries: 6
       start_period: 10s
 
+  ##############################################################################
+  # Redis for BullMQ Queue
+  ##############################################################################
+  redis:
+    image: redis:7-alpine
+    container_name: kodla_redis
+    restart: unless-stopped
+    command: >
+      redis-server
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  ##############################################################################
+  # Piston Code Execution Engine
+  # Note: On ARM64 (Apple Silicon), Piston runs under Rosetta emulation
+  # and requires privileged mode for proper isolation
+  #
+  # For ML courses setup, see: docs/PISTON_ML_SETUP.md
+  ##############################################################################
+  piston:
+    image: ghcr.io/engineer-man/piston
+    container_name: kodla_piston
+    restart: always  # Auto-restart on crash or OOM
+    privileged: true
+    ports:
+      - "2000:2000"
+    volumes:
+      - piston_data:/piston/jobs
+      - piston_packages:/piston/packages
+    # Memory limits - increased for ML courses (NumPy, Pandas, sklearn)
+    mem_limit: 2g
+    memswap_limit: 2g  # No swap, strict limit
+    environment:
+      - PISTON_RUN_TIMEOUT=30000     # 30s for ML training tasks
+      - PISTON_COMPILE_TIMEOUT=30000
+      - PISTON_OUTPUT_MAX_SIZE=131072  # 128KB for chart JSON output
+      - PISTON_MAX_PROCESS_COUNT=64  # Reduced for memory efficiency
+      - PISTON_MAX_OPEN_FILES=2048   # Reduced for memory efficiency
+      - PISTON_MAX_FILE_SIZE=10485760
+      - PISTON_PROCESS_LIMIT=64      # Reduced for memory efficiency
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:2000/api/v2/runtimes', (r) => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  ##############################################################################
+  # Backend API Server
+  ##############################################################################
   backend:
     build:
       context: ./server
@@ -27,16 +94,32 @@ services:
     restart: unless-stopped
     environment:
       DATABASE_URL: postgresql://kodla_user:kodla_secure_password@db:5432/kodla_db?schema=public
-      JWT_SECRET: ${JWT_SECRET:-super_secret_jwt_key_kodla_v1}
+      JWT_SECRET: ${JWT_SECRET:-super_secret_jwt_key_kodla_v1_production_ready_2025}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       PORT: 8080
+      SKIP_SEED: ${SKIP_SEED:-false}
+      # Piston Configuration
+      PISTON_URL: http://piston:2000
+      # Redis Configuration
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
     ports:
       - "8080:8080"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      piston:
+        condition: service_healthy
     command: >
-      sh -c "until npx prisma migrate deploy; do echo 'Waiting for Postgres...'; sleep 5; done && node dist/main"
+      sh -c "until npx prisma db push; do echo 'Waiting for Postgres...'; sleep 5; done &&
+      if [ \"$SKIP_SEED\" != \"true\" ]; then npm run seed || true; fi &&
+      node dist/main"
 
+  ##############################################################################
+  # Frontend
+  ##############################################################################
   frontend:
     build:
       context: .
@@ -52,3 +135,6 @@ services:
 
 volumes:
   postgres_data:
+  redis_data:
+  piston_data:
+  piston_packages:

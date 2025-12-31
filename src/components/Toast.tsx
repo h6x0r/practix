@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
 import { IconCheckCircle, IconX, IconSparkles } from './Icons';
 
 type ToastType = 'success' | 'error' | 'info';
@@ -26,18 +26,36 @@ export const useToast = () => {
 
 export const ToastProvider = ({ children }: { children: React.ReactNode }) => {
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const timeoutRefs = useRef<Map<string, NodeJS.Timeout>>(new Map());
+
+  // Cleanup all timeouts on unmount
+  useEffect(() => {
+    return () => {
+      timeoutRefs.current.forEach((timeout) => clearTimeout(timeout));
+      timeoutRefs.current.clear();
+    };
+  }, []);
 
   const showToast = useCallback((message: string, type: ToastType) => {
     const id = Math.random().toString(36).substr(2, 9);
     setToasts((prev) => [...prev, { id, message, type }]);
 
-    // Auto dismiss
-    setTimeout(() => {
+    // Auto dismiss with cleanup tracking
+    const timeout = setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id));
+      timeoutRefs.current.delete(id);
     }, 4000);
+
+    timeoutRefs.current.set(id, timeout);
   }, []);
 
   const removeToast = (id: string) => {
+    // Clear timeout when manually removed
+    const timeout = timeoutRefs.current.get(id);
+    if (timeout) {
+      clearTimeout(timeout);
+      timeoutRefs.current.delete(id);
+    }
     setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 

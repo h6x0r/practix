@@ -1,97 +1,103 @@
+import { Task, Submission, TestCaseResult } from '@/types';
+import { api, isAbortError } from '@/lib/api';
+import { storage } from '@/lib/storage';
+import { createLogger } from '@/lib/logger';
 
-import { Task, Submission, Topic } from '../../../types';
-import { MOCK_TASK, MOCK_SUBMISSIONS, RECENT_TASKS } from '../data/mockData';
-import { getTopicsForCourse } from '../../courses/data/mockData';
-import { STORAGE_KEYS } from '../../../config/constants';
+const log = createLogger('TaskService');
+
+// Run tests result (not saved to DB)
+export interface RunTestsResult {
+  status: string;
+  testsPassed: number;
+  testsTotal: number;
+  testCases: TestCaseResult[];
+  runtime: string;
+  message: string;
+}
+
+interface RequestOptions {
+  signal?: AbortSignal;
+}
 
 export const taskService = {
-  
-  fetchTask: async (slug: string): Promise<Task> => {
-    return new Promise((resolve) => {
-        setTimeout(() => {
-            // Check if it's a known task from our generated topics
-            let foundTask: Task | undefined;
-            
-            // Search in all courses -> topics -> tasks
-            const allCourses = ['c_go', 'c_java', 'c_algo', 'c_sys'];
-            for (const cId of allCourses) {
-                const topics = getTopicsForCourse(cId);
-                for (const t of topics) {
-                    const match = t.tasks.find(tk => tk.slug === slug);
-                    if (match) {
-                        foundTask = match;
-                        break;
-                    }
-                }
-                if (foundTask) break;
-            }
 
-            if (foundTask) {
-                resolve(foundTask);
-            } else {
-                // Fallback to generic mock if not found in structured data
-                resolve({ ...MOCK_TASK, slug, title: slug });
-            }
-        }, 300);
-    });
+  fetchTask: async (slug: string, options?: RequestOptions): Promise<Task> => {
+    return api.get<Task>(`/tasks/${slug}`, options);
   },
 
-  getRecentTasks: async (): Promise<Task[]> => {
-    return new Promise((resolve) => {
-        setTimeout(() => resolve(RECENT_TASKS), 400);
-    });
-  },
-
-  submitCode: async (code: string): Promise<Submission> => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const isSuccess = Math.random() > 0.3; // Random success/fail
-        const message = isSuccess 
-            ? `> Build Successful\n> Running Tests...\n> Test Case 1: PASSED (2ms)\n> Test Case 2: PASSED (1ms)\n> Test Case 3: PASSED (5ms)\n\n[SUCCESS] All test cases passed!`
-            : `> Build Successful\n> Running Tests...\n> Test Case 1: PASSED (2ms)\n> Test Case 2: FAILED\n   Input:    [2,7,11,15], 9\n   Expected: [0,1]\n   Output:   []\n\n[FAILED] Wrong Answer.`;
-
-        resolve({
-          id: Math.random().toString(36).substr(2, 9),
-          status: isSuccess ? 'passed' : 'failed',
-          score: isSuccess ? 100 : 0,
-          runtime: Math.floor(Math.random() * 50) + 'ms',
-          createdAt: new Date().toISOString(),
-          code,
-          message
-        });
-      }, 1500);
-    });
+  getRecentTasks: async (options?: RequestOptions): Promise<Task[]> => {
+    return api.get<Task[]>('/tasks', options);
   },
 
   /**
-   * Get list of all completed task IDs from local storage
+   * Run quick tests (5 tests) without saving to database
+   * Used for "Run Code" button - fast feedback
    */
-  getCompletedTaskIds: (): string[] => {
+  runTests: async (code: string, taskId: string, language: string, options?: RequestOptions): Promise<RunTestsResult> => {
+    return api.post<RunTestsResult>('/submissions/run-tests', { code, taskId, language }, options);
+  },
+
+  /**
+   * Submit code for full evaluation (all tests) and save to database
+   * Used for "Submit" button
+   */
+  submitCode: async (code: string, taskId: string, language: string, options?: RequestOptions): Promise<Submission> => {
+    return api.post<Submission>('/submissions', { code, taskId, language }, options);
+  },
+
+  /**
+   * Get user's submissions for a specific task
+   * Requires authentication
+   */
+  getTaskSubmissions: async (taskId: string, options?: RequestOptions): Promise<Submission[]> => {
     try {
-      return JSON.parse(localStorage.getItem(STORAGE_KEYS.COMPLETED_TASKS) || '[]');
-    } catch {
+      return await api.get<Submission[]>(`/submissions/task/${taskId}`, options);
+    } catch (error) {
+      // Don't log abort errors as warnings
+      if (isAbortError(error)) {
+        throw error;
+      }
+      // Return empty array if not authenticated or error
+      log.warn('Failed to fetch submissions', error);
       return [];
     }
   },
 
   /**
-   * Mark a task as completed
+   * Get user's recent submissions across all tasks
    */
-  markTaskAsCompleted: (taskId: string) => {
-    const current = taskService.getCompletedTaskIds();
-    if (!current.includes(taskId)) {
-      const updated = [...current, taskId];
-      localStorage.setItem(STORAGE_KEYS.COMPLETED_TASKS, JSON.stringify(updated));
+  getRecentSubmissions: async (limit: number = 10): Promise<Submission[]> => {
+    try {
+      return await api.get<Submission[]>(`/submissions/user/recent?limit=${limit}`);
+    } catch (error) {
+      log.warn('Failed to fetch recent submissions', error);
+      return [];
     }
   },
-  
+
+  /**
+   * Get list of all completed task IDs from local storage
+   * @deprecated Use backend submission status instead
+   */
+  getCompletedTaskIds: (): string[] => {
+    return storage.getCompletedTasks();
+  },
+
+  /**
+   * Mark a task as completed in local storage
+   * @deprecated Backend tracks completion via passed submissions
+   */
+  markTaskAsCompleted: (taskId: string) => {
+    storage.addCompletedTask(taskId);
+  },
+
   isResourceCompleted: (resourceId: string, type: 'task' | 'topic'): boolean => {
-      const completedIds = taskService.getCompletedTaskIds();
-      
-      if (type === 'task') {
-        return completedIds.includes(resourceId);
-      }
-      
-      return false;
+    const completedIds = taskService.getCompletedTaskIds();
+
+    if (type === 'task') {
+      return completedIds.includes(resourceId);
+    }
+
+    return false;
   }
 };

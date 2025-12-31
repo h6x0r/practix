@@ -1,7 +1,6 @@
-import { User, UserPreferences } from '../../../types';
-import { authRepository } from '../data/repository';
-import { STORAGE_KEYS } from '../../../config/constants';
-// import { api } from '../../../services/api'; // Uncomment when backend is fully ready
+import { User, UserPreferences } from '@/types';
+import { api } from '@/lib/api';
+import { storage } from '@/lib/storage';
 
 interface AuthResponse {
   token: string;
@@ -20,76 +19,86 @@ interface RegisterPayload {
 }
 
 /**
- * Auth Service
- * 
- * Currently operating in Simulation Mode using Repository pattern.
- * To switch to Real API, implement the api.post calls instead of repository calls.
+ * Auth Service - Connected to Real Backend API
+ *
+ * Endpoints:
+ * - POST /auth/login
+ * - POST /auth/register
+ * - GET /users/me
+ * - PATCH /users/me/preferences
+ * - POST /users/upgrade
  */
 export const authService = {
-  
+
+  /**
+   * Login with email and password
+   * Returns JWT token and user data
+   */
   login: async (creds: LoginPayload): Promise<AuthResponse> => {
-    // Simulation: Fetch user from local mock repository
-    const user = await new Promise<User>((resolve) => {
-        setTimeout(async () => {
-            resolve(await authRepository.getUser());
-        }, 800);
-    });
-
-    const token = 'mock_jwt_token_' + Math.random().toString(36).substring(7);
-    localStorage.setItem(STORAGE_KEYS.TOKEN, token);
-    
-    return { token, user };
+    const response = await api.post<AuthResponse>('/auth/login', creds);
+    storage.setToken(response.token);
+    return response;
   },
 
+  /**
+   * Register new user
+   * Returns JWT token and user data
+   */
   register: async (creds: RegisterPayload): Promise<AuthResponse> => {
-    // Simulation: Create user in local mock repository
-    const user = await new Promise<User>((resolve) => {
-        setTimeout(async () => {
-             const u = await authRepository.getUser();
-             const newUser = { 
-               ...u, 
-               name: creds.name, 
-               email: creds.email, 
-               id: 'u_' + Date.now() 
-             };
-             resolve(newUser);
-        }, 800);
-    });
-
-    const token = 'mock_jwt_token_' + Math.random().toString(36).substring(7);
-    localStorage.setItem(STORAGE_KEYS.TOKEN, token);
-    
-    return { token, user };
+    const response = await api.post<AuthResponse>('/auth/register', creds);
+    storage.setToken(response.token);
+    return response;
   },
 
+  /**
+   * Request password reset (not yet implemented on backend)
+   */
   resetPassword: async (email: string): Promise<void> => {
-    return new Promise((resolve) => {
-        setTimeout(() => resolve(), 1000);
-    });
+    // TODO: Implement when backend supports password reset
+    await api.post('/auth/reset-password', { email });
   },
 
+  /**
+   * Get current authenticated user profile
+   */
   getMe: async (): Promise<User> => {
-    return new Promise((resolve) => {
-        setTimeout(async () => resolve(await authRepository.getUser()), 400);
-    });
+    return api.get<User>('/users/me');
   },
 
+  /**
+   * Update user preferences (editor settings, notifications)
+   */
   updatePreferences: async (prefs: Partial<UserPreferences>): Promise<User> => {
-    return new Promise((resolve) => {
-        setTimeout(async () => {
-            const updated = await authRepository.updateUser({ preferences: prefs as any });
-            resolve(updated);
-        }, 600);
-    });
+    return api.patch<User>('/users/me/preferences', prefs);
   },
 
-  logout: () => {
-    localStorage.removeItem(STORAGE_KEYS.TOKEN);
+  /**
+   * Logout - clear token from storage
+   */
+  logout: (): void => {
+    storage.removeToken();
   },
 
+  /**
+   * Upgrade to premium tier
+   * Note: In production, this would be called after payment webhook
+   */
   upgrade: async (): Promise<User> => {
-    return new Promise((resolve) => {
-        setTimeout(async () => resolve(await authRepository.getUser()), 600);
-    });
+    return api.post<User>('/users/upgrade', {});
+  },
+
+  /**
+   * Check if user is authenticated (has valid token)
+   */
+  isAuthenticated: (): boolean => {
+    return !!storage.getToken();
+  },
+
+  /**
+   * Update user avatar
+   * Accepts either a base64-encoded image or a URL (for preset avatars)
+   */
+  updateAvatar: async (avatarData: string): Promise<User> => {
+    return api.patch<User>('/users/me/avatar', { avatarUrl: avatarData });
   }
 };

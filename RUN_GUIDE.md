@@ -1,94 +1,200 @@
-# 🚀 Инструкция по запуску KODLA
+# KODLA Platform - Run Guide
 
-Следуйте этим шагам, чтобы развернуть проект локально.
-
-## Предварительные требования
-* **Node.js** (v18 или выше)
-* **Docker** и **Docker Compose**
-* **API Key** для Google Gemini (опционально, для AI подсказок)
+## Prerequisites
+* **Node.js** (v18+)
+* **Docker** & **Docker Compose**
+* **API Key** for Google Gemini (optional, for AI hints)
 
 ---
 
-## Быстрый старт (Makefile)
+## Quick Start
 
-| Команда | Что делает |
-| --- | --- |
-| `make migrate-up` | Прогоняет `prisma migrate deploy` (нужно поднять БД). |
-| `make vet` | Собирает фронтенд (`npm run build`) и бекенд (`npm run build` в `server/`) для проверки типизации. |
-| `make build` | Собирает Docker-образы (`docker compose build`). |
-| `make start` | Запускает локальные дев-сервера (Vite + Nest) в watch-режиме. |
-| `make start-docker` | Поднимает весь стек (Postgres, бекенд, фронтенд) в Docker. |
+### Option 1: Full Stack (Recommended)
+```bash
+make start-docker
+```
+This starts:
+- Frontend at http://localhost:3000
+- Backend at http://localhost:8080
+- Piston (code execution) + Redis + BullMQ
 
----
-
-## Docker Compose
-
-1. (Опционально) экспортируйте переменные, если хотите переопределить дефолты:
-   ```bash
-   export GEMINI_API_KEY="xxx"
-   export REACT_APP_API_URL="https://api.example.com"
-   export JWT_SECRET="super_secret"
-   ```
-2. Соберите и запустите проект:
-   ```bash
-   make start-docker
-   # или напрямую
-   docker compose up --build
-   ```
-3. Фронтенд будет доступен по `http://localhost:3000`, API — по `http://localhost:8080`.
+### Option 2: Local Development
+```bash
+make start
+```
+Runs Vite dev server + NestJS in watch mode.
 
 ---
 
-## Ручной запуск (без Docker)
+## Makefile Commands
 
-### Шаг 1: Настройка окружения
+### Application
+| Command | Description |
+|---------|-------------|
+| `make start-docker` | Start full stack |
+| `make start` | Local dev servers |
+| `make stop` | Stop all containers |
+| `make build` | Build Docker images |
+| `make vet` | Type-check frontend & backend |
 
-Создайте `server/.env` (можно взять за основу `server/env.txt`):
+### Database
+| Command | Description |
+|---------|-------------|
+| `make db-refresh` | Reset DB and re-seed |
+| `make db-seed` | Run seeds only |
+| `make db-reset` | Reset DB (drops data!) |
+| `make db-studio` | Open Prisma Studio |
+| `make db-migrate` | Run migrations |
+
+---
+
+## Code Execution Engine (Piston + BullMQ)
+
+### Architecture
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│   Frontend  │────▶│   Backend   │────▶│   BullMQ    │
+│  (React)    │     │  (NestJS)   │     │  (Redis)    │
+└─────────────┘     └─────────────┘     └─────────────┘
+                                               │
+                                               ▼
+                    ┌─────────────┐     ┌─────────────┐
+                    │  PostgreSQL │     │   Piston    │
+                    │  (kodla_db) │     │  (sandbox)  │
+                    └─────────────┘     └─────────────┘
+```
+
+### Supported Languages
+| Language | Time Limit | Memory Limit |
+|----------|------------|--------------|
+| Go | 5s | 256MB |
+| Java | 10s | 512MB |
+| JavaScript | 5s | 256MB |
+| TypeScript | 10s | 256MB |
+| Python | 10s | 256MB |
+| Rust | 10s | 256MB |
+| C/C++ | 5s | 256MB |
+
+### Resource Management
+- **Queue-based execution** with BullMQ (Redis)
+- **Caching**: Results cached for 30 minutes (reduces load by ~60%)
+- **Rate Limiting**:
+  - Global: 60 requests/minute
+  - POST /submissions: 10/minute
+  - POST /submissions/run: 20/minute
+- **Priority Queue**: Premium users get higher priority
+
+### Configuration
+Environment variables in `docker-compose.yml`:
+```bash
+PISTON_URL=http://piston:2000
+REDIS_HOST=redis
+REDIS_PORT=6379
+```
+
+---
+
+## Environment Variables
+
+### Backend (`server/.env` or docker-compose)
 ```env
-DATABASE_URL="postgresql://kodla_user:kodla_secure_password@localhost:5432/kodla_db?schema=public"
-JWT_SECRET="secret_key_change_me"
+DATABASE_URL="postgresql://kodla_user:kodla_secure_password@db:5432/kodla_db"
+JWT_SECRET="your_jwt_secret"
 PORT=8080
+GEMINI_API_KEY="your_google_ai_key"
+
+# Piston
+PISTON_URL="http://piston:2000"
+
+# Redis (for BullMQ queue and caching)
+REDIS_HOST=redis
+REDIS_PORT=6379
+```
+
+### Frontend (build args)
+```env
+REACT_APP_API_URL="http://localhost:8080"
 GEMINI_API_KEY="your_google_ai_key"
 ```
 
-### Шаг 2: База данных
+---
 
-Поднимите Postgres (можно отдельным контейнером из Compose):
+## API Endpoints
+
+### Code Execution
 ```bash
-docker compose up -d db
+# Run code (no auth required)
+POST /submissions/run
+{
+  "code": "package main...",
+  "language": "go",
+  "stdin": "optional input"
+}
+
+# Submit solution (auth required)
+POST /submissions
+{
+  "taskId": "task-slug",
+  "code": "package main...",
+  "language": "go"
+}
+
+# Check execution engine status
+GET /submissions/judge/status
+
+# Get supported languages
+GET /submissions/languages
 ```
-
-### Шаг 3: Бэкенд (server/)
-
-```bash
-cd server
-npm install
-npx prisma db push    # или make migrate-up из корня
-npm run seed          # опционально
-npm run start:dev
-```
-API будет висеть на `http://localhost:8080`.
-
-### Шаг 4: Фронтенд (корень)
-
-```bash
-npm install
-npm run dev
-```
-
-Приложение будет на `http://localhost:3000` (порт можно поменять в `vite.config.ts`).
 
 ---
 
-## ✅ Проверка работоспособности
+## Troubleshooting
 
-1. Откройте фронтенд.
-2. Зайдите на `/login` и создайте пользователя.
-3. Откройте раздел Courses → Go Language.
-4. Убедитесь, что курс и задачи подгружаются из БД.
+### Code Execution Issues
+| Problem | Solution |
+|---------|----------|
+| Piston not starting | Check Docker: `docker compose logs piston` |
+| Code execution timeout | Check queue status: `GET /submissions/judge/status` |
+| "Unsupported language" | Check `/submissions/languages` for supported list |
+| Rate limit exceeded | Wait 1 minute or check rate limiting config |
 
-## 🐛 Возможные проблемы
+### Database Issues
+| Problem | Solution |
+|---------|----------|
+| P1001 Connection refused | Ensure PostgreSQL is running: `docker compose up -d db` |
+| Seed fails | Check for TypeScript errors in seed files |
 
-* **Prisma P1001** — Postgres не запущен или порт недоступен.
-* **AI ответ не приходит** — проверьте `GEMINI_API_KEY` (docker-переменные или `server/.env`).
-* **Judge0 отсутствует** — бэкенд переключается в mock-режим; для реального исполнения используйте `docker-compose.judge0.yml`.
+### General
+| Problem | Solution |
+|---------|----------|
+| Frontend blank | Check console for API errors, verify `REACT_APP_API_URL` |
+| AI hints not working | Verify `GEMINI_API_KEY` is set |
+
+---
+
+## Production Deployment
+
+### Recommended Setup
+1. Use managed PostgreSQL (AWS RDS, Google Cloud SQL)
+2. Deploy Piston on dedicated server with high CPU
+3. Use Redis cluster for BullMQ queue persistence
+4. Set up monitoring for queue depth
+
+### Scaling
+```bash
+# Scale Piston workers
+docker compose up -d --scale piston=4
+```
+
+BullMQ automatically distributes jobs across workers.
+
+### Security
+- Use firewall to restrict Piston access to backend only
+- Set resource limits per execution
+- Configure rate limiting per user tier
+
+---
+
+## Support
+- GitHub Issues: https://github.com/your-org/kodla/issues
+- Documentation: See TECH_STACK.md for architecture details

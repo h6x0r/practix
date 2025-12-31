@@ -1,6 +1,8 @@
-import { Controller, Get, Param, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Param, UseGuards, Request } from '@nestjs/common';
 import { CoursesService } from './courses.service';
 import { OptionalJwtAuthGuard } from '../auth/guards/optional-jwt.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { AdminGuard } from '../auth/guards/admin.guard';
 
 @Controller('courses')
 export class CoursesController {
@@ -22,5 +24,15 @@ export class CoursesController {
   @Get(':id/structure')
   getStructure(@Param('id') id: string, @Request() req) {
     return this.coursesService.getStructure(id, req.user?.userId);
+  }
+
+  /**
+   * Invalidate all course caches (Admin only)
+   * Call this after updating course content via seed
+   */
+  @UseGuards(JwtAuthGuard, AdminGuard)
+  @Post('cache/invalidate')
+  invalidateCache() {
+    return this.coursesService.invalidateCache();
   }
 }

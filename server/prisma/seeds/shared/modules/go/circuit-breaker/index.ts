@@ -1,0 +1,1 @@
+export { circuitBreakerModule } from './module';

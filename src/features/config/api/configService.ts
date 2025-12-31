@@ -1,5 +1,5 @@
 
-import { NavItemConfig } from '../../../types';
+import { NavItemConfig } from '@/types';
 import { configRepository, MOCK_PROMPTS } from '../data/repository';
 
 export const configService = {

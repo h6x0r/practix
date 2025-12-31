@@ -9,7 +9,7 @@ export class TasksService {
    * Fetch all tasks and enrich with completion status for the current user.
    */
   async findAll(userId?: string) {
-    const tasks = await (this.prisma as any).task.findMany({
+    const tasks = await this.prisma.task.findMany({
       select: {
         id: true,
         slug: true,
@@ -27,20 +27,24 @@ export class TasksService {
         return tasks.map(t => ({ ...t, status: 'pending' }));
     }
 
-    // Determine status for each task based on submissions
-    const enrichedTasks = await Promise.all(tasks.map(async (task) => {
-        const passedSubmission = await (this.prisma as any).submission.findFirst({
-            where: {
-                userId: userId,
-                taskId: task.id,
-                status: 'passed'
-            }
-        });
+    // Fetch all passed submissions for the user in a single query
+    const passedSubmissions = await this.prisma.submission.findMany({
+        where: {
+            userId: userId,
+            status: 'passed'
+        },
+        select: {
+            taskId: true
+        }
+    });
 
-        return {
-            ...task,
-            status: passedSubmission ? 'completed' : 'pending'
-        };
+    // Create a Set for O(1) lookup performance
+    const passedTaskIds = new Set(passedSubmissions.map(s => s.taskId));
+
+    // Map tasks with completion status using the Set
+    const enrichedTasks = tasks.map(task => ({
+        ...task,
+        status: passedTaskIds.has(task.id) ? 'completed' : 'pending'
     }));
 
     return enrichedTasks;
@@ -50,7 +54,7 @@ export class TasksService {
    * Fetch single task with status
    */
   async findOne(slug: string, userId?: string) {
-    const task = await (this.prisma as any).task.findUnique({
+    const task = await this.prisma.task.findUnique({
       where: { slug },
     });
 
@@ -61,7 +65,7 @@ export class TasksService {
     let status = 'pending';
 
     if (userId) {
-        const passedSubmission = await (this.prisma as any).submission.findFirst({
+        const passedSubmission = await this.prisma.submission.findFirst({
             where: {
                 userId: userId,
                 taskId: task.id,

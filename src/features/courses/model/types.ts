@@ -1,6 +1,11 @@
-import { Task } from '../../tasks/model/types';
+import { Task, Translations } from '../../tasks/model/types';
 
 export type CourseCategory = 'language' | 'cs' | 'interview';
+
+export interface SampleTopic {
+  title: string;
+  translations?: Translations;
+}
 
 export interface Course {
   id: string;
@@ -9,8 +14,10 @@ export interface Course {
   description: string;
   icon: string; // Emoji or icon name (URLs are fine from backend)
   progress: number;
-  totalTopics: number;
+  totalModules: number;
   estimatedTime: string; // e.g. "56h"
+  translations?: Translations; // Multi-language support
+  sampleTopics?: SampleTopic[]; // Preview topics for course cards
 }
 
 export interface Topic {
@@ -20,6 +27,7 @@ export interface Topic {
   difficulty: 'easy' | 'medium' | 'hard';
   estimatedTime: string; // e.g. "2h"
   tasks: Task[]; // Hierarchy: Course -> Topic -> Task
+  translations?: Translations; // Multi-language support
 }
 
 export interface CourseModule {
@@ -27,7 +35,9 @@ export interface CourseModule {
   title: string;
   description: string;
   section?: 'core' | 'frameworks' | 'interview' | 'projects'; // New categorization
+  estimatedTime: string; // Calculated from sum of task times during seed
   topics: Topic[];
+  translations?: Translations; // Multi-language support
 }
 
 export interface Track {

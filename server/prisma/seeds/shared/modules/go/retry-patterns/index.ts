@@ -1,0 +1,1 @@
+export { retryPatternsModule } from './module';

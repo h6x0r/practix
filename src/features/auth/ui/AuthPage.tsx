@@ -1,15 +1,19 @@
 
 import React, { useState, useContext } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { AuthContext } from '../../../components/Layout';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { AuthContext } from '@/components/Layout';
 import { authService } from '../api/authService';
-import { ApiError } from '../../../services/api';
-import { useToast } from '../../../components/Toast';
+import { ApiError } from '@/lib/api';
+import { useToast } from '@/components/Toast';
 
 const AuthPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login } = useContext(AuthContext);
   const { showToast } = useToast();
+
+  // Get the page user was trying to access before being redirected to login
+  const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/';
   
   const [mode, setMode] = useState<'login' | 'register' | 'forgot'>('login');
   const [isLoading, setIsLoading] = useState(false);
@@ -40,8 +44,9 @@ const AuthPage = () => {
          await login(resp.user);
          showToast('Account created successfully!', 'success');
       }
-      navigate('/dashboard');
-    } catch (err: any) {
+      // Navigate back to the page they were trying to access, or home
+      navigate(from, { replace: true });
+    } catch (err: unknown) {
         if (err instanceof ApiError) {
             showToast(err.message, 'error');
         } else {
@@ -77,10 +82,10 @@ const AuthPage = () => {
         {/* Header */}
         <div className="text-center mb-8">
           <Link to="/" className="inline-flex items-center gap-3 mb-4 group">
-            <div className="w-10 h-10 bg-black dark:bg-white rounded-xl flex items-center justify-center text-white dark:text-black font-display font-black text-xl shadow-xl group-hover:scale-110 transition-transform">
-              K
+            <div className="w-10 h-10 bg-gradient-to-br from-brand-500 to-purple-600 rounded-xl flex items-center justify-center text-white font-display font-black text-xl shadow-xl shadow-brand-500/25 group-hover:scale-110 transition-transform">
+              P
             </div>
-            <span className="text-2xl font-display font-bold text-gray-900 dark:text-white">KODLA</span>
+            <span className="text-2xl font-display font-bold text-gray-900 dark:text-white">Practix</span>
           </Link>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
             {getTitle()}
@@ -146,10 +151,10 @@ const AuthPage = () => {
               </div>
             )}
 
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               disabled={isLoading}
-              className="w-full py-3.5 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl shadow-lg shadow-brand-500/20 transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2"
+              className="w-full py-3.5 bg-gradient-to-r from-brand-600 to-purple-600 hover:from-brand-500 hover:to-purple-500 text-white font-bold rounded-xl shadow-lg shadow-brand-500/25 transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2"
             >
               {isLoading ? (
                 <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>

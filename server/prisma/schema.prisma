@@ -7,101 +7,156 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum UserRole {
+  USER
+  ADMIN
+}
+
 model User {
-  id          String   @id @default(uuid())
-  email       String   @unique
-  name        String
-  password    String
-  avatarUrl   String?
-  isPremium   Boolean  @default(false)
-  
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String
+  password  String
+  avatarUrl String?
+  isPremium Boolean  @default(false)
+  role      UserRole @default(USER)
+
   // Subscription plan details { name: string, expiresAt: string }
-  plan        Json?
-  
+  plan Json?
+
   // Editor and notification preferences
   preferences Json?
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
 
-  submissions Submission[]
-  roadmaps    UserRoadmap[]
-  aiUsage     AiUsage[]
+  // Roadmap generation tracking (first generation is free)
+  roadmapGenerations     Int       @default(0)
+  lastRoadmapGeneration  DateTime?
+
+  // === GAMIFICATION ===
+  xp             Int      @default(0)     // Total experience points
+  level          Int      @default(1)     // Current level (1-100)
+  currentStreak  Int      @default(0)     // Current daily streak
+  maxStreak      Int      @default(0)     // Longest streak ever
+  lastActivityAt DateTime?               // Last task completion date (for streak)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  submissions   Submission[]
+  roadmaps      UserRoadmap[]
+  aiUsage       AiUsage[]
+  bugReports    BugReport[]
+  subscriptions Subscription[]
+  badges        UserBadge[]
+  courses       UserCourse[]
+  sessions      Session[]
 }
 
 model Course {
-  id            String   @id @default(uuid())
-  slug          String   @unique // e.g. "c_go"
-  category      String   // 'language', 'cs', 'interview'
+  id            String @id @default(uuid())
+  slug          String @unique // e.g. "c_go"
+  category      String // 'language', 'cs', 'interview'
   title         String
   description   String
   icon          String
   estimatedTime String
-  
-  modules       Module[]
-  
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  order         Int    @default(0)
+
+  // Multi-language: { ru: { title, description }, uz: {...} }
+  translations  Json?
+
+  modules           Module[]
+  subscriptionPlans SubscriptionPlan[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Module {
-  id          String   @id @default(uuid())
-  courseId    String
-  title       String
-  description String
-  section     String?  // 'core', 'frameworks', etc.
-  order       Int
-  
-  course      Course   @relation(fields: [courseId], references: [id])
-  topics      Topic[]
+  id            String  @id @default(uuid())
+  courseId      String
+  title         String
+  description   String
+  section       String? // 'core', 'frameworks', etc.
+  estimatedTime String  @default("1h") // Calculated from sum of task times during seed
+  order         Int
+
+  // Multi-language: { ru: { title, description }, uz: {...} }
+  translations Json?
+
+  course Course  @relation(fields: [courseId], references: [id])
+  topics Topic[]
 }
 
 model Topic {
-  id            String   @id @default(uuid())
+  id            String @id @default(uuid())
   moduleId      String
   title         String
   description   String
-  difficulty    String   // 'easy', 'medium', 'hard'
+  difficulty    String // 'easy', 'medium', 'hard'
   estimatedTime String
   order         Int
-  
-  module        Module   @relation(fields: [moduleId], references: [id])
-  tasks         Task[]
+
+  // Multi-language: { ru: { title, description }, uz: {...} }
+  translations  Json?
+
+  module Module @relation(fields: [moduleId], references: [id])
+  tasks  Task[]
 }
 
 model Task {
   id            String   @id @default(uuid())
-  topicId       String?  // Optional for backward compatibility, but required for structured courses
+  topicId       String? // Optional for backward compatibility, but required for structured courses
   slug          String   @unique
-  title         String
-  description   String
+  title         String   // User-friendly title (EN default)
+  description   String   // Task description with examples (EN default)
   difficulty    String
   tags          String[]
   isPremium     Boolean  @default(false)
+  isImportant   Boolean  @default(false) // UI annotation for important GoF patterns
   initialCode   String
   solutionCode  String?
-  hints         String[]
+  solutionExplanation String? // Solution with line-by-line comments explaining the code
+  whyItMatters  String? // 1-2 paragraphs explaining real-world usage and importance of this pattern
+  testCode      String? // Test code for task validation
+  hint1         String? // First hint (gentle nudge, 8-10 words)
+  hint2         String? // Second hint (more detailed, 8-10 words)
   estimatedTime String
   youtubeUrl    String?
   order         Int      @default(0)
 
-  topic         Topic?   @relation(fields: [topicId], references: [id])
-  submissions   Submission[]
+  // ML visualization support
+  visualizationType String? // 'none' | 'line' | 'bar' | 'scatter' | 'heatmap' | 'confusion_matrix' | 'multi'
+
+  // Multi-language support: { ru: { title, description, hint1, hint2, solutionExplanation, whyItMatters }, uz: {...} }
+  translations  Json?
+
+  topic       Topic?       @relation(fields: [topicId], references: [id])
+  submissions Submission[]
+  bugReports  BugReport[]
 }
 
 model Submission {
-  id        String   @id @default(uuid())
-  userId    String
-  taskId    String
-  status    String
-  score     Int
-  runtime   String
-  code      String
-  message   String?
-  createdAt DateTime @default(now())
+  id          String   @id @default(uuid())
+  userId      String
+  taskId      String
+  status      String
+  score       Int
+  runtime     String
+  memory      String?
+  code        String
+  message     String?
+  testsPassed Int?
+  testsTotal  Int?
+  testCases   Json?     // Array of test case results for UI display
+  createdAt   DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id])
   task Task @relation(fields: [taskId], references: [id])
+
+  @@index([userId, status])
+  @@index([userId, taskId])
+  @@index([taskId, status])
+  @@index([createdAt])
 }
 
 model UserRoadmap {
@@ -121,12 +176,157 @@ model UserRoadmap {
 model AiUsage {
   id        String   @id @default(uuid())
   userId    String
-  date      String   // Format: YYYY-MM-DD
+  date      String // Format: YYYY-MM-DD
   count     Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user      User     @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id])
 
   @@unique([userId, date])
+}
+
+model BugReport {
+  id          String   @id @default(uuid())
+  userId      String
+  taskId      String?
+  category    String   // 'description' | 'solution' | 'editor' | 'hints' | 'ai-tutor' | 'other'
+  severity    String   @default("medium") // 'low' | 'medium' | 'high'
+  title       String
+  description String
+  metadata    Json?    // { userCode?, browserInfo?, url? }
+  status      String   @default("open") // 'open' | 'reviewing' | 'resolved' | 'closed'
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User  @relation(fields: [userId], references: [id])
+  task Task? @relation(fields: [taskId], references: [id])
+}
+
+// Subscription plan definitions (admin-managed)
+model SubscriptionPlan {
+  id           String   @id @default(uuid())
+  slug         String   @unique // 'global', 'go-basics', 'java-core', etc.
+  name         String   // Display name
+  nameRu       String?  // Russian name
+  type         String   // 'global' | 'course'
+  courseId     String?  // null for global plans
+  priceMonthly Int      // Price in tiyn (1 UZS = 100 tiyn)
+  currency     String   @default("UZS")
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  course        Course?        @relation(fields: [courseId], references: [id])
+  subscriptions Subscription[]
+}
+
+// User subscriptions
+model Subscription {
+  id        String   @id @default(uuid())
+  userId    String
+  planId    String
+  status    String   @default("active") // 'active' | 'cancelled' | 'expired' | 'pending'
+  startDate DateTime @default(now())
+  endDate   DateTime // subscription expiry
+  autoRenew Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User             @relation(fields: [userId], references: [id])
+  plan     SubscriptionPlan @relation(fields: [planId], references: [id])
+  payments Payment[]
+
+  @@unique([userId, planId]) // One subscription per plan per user
+  @@index([userId])
+  @@index([status])
+}
+
+// Payment history (for future payment integration)
+model Payment {
+  id             String   @id @default(uuid())
+  subscriptionId String
+  amount         Int      // Amount in tiyn
+  currency       String   @default("UZS")
+  status         String   // 'pending' | 'completed' | 'failed' | 'refunded'
+  provider       String?  // 'uzcard' | 'humo' | 'visa' | 'mastercard' | null
+  providerTxId   String?  // External transaction ID
+  metadata       Json?    // Provider-specific data
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  subscription Subscription @relation(fields: [subscriptionId], references: [id])
+
+  @@index([subscriptionId])
+  @@index([status])
+}
+
+// === GAMIFICATION MODELS ===
+
+// Badge definitions (seeded)
+model Badge {
+  id          String @id @default(uuid())
+  slug        String @unique // 'first-task', 'streak-7', 'level-10', etc.
+  name        String
+  description String
+  icon        String // Emoji or icon name
+  category    String // 'milestone', 'streak', 'level', 'special'
+  requirement Int    // e.g., 7 for 7-day streak, 10 for level 10
+  xpReward    Int    @default(0) // Bonus XP for earning badge
+
+  // Multi-language: { ru: { name, description }, uz: {...} }
+  translations Json?
+
+  createdAt DateTime    @default(now())
+  users     UserBadge[]
+}
+
+// User-earned badges (many-to-many)
+model UserBadge {
+  id        String   @id @default(uuid())
+  userId    String
+  badgeId   String
+  earnedAt  DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id])
+  badge Badge @relation(fields: [badgeId], references: [id])
+
+  @@unique([userId, badgeId])
+  @@index([userId])
+}
+
+// === USER COURSE PROGRESS ===
+// Tracks which courses a user has started and their progress
+model UserCourse {
+  id             String   @id @default(uuid())
+  userId         String
+  courseSlug     String   // Course slug (e.g., 'go-basics')
+  progress       Int      @default(0) // 0-100 percentage
+  startedAt      DateTime @default(now())
+  lastAccessedAt DateTime @default(now())
+  completedAt    DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseSlug])
+  @@index([userId])
+}
+
+// === SESSION MANAGEMENT ===
+// For single-device authentication enforcement
+model Session {
+  id           String   @id @default(uuid())
+  userId       String
+  token        String   @unique
+  deviceInfo   String?  // Browser, OS info
+  ipAddress    String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  expiresAt    DateTime
+  lastActiveAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
 }

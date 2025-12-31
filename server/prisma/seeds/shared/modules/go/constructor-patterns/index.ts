@@ -1,0 +1,1 @@
+export { constructorPatternsModule } from './module';

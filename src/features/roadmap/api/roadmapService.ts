@@ -1,91 +1,136 @@
 
-import { taskService } from '../../tasks/api/taskService';
-import { RoadmapUI, RoadmapPhaseUI, RoadmapStepUI } from '../model/types';
-import { roadmapRepository } from '../data/repository';
+import { api } from '@/lib/api';
+import { RoadmapUI, RoadmapVariant, RoadmapVariantsResponse, RoadmapGenerationInput } from '../model/types';
 
-// Distinct modern gradients for phases
-const PHASE_PALETTES = [
-  'from-cyan-400 to-blue-500',      // 1. Blue/Cyan
-  'from-emerald-400 to-green-500',  // 2. Green
-  'from-orange-400 to-red-500',     // 3. Orange/Red
-  'from-purple-400 to-indigo-500',  // 4. Purple
-  'from-pink-400 to-rose-500',      // 5. Pink
-  'from-amber-400 to-yellow-500',   // 6. Amber
-  'from-teal-400 to-cyan-500',      // 7. Teal
-  'from-fuchsia-400 to-purple-600', // 8. Fuchsia
-];
+export interface GenerateRoadmapParams {
+  role: string;
+  level: string;
+  goal?: string;
+  preferredTopics?: string[];
+  hoursPerWeek?: number;
+}
 
+export interface RoadmapTemplate {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  levels: string[];
+}
+
+// ============================================================================
+// NEW: Variant-based generation (v2)
+// ============================================================================
+
+export interface GenerateVariantsParams extends RoadmapGenerationInput {}
+
+export interface SelectVariantParams {
+  variantId: string;
+  name: string;
+  description: string;
+  totalTasks: number;
+  estimatedHours: number;
+  estimatedMonths: number;
+  targetRole: string;
+  difficulty: 'easy' | 'medium' | 'hard';
+  phases: any[];
+}
+
+/**
+ * Roadmap Service - Connected to Real Backend API
+ *
+ * Endpoints:
+ * - GET /roadmaps/templates - Available roadmap templates
+ * - GET /roadmaps/me - User's current roadmap
+ * - POST /roadmaps/generate - Generate new roadmap
+ * - DELETE /roadmaps/me - Delete/reset roadmap
+ */
 export const roadmapService = {
-  
   /**
-   * Generates a fully hydrated UI Roadmap.
-   * This simulates the Backend Logic:
-   * 1. Check if user has an existing roadmap in DB.
-   * 2. If not, create one from Template.
-   * 3. Join with UserProgress (completed tasks) to determine status.
+   * Get available roadmap templates
    */
-  generateUserRoadmap: async (role: string, level: string, userId: string = 'guest'): Promise<RoadmapUI> => {
-    // In a real backend, we would fetch: SELECT * FROM user_roadmaps WHERE user_id = ?
-    const template = await roadmapRepository.getTemplate(role, level);
-    
-    // Fetch user progress (in real app: SELECT task_id FROM user_completed_tasks WHERE user_id = ?)
-    const completedTaskIds = taskService.getCompletedTaskIds();
+  getTemplates: async (): Promise<RoadmapTemplate[]> => {
+    return api.get<RoadmapTemplate[]>('/roadmaps/templates');
+  },
 
-    let totalSteps = 0;
-    let completedSteps = 0;
+  /**
+   * Get user's current roadmap
+   * Returns null if no roadmap exists
+   */
+  getUserRoadmap: async (): Promise<RoadmapUI | null> => {
+    try {
+      return await api.get<RoadmapUI>('/roadmaps/me');
+    } catch (err: unknown) {
+      if (err && typeof err === 'object' && 'status' in err && err.status === 404) {
+        return null;
+      }
+      throw err;
+    }
+  },
 
-    const hydratedPhases: RoadmapPhaseUI[] = template.phases.map((phase, index) => {
-      let phaseCompletedCount = 0;
-
-      // Assign dynamic color based on index (cycles if more phases than palettes)
-      const dynamicColor = PHASE_PALETTES[index % PHASE_PALETTES.length];
-
-      const hydratedSteps: RoadmapStepUI[] = phase.steps.map(step => {
-        totalSteps++;
-        
-        // Determine completion based on related resource
-        let isCompleted = false;
-        
-        if (step.resourceType === 'task' && step.relatedResourceId) {
-            // Strict sync: Is the specific task ID in the completed list?
-            isCompleted = completedTaskIds.includes(step.relatedResourceId);
-        } else if (step.resourceType === 'topic' && step.relatedResourceId) {
-            // Logic for Topic: Considered complete if related tasks are done?
-            // For now, we use a simple helper, but backend would run a COUNT query.
-            isCompleted = taskService.isResourceCompleted(step.relatedResourceId, 'topic');
-        }
-
-        if (isCompleted) {
-            completedSteps++;
-            phaseCompletedCount++;
-        }
-
-        return {
-          ...step,
-          status: isCompleted ? 'completed' : 'available' 
-        };
-      });
-
-      return {
-        ...phase,
-        colorTheme: dynamicColor, // Inject dynamic color
-        steps: hydratedSteps,
-        progressPercentage: phase.steps.length > 0 ? (phaseCompletedCount / phase.steps.length) * 100 : 0
-      };
+  /**
+   * Generate a new personalized roadmap
+   * Creates or replaces existing roadmap
+   */
+  generateUserRoadmap: async (
+    role: string,
+    level: string,
+    userId?: string,
+    options?: Partial<GenerateRoadmapParams>
+  ): Promise<RoadmapUI> => {
+    return api.post<RoadmapUI>('/roadmaps/generate', {
+      role,
+      level,
+      goal: options?.goal,
+      preferredTopics: options?.preferredTopics,
+      hoursPerWeek: options?.hoursPerWeek,
     });
+  },
 
-    return {
-      id: template.id, // This would be the user_roadmap UUID in real DB
-      userId: userId,  // Associated User
-      role: role,
-      roleTitle: template.roleTitle,
-      level: level,
-      targetLevel: template.targetLevel,
-      title: `${template.roleTitle} Roadmap`,
-      phases: hydratedPhases,
-      totalProgress: totalSteps > 0 ? (completedSteps / totalSteps) * 100 : 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-  }
+  /**
+   * Delete/reset user's roadmap
+   */
+  deleteRoadmap: async (): Promise<void> => {
+    await api.delete('/roadmaps/me');
+  },
+
+  // ============================================================================
+  // NEW: Variant-based generation (v2)
+  // ============================================================================
+
+  /**
+   * Generate 3-5 roadmap variants based on user input
+   * First generation is FREE, regeneration requires Premium
+   */
+  generateVariants: async (params: GenerateVariantsParams): Promise<RoadmapVariantsResponse> => {
+    return api.post<RoadmapVariantsResponse>('/roadmaps/generate-variants', params);
+  },
+
+  /**
+   * Get user's saved variants (if any were generated but not yet selected)
+   */
+  getUserVariants: async (): Promise<RoadmapVariantsResponse> => {
+    return api.get<RoadmapVariantsResponse>('/roadmaps/variants');
+  },
+
+  /**
+   * Select a variant and create the roadmap from it
+   * Saves the selected variant as the user's active roadmap
+   */
+  selectVariant: async (params: SelectVariantParams): Promise<RoadmapUI> => {
+    return api.post<RoadmapUI>('/roadmaps/select-variant', params);
+  },
+
+  /**
+   * Check if user can generate a roadmap
+   * Returns generation status and limits
+   */
+  canGenerate: async (): Promise<{
+    canGenerate: boolean;
+    reason?: string;
+    isPremium: boolean;
+    generationCount: number;
+  }> => {
+    return api.get('/roadmaps/can-generate');
+  },
 };

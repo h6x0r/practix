@@ -18,6 +18,7 @@ export interface User {
   email: string;
   avatarUrl: string;
   isPremium: boolean;
+  role?: 'USER' | 'ADMIN'; // User role for access control
   plan?: {
     name: string;
     expiresAt: string;

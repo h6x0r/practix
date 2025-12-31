@@ -1,4 +1,6 @@
 
+import { storage } from '../lib/storage';
+
 export const ENV = {
   API_URL: process.env.REACT_APP_API_URL || 'http://localhost:8080',
   GEMINI_API_KEY: process.env.API_KEY || '',
@@ -9,7 +11,7 @@ export const getHeaders = (): HeadersInit => {
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
   };
-  const token = localStorage.getItem('kodla_token');
+  const token = storage.getToken();
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }

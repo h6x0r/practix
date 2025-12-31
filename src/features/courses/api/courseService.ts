@@ -1,5 +1,5 @@
-import { Course, CourseModule } from '../../../types';
-import { api } from '../../../services/api';
+import { Course, CourseModule } from '@/types';
+import { api } from '@/lib/api';
 
 export const courseService = {
   
