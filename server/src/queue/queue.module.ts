@@ -37,6 +37,11 @@ import { CODE_EXECUTION_QUEUE, DEAD_LETTER_QUEUE } from './constants';
           },
           removeOnFail: false, // Keep failed jobs for DLQ processing
         },
+        // Queue depth limits to prevent DoS
+        limiter: {
+          max: 100,        // Max 100 jobs per duration window
+          duration: 60000, // Per minute (60 seconds)
+        },
       },
       {
         name: DEAD_LETTER_QUEUE,

@@ -366,35 +366,33 @@ export class GamificationService {
   }
 
   /**
-   * Get user's rank with caching
-   * Rank is cached per-user for RANK_CACHE_TTL seconds
+   * Get user's rank with caching and stampede protection
+   * Uses getOrSet with distributed lock to prevent cache stampede
    */
   async getUserRank(userId: string): Promise<number> {
     const cacheKey = `rank:${userId}`;
 
-    // Try cache first
-    const cachedRank = await this.cache.get<number>(cacheKey);
-    if (cachedRank !== null) {
-      return cachedRank;
-    }
+    // Use getOrSet with lock to prevent cache stampede
+    const rank = await this.cache.getOrSet<number>(
+      cacheKey,
+      RANK_CACHE_TTL,
+      async () => {
+        const user = await this.prisma.user.findUnique({
+          where: { id: userId },
+          select: { xp: true },
+        });
 
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: { xp: true },
-    });
+        if (!user) return 0;
 
-    if (!user) return 0;
+        const higherRanked = await this.prisma.user.count({
+          where: { xp: { gt: user.xp } },
+        });
 
-    const higherRanked = await this.prisma.user.count({
-      where: { xp: { gt: user.xp } },
-    });
+        return higherRanked + 1;
+      }
+    );
 
-    const rank = higherRanked + 1;
-
-    // Cache the rank
-    await this.cache.set(cacheKey, rank, RANK_CACHE_TTL);
-
-    return rank;
+    return rank ?? 0;
   }
 
   /**

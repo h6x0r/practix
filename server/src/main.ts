@@ -24,8 +24,9 @@ async function bootstrap() {
         ? {
             directives: {
               defaultSrc: ["'self'"],
-              scriptSrc: ["'self'", "'unsafe-inline'", 'cdn.jsdelivr.net'],
-              styleSrc: ["'self'", "'unsafe-inline'", 'fonts.googleapis.com'],
+              // Remove 'unsafe-inline' - use strict CSP
+              scriptSrc: ["'self'", 'cdn.jsdelivr.net'],
+              styleSrc: ["'self'", 'fonts.googleapis.com'],
               fontSrc: ["'self'", 'fonts.gstatic.com'],
               imgSrc: ["'self'", 'data:', 'blob:'],
               connectSrc: ["'self'"],

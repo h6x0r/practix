@@ -604,13 +604,43 @@ ${testCalls}
 
   /**
    * Extract Go test function names from test code
+   * Validates function names to prevent code injection
    */
   private extractGoTestFunctions(testCode: string): string[] {
     const functions: string[] = [];
     const regex = /func\s+(Test\w+)\s*\(/g;
+    // Whitelist pattern: only alphanumeric and underscore, must start with Test
+    const validNamePattern = /^Test[A-Za-z0-9_]+$/;
+    // Blacklist dangerous keywords that could indicate injection attempts
+    const dangerousPatterns = [
+      /os\./i, /exec\./i, /syscall\./i, /unsafe\./i,
+      /runtime\./i, /reflect\./i, /eval/i, /import/i
+    ];
+
     let match;
     while ((match = regex.exec(testCode)) !== null) {
-      functions.push(match[1]);
+      const funcName = match[1];
+
+      // Validate function name format
+      if (!validNamePattern.test(funcName)) {
+        this.logger.warn(`Invalid test function name rejected: ${funcName}`);
+        continue;
+      }
+
+      // Check for dangerous patterns in function name
+      const hasDangerousPattern = dangerousPatterns.some(pattern => pattern.test(funcName));
+      if (hasDangerousPattern) {
+        this.logger.warn(`Potentially dangerous test function name rejected: ${funcName}`);
+        continue;
+      }
+
+      // Limit function name length to prevent buffer overflow attempts
+      if (funcName.length > 100) {
+        this.logger.warn(`Test function name too long, rejected: ${funcName.substring(0, 20)}...`);
+        continue;
+      }
+
+      functions.push(funcName);
     }
     return functions;
   }

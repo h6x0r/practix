@@ -158,6 +158,66 @@ export class CacheService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
+   * Get or set with lock to prevent cache stampede
+   * Uses Redis SET NX for distributed lock
+   */
+  async getOrSet<T>(
+    key: string,
+    ttl: number,
+    factory: () => Promise<T>,
+  ): Promise<T | null> {
+    if (!this.isConnected) {
+      return factory();
+    }
+
+    try {
+      // Try to get from cache first
+      const cached = await this.redis.get(key);
+      if (cached) {
+        return JSON.parse(cached) as T;
+      }
+
+      // Acquire lock to prevent stampede
+      const lockKey = `lock:${key}`;
+      const lockAcquired = await this.redis.set(lockKey, '1', 'EX', 10, 'NX');
+
+      if (lockAcquired) {
+        try {
+          // Double-check cache after acquiring lock
+          const cachedAgain = await this.redis.get(key);
+          if (cachedAgain) {
+            await this.redis.del(lockKey);
+            return JSON.parse(cachedAgain) as T;
+          }
+
+          // Generate value
+          const value = await factory();
+          await this.redis.setex(key, ttl, JSON.stringify(value));
+          await this.redis.del(lockKey);
+          return value;
+        } catch (error) {
+          await this.redis.del(lockKey);
+          throw error;
+        }
+      } else {
+        // Wait for lock holder to populate cache
+        for (let i = 0; i < 10; i++) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+          const result = await this.redis.get(key);
+          if (result) {
+            return JSON.parse(result) as T;
+          }
+        }
+        // Fallback to direct call if wait exceeded
+        return factory();
+      }
+    } catch (error) {
+      this.logger.warn(`Cache getOrSet error: ${error.message}`);
+      return factory();
+    }
+  }
+
+  /**
    * Delete cache entry
    */
   async delete(key: string): Promise<void> {

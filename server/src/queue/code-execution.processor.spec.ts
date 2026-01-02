@@ -32,7 +32,9 @@ describe('CodeExecutionProcessor', () => {
         attempts: 3,
       },
       attemptsMade: 0,
-    } as Job<CodeExecutionJob>;
+      getState: jest.fn().mockResolvedValue('waiting'), // Not completed
+      returnvalue: null,
+    } as unknown as Job<CodeExecutionJob>;
   };
 
   beforeEach(async () => {

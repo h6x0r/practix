@@ -17,7 +17,9 @@ import { PassportModule } from '@nestjs/passport';
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
         secret: configService.get<string>('JWT_SECRET'),
-        signOptions: { expiresIn: '7d' },
+        // Use JWT_EXPIRES_IN env var or default to 7 days
+        // For high-security: set JWT_EXPIRES_IN=15m and implement refresh tokens
+        signOptions: { expiresIn: configService.get<string>('JWT_EXPIRES_IN') || '7d' },
       }),
       inject: [ConfigService],
     }),

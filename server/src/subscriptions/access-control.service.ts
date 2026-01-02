@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { TaskAccessDto, CourseAccessDto } from './dto/subscription.dto';
 
@@ -12,6 +12,8 @@ const GRACE_PERIOD_DAYS = 3;
 
 @Injectable()
 export class AccessControlService {
+  private readonly logger = new Logger(AccessControlService.name);
+
   constructor(private prisma: PrismaService) {}
 
   /**
@@ -210,5 +212,45 @@ export class AccessControlService {
         plan: true,
       },
     });
+  }
+
+  /**
+   * Verify subscription at execution time (TOCTOU mitigation)
+   * Called immediately before executing code to ensure subscription is still valid
+   * This prevents race conditions where subscription expires between check and use
+   */
+  async verifyAccessAtExecutionTime(
+    userId: string,
+    courseId: string,
+  ): Promise<{ hasAccess: boolean; priority: number }> {
+    const now = new Date();
+    const gracePeriodCutoff = this.getGracePeriodCutoff();
+
+    // Re-check subscription status with fresh database query
+    const subscription = await this.prisma.subscription.findFirst({
+      where: {
+        userId,
+        status: 'active',
+        endDate: { gte: gracePeriodCutoff },
+        OR: [
+          { plan: { type: 'global' } },
+          { plan: { type: 'course', courseId } },
+        ],
+      },
+    });
+
+    const hasAccess = !!subscription;
+
+    // Log if access status might have changed
+    if (!hasAccess) {
+      this.logger.debug(
+        `Access verification: User ${userId} does not have active subscription for course ${courseId}`,
+      );
+    }
+
+    return {
+      hasAccess,
+      priority: hasAccess ? PRIORITY_HIGH : PRIORITY_LOW,
+    };
   }
 }

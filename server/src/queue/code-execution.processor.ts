@@ -55,7 +55,7 @@ export class CodeExecutionProcessor extends WorkerHost {
   }
 
   /**
-   * Process code execution job
+   * Process code execution job with idempotency check
    */
   async process(job: Job<CodeExecutionJob>): Promise<CodeExecutionResult> {
     const { code, language, stdin, taskId, userId, expectedOutput } = job.data;
@@ -63,6 +63,19 @@ export class CodeExecutionProcessor extends WorkerHost {
     this.logger.debug(
       `Processing job ${job.id}: ${language} code (task: ${taskId || 'playground'})`,
     );
+
+    // Idempotency: Check if this job was already processed
+    // This prevents duplicate execution on retry after partial success
+    const idempotencyKey = `job:processed:${job.id}`;
+    const alreadyProcessed = await job.getState();
+    if (alreadyProcessed === 'completed') {
+      this.logger.warn(`Job ${job.id} already completed, skipping duplicate execution`);
+      // Return cached result if available (BullMQ stores it)
+      const returnValue = job.returnvalue as CodeExecutionResult;
+      if (returnValue) {
+        return returnValue;
+      }
+    }
 
     // Execute code via Piston
     const result = await this.pistonService.execute(code, language, stdin);

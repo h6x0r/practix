@@ -75,6 +75,7 @@ describe('GamificationService', () => {
     get: jest.fn(),
     set: jest.fn(),
     delete: jest.fn(),
+    getOrSet: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -648,21 +649,31 @@ describe('GamificationService', () => {
   });
 
   // ============================================
-  // getUserRank() with Caching
+  // getUserRank() with Caching (uses getOrSet for stampede protection)
   // ============================================
   describe('getUserRank()', () => {
-    it('should return user rank', async () => {
-      mockCacheService.get.mockResolvedValue(null);
+    it('should return user rank via getOrSet', async () => {
+      // getOrSet calls the factory function, which queries the database
+      mockCacheService.getOrSet.mockImplementation(async (key, ttl, factory) => {
+        return factory();
+      });
       mockPrismaService.user.findUnique.mockResolvedValue({ xp: 500 });
       mockPrismaService.user.count.mockResolvedValue(10);
 
       const result = await service.getUserRank('user-123');
 
       expect(result).toBe(11); // 10 users with higher XP + 1
+      expect(mockCacheService.getOrSet).toHaveBeenCalledWith(
+        'rank:user-123',
+        300,
+        expect.any(Function)
+      );
     });
 
     it('should return rank 1 for top user', async () => {
-      mockCacheService.get.mockResolvedValue(null);
+      mockCacheService.getOrSet.mockImplementation(async (key, ttl, factory) => {
+        return factory();
+      });
       mockPrismaService.user.findUnique.mockResolvedValue({ xp: 10000 });
       mockPrismaService.user.count.mockResolvedValue(0);
 
@@ -672,7 +683,9 @@ describe('GamificationService', () => {
     });
 
     it('should return 0 for non-existent user', async () => {
-      mockCacheService.get.mockResolvedValue(null);
+      mockCacheService.getOrSet.mockImplementation(async (key, ttl, factory) => {
+        return factory();
+      });
       mockPrismaService.user.findUnique.mockResolvedValue(null);
 
       const result = await service.getUserRank('nonexistent');
@@ -680,38 +693,41 @@ describe('GamificationService', () => {
       expect(result).toBe(0);
     });
 
-    it('should return cached rank if available', async () => {
-      mockCacheService.get.mockResolvedValue(5); // Cached rank
+    it('should return cached rank if available (via getOrSet)', async () => {
+      // getOrSet returns cached value without calling factory
+      mockCacheService.getOrSet.mockResolvedValue(5);
 
       const result = await service.getUserRank('user-123');
 
       expect(result).toBe(5);
-      // Should not call database
+      // Should not call database since getOrSet returns cached value
       expect(mockPrismaService.user.findUnique).not.toHaveBeenCalled();
       expect(mockPrismaService.user.count).not.toHaveBeenCalled();
     });
 
-    it('should cache rank after fetching from database', async () => {
-      mockCacheService.get.mockResolvedValue(null);
+    it('should use getOrSet for cache stampede protection', async () => {
+      mockCacheService.getOrSet.mockImplementation(async (key, ttl, factory) => {
+        return factory();
+      });
       mockPrismaService.user.findUnique.mockResolvedValue({ xp: 500 });
       mockPrismaService.user.count.mockResolvedValue(10);
 
       await service.getUserRank('user-123');
 
-      expect(mockCacheService.set).toHaveBeenCalledWith(
+      // Verify getOrSet is used with correct key and TTL
+      expect(mockCacheService.getOrSet).toHaveBeenCalledWith(
         'rank:user-123',
-        11, // rank = 10 + 1
-        300 // 5 minute TTL
+        300, // 5 minute TTL
+        expect.any(Function)
       );
     });
 
-    it('should not cache rank for non-existent user', async () => {
-      mockCacheService.get.mockResolvedValue(null);
-      mockPrismaService.user.findUnique.mockResolvedValue(null);
+    it('should handle null return from getOrSet (fallback to 0)', async () => {
+      mockCacheService.getOrSet.mockResolvedValue(null);
 
-      await service.getUserRank('nonexistent');
+      const result = await service.getUserRank('user-123');
 
-      expect(mockCacheService.set).not.toHaveBeenCalled();
+      expect(result).toBe(0);
     });
   });
 

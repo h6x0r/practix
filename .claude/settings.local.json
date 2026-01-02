@@ -146,7 +146,9 @@
       "Bash(npm run test:coverage:*)",
       "WebSearch",
       "WebFetch(domain:deepmind.google)",
-      "Bash(git reset:*)"
+      "Bash(git reset:*)",
+      "Bash(npm run test:cov:*)",
+      "Bash(npm run test:*)"
     ],
     "deny": [],
     "ask": []

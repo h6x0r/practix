@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsOptional, MaxLength } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, MaxLength, IsIn } from 'class-validator';
 
 export class AskAiDto {
   @IsString()
@@ -26,5 +26,6 @@ export class AskAiDto {
 
   @IsString()
   @IsOptional()
+  @IsIn(['en', 'ru', 'uz'], { message: 'Invalid UI language. Supported: en, ru, uz' })
   uiLanguage?: string;
 }
