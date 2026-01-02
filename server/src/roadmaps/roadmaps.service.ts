@@ -155,15 +155,25 @@ export class RoadmapsService {
   }> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { isPremium: true, roadmapGenerations: true }
+      select: { roadmapGenerations: true }
     });
 
     if (!user) {
       return { canGenerate: false, reason: 'user_not_found', isPremium: false, generationCount: 0 };
     }
 
+    // Compute isPremium from active subscriptions (not cached field)
+    const activeSubscription = await this.prisma.subscription.findFirst({
+      where: {
+        userId,
+        status: 'active',
+        endDate: { gt: new Date() },
+      },
+    });
+    const isPremium = !!activeSubscription;
+
     // Premium users have unlimited generations
-    if (user.isPremium) {
+    if (isPremium) {
       return { canGenerate: true, isPremium: true, generationCount: user.roadmapGenerations };
     }
 

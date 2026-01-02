@@ -6,19 +6,36 @@ import { TaskAccessDto, CourseAccessDto } from './dto/subscription.dto';
 const PRIORITY_HIGH = 1; // Premium/subscribed users
 const PRIORITY_LOW = 10; // Free users
 
+// Grace period: 3 days after subscription expires, user still has access
+// This gives users time to renew and prevents abrupt access loss
+const GRACE_PERIOD_DAYS = 3;
+
 @Injectable()
 export class AccessControlService {
   constructor(private prisma: PrismaService) {}
 
   /**
+   * Get the grace period cutoff date (now - grace period)
+   * Subscriptions expired within this window still grant access
+   */
+  private getGracePeriodCutoff(): Date {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - GRACE_PERIOD_DAYS);
+    return cutoff;
+  }
+
+  /**
    * Check if user has an active global subscription
+   * Includes grace period - recently expired subscriptions still work
    */
   async hasGlobalAccess(userId: string): Promise<boolean> {
+    const gracePeriodCutoff = this.getGracePeriodCutoff();
+
     const subscription = await this.prisma.subscription.findFirst({
       where: {
         userId,
         status: 'active',
-        endDate: { gte: new Date() },
+        endDate: { gte: gracePeriodCutoff }, // Include grace period
         plan: { type: 'global' },
       },
     });
@@ -27,6 +44,7 @@ export class AccessControlService {
 
   /**
    * Check if user has access to a specific course (via course subscription or global)
+   * Includes grace period - recently expired subscriptions still work
    */
   async hasCourseAccess(userId: string, courseId: string): Promise<boolean> {
     // Check global subscription first
@@ -34,12 +52,14 @@ export class AccessControlService {
       return true;
     }
 
+    const gracePeriodCutoff = this.getGracePeriodCutoff();
+
     // Check course-specific subscription
     const subscription = await this.prisma.subscription.findFirst({
       where: {
         userId,
         status: 'active',
-        endDate: { gte: new Date() },
+        endDate: { gte: gracePeriodCutoff }, // Include grace period
         plan: {
           type: 'course',
           courseId,
@@ -175,13 +195,16 @@ export class AccessControlService {
 
   /**
    * Get user's active subscriptions
+   * Includes subscriptions within grace period
    */
   async getUserSubscriptions(userId: string) {
+    const gracePeriodCutoff = this.getGracePeriodCutoff();
+
     return this.prisma.subscription.findMany({
       where: {
         userId,
         status: 'active',
-        endDate: { gte: new Date() },
+        endDate: { gte: gracePeriodCutoff }, // Include grace period
       },
       include: {
         plan: true,

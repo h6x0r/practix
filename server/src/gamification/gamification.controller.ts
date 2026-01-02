@@ -27,7 +27,9 @@ export class GamificationController {
 
   /**
    * Get leaderboard
+   * Requires authentication to protect user data (GDPR compliance)
    */
+  @UseGuards(JwtAuthGuard)
   @Get('leaderboard')
   async getLeaderboard(@Query('limit') limit?: string) {
     const parsedLimit = limit ? parseInt(limit, 10) : 50;

@@ -41,14 +41,15 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  submissions   Submission[]
-  roadmaps      UserRoadmap[]
-  aiUsage       AiUsage[]
-  bugReports    BugReport[]
-  subscriptions Subscription[]
-  badges        UserBadge[]
-  courses       UserCourse[]
-  sessions      Session[]
+  submissions      Submission[]
+  roadmaps         UserRoadmap[]
+  aiUsage          AiUsage[]
+  bugReports       BugReport[]
+  subscriptions    Subscription[]
+  badges           UserBadge[]
+  courses          UserCourse[]
+  sessions         Session[]
+  taskCompletions  TaskCompletion[]
 }
 
 model Course {
@@ -83,7 +84,7 @@ model Module {
   // Multi-language: { ru: { title, description }, uz: {...} }
   translations Json?
 
-  course Course  @relation(fields: [courseId], references: [id])
+  course Course  @relation(fields: [courseId], references: [id], onDelete: Cascade)
   topics Topic[]
 }
 
@@ -99,7 +100,7 @@ model Topic {
   // Multi-language: { ru: { title, description }, uz: {...} }
   translations  Json?
 
-  module Module @relation(fields: [moduleId], references: [id])
+  module Module @relation(fields: [moduleId], references: [id], onDelete: Cascade)
   tasks  Task[]
 }
 
@@ -130,9 +131,10 @@ model Task {
   // Multi-language support: { ru: { title, description, hint1, hint2, solutionExplanation, whyItMatters }, uz: {...} }
   translations  Json?
 
-  topic       Topic?       @relation(fields: [topicId], references: [id])
-  submissions Submission[]
-  bugReports  BugReport[]
+  topic           Topic?           @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  submissions     Submission[]
+  bugReports      BugReport[]
+  taskCompletions TaskCompletion[]
 }
 
 model Submission {
@@ -150,8 +152,8 @@ model Submission {
   testCases   Json?     // Array of test case results for UI display
   createdAt   DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id])
-  task Task @relation(fields: [taskId], references: [id])
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
 
   @@index([userId, status])
   @@index([userId, taskId])
@@ -170,7 +172,7 @@ model UserRoadmap {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  user User @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model AiUsage {
@@ -181,7 +183,7 @@ model AiUsage {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user User @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, date])
 }
@@ -199,8 +201,8 @@ model BugReport {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  user User  @relation(fields: [userId], references: [id])
-  task Task? @relation(fields: [taskId], references: [id])
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  task Task? @relation(fields: [taskId], references: [id], onDelete: SetNull)
 }
 
 // Subscription plan definitions (admin-managed)
@@ -217,7 +219,7 @@ model SubscriptionPlan {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  course        Course?        @relation(fields: [courseId], references: [id])
+  course        Course?        @relation(fields: [courseId], references: [id], onDelete: SetNull)
   subscriptions Subscription[]
 }
 
@@ -233,8 +235,8 @@ model Subscription {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user     User             @relation(fields: [userId], references: [id])
-  plan     SubscriptionPlan @relation(fields: [planId], references: [id])
+  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan     SubscriptionPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
   payments Payment[]
 
   @@unique([userId, planId]) // One subscription per plan per user
@@ -255,7 +257,7 @@ model Payment {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  subscription Subscription @relation(fields: [subscriptionId], references: [id])
+  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
 
   @@index([subscriptionId])
   @@index([status])
@@ -288,8 +290,8 @@ model UserBadge {
   badgeId   String
   earnedAt  DateTime @default(now())
 
-  user  User  @relation(fields: [userId], references: [id])
-  badge Badge @relation(fields: [badgeId], references: [id])
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badge Badge @relation(fields: [badgeId], references: [id], onDelete: Cascade)
 
   @@unique([userId, badgeId])
   @@index([userId])
@@ -329,4 +331,41 @@ model Session {
 
   @@index([userId])
   @@index([token])
+}
+
+// === TASK COMPLETION TRACKING ===
+// Tracks first successful task completions for atomic XP award
+// Unique constraint prevents race condition where two parallel submissions
+// could both award XP for "first completion"
+model TaskCompletion {
+  id        String   @id @default(uuid())
+  userId    String
+  taskId    String
+  xpAwarded Int      // XP awarded for this completion
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, taskId]) // Only one completion per user per task
+  @@index([userId])
+}
+
+// === SECURITY EVENTS ===
+// Logs security-related events for auditing and analysis
+model SecurityEvent {
+  id        String   @id @default(uuid())
+  type      String   // SecurityEventType enum value
+  severity  String   // EventSeverity enum value
+  ip        String
+  userId    String?  // Can be null for unauthenticated requests
+  userEmail String?
+  details   Json?    // Event-specific details
+  createdAt DateTime @default(now())
+
+  @@index([type])
+  @@index([ip])
+  @@index([userId])
+  @@index([createdAt])
+  @@index([severity])
 }

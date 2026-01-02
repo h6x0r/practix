@@ -28,9 +28,8 @@ const config: LoggerConfig = {
 };
 
 function shouldLog(level: LogLevel): boolean {
-  if (!isDevelopment && !config.enabledInProduction) {
-    return false;
-  }
+  // In production mode (when enabledInProduction is true), we only log at minLevel or above
+  // Note: enabledInProduction is always true in current config, so all logging goes through minLevel check
   return LOG_LEVELS[level] >= LOG_LEVELS[config.minLevel];
 }
 

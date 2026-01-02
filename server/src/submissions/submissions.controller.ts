@@ -13,8 +13,10 @@ import {
 } from '@nestjs/common';
 import { ThrottlerGuard, Throttle, SkipThrottle } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { OptionalJwtAuthGuard } from '../auth/guards/optional-jwt.guard';
 import { SubmissionsService } from './submissions.service';
 import { CodeExecutionService } from '../queue/code-execution.service';
+import { PlaygroundThrottlerGuard } from '../common/guards/playground-throttler.guard';
 import { CreateSubmissionDto, RunCodeDto, RunTestsDto } from './dto/submissions.dto';
 
 @Controller('submissions')
@@ -22,8 +24,21 @@ import { CreateSubmissionDto, RunCodeDto, RunTestsDto } from './dto/submissions.
 export class SubmissionsController {
   constructor(
     private readonly submissionsService: SubmissionsService,
-    private readonly codeExecutionService: CodeExecutionService
+    private readonly codeExecutionService: CodeExecutionService,
+    private readonly playgroundThrottler: PlaygroundThrottlerGuard,
   ) {}
+
+  /**
+   * Extract client IP from request (considering proxies)
+   */
+  private getClientIp(req: any): string {
+    const forwardedFor = req.headers['x-forwarded-for'];
+    if (forwardedFor) {
+      const ips = forwardedFor.split(',').map((ip: string) => ip.trim());
+      return ips[0];
+    }
+    return req.ip || req.connection?.remoteAddress || 'unknown';
+  }
 
   /**
    * POST /submissions
@@ -35,41 +50,83 @@ export class SubmissionsController {
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: { limit: 10, ttl: 60000 } }) // 10 submissions per minute
   async create(@Request() req, @Body() body: CreateSubmissionDto) {
+    const ip = this.getClientIp(req);
     return this.submissionsService.create(
       req.user.userId,
       body.taskId,
       body.code,
-      body.language
+      body.language,
+      ip
     );
   }
 
   /**
    * POST /submissions/run
    * Run code without saving (playground mode)
-   * Rate limit: 20 runs per minute (more lenient for testing)
+   * Custom rate limit based on subscription:
+   * - Free/Unauthenticated: 10 seconds between runs
+   * - Authenticated: 10 seconds between runs
+   * - Premium: 5 seconds between runs
    */
   @Post('run')
   @HttpCode(HttpStatus.OK)
-  @Throttle({ default: { limit: 20, ttl: 60000 } }) // 20 runs per minute
-  async runCode(@Body() body: RunCodeDto) {
-    return this.submissionsService.runCode(body.code, body.language, body.stdin);
+  @UseGuards(OptionalJwtAuthGuard)
+  @SkipThrottle() // Using custom throttler instead
+  async runCode(@Request() req, @Body() body: RunCodeDto) {
+    // Apply custom rate limiting
+    await this.playgroundThrottler.canActivate({
+      switchToHttp: () => ({
+        getRequest: () => req,
+        getResponse: () => req.res,
+      }),
+    } as any);
+
+    const ip = this.getClientIp(req);
+    const userId = req.user?.userId;
+    return this.submissionsService.runCode(body.code, body.language, body.stdin, ip, userId);
   }
 
   /**
    * POST /submissions/run-tests
    * Run quick tests (5 tests) without saving to database
    * Used for "Run Code" button - fast feedback without full submission
-   * Rate limit: 15 runs per minute
+   * Custom rate limit based on subscription (same as /run)
    */
   @Post('run-tests')
   @HttpCode(HttpStatus.OK)
-  @Throttle({ default: { limit: 15, ttl: 60000 } }) // 15 runs per minute
-  async runTests(@Body() body: RunTestsDto) {
+  @UseGuards(OptionalJwtAuthGuard)
+  @SkipThrottle() // Using custom throttler instead
+  async runTests(@Request() req, @Body() body: RunTestsDto) {
+    // Apply custom rate limiting
+    await this.playgroundThrottler.canActivate({
+      switchToHttp: () => ({
+        getRequest: () => req,
+        getResponse: () => req.res,
+      }),
+    } as any);
+
+    const ip = this.getClientIp(req);
+    const userId = req.user?.userId;
     return this.submissionsService.runQuickTests(
       body.taskId,
       body.code,
-      body.language
+      body.language,
+      ip,
+      userId
     );
+  }
+
+  /**
+   * GET /submissions/rate-limit-info
+   * Get rate limit configuration for the current user
+   * Used by frontend to display cooldown timers
+   */
+  @Get('rate-limit-info')
+  @UseGuards(OptionalJwtAuthGuard)
+  @SkipThrottle()
+  async getRateLimitInfo(@Request() req) {
+    const userId = req.user?.userId;
+    return this.playgroundThrottler.getRateLimitInfo(userId);
   }
 
   /**

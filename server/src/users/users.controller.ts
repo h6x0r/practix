@@ -1,8 +1,8 @@
 
-import { Controller, Get, Post, Body, Patch, UseGuards, Request, Query } from '@nestjs/common';
+import { Controller, Get, Body, Patch, UseGuards, Request, Query } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { UpdatePreferencesDto, UpdatePlanDto } from './dto/users.dto';
+import { UpdatePreferencesDto } from './dto/users.dto';
 import { User } from '@prisma/client';
 
 @Controller('users')
@@ -84,31 +84,14 @@ export class UsersController {
     return this.transformUser(user, isPremium, plan);
   }
 
-  // New Endpoint: Simulate a payment/upgrade action
-  @UseGuards(JwtAuthGuard)
-  @Post('upgrade')
-  async upgradeToPremium(@Request() req, @Body() planData?: UpdatePlanDto) {
-    // In a real app, this would be a webhook from Stripe.
-    // Here we manually update the DB to reflect a successful subscription.
-    const oneYearFromNow = new Date();
-    oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
+  // NOTE: /users/upgrade endpoint removed for security.
+  // Subscription upgrades should only be processed through:
+  // 1. POST /subscriptions (admin-only) - for manual subscriptions
+  // 2. POST /webhooks/stripe - for payment gateway callbacks
 
-    const plan: UpdatePlanDto = planData || {
-        name: 'Pro Annual',
-        expiresAt: oneYearFromNow.toISOString()
-    };
-
-    const user = await this.usersService.updatePlan(req.user.userId, true, plan);
-
-    // Compute isPremium and plan from active subscriptions
-    const isPremium = await this.usersService.isPremiumUser(req.user.userId);
-    const activePlan = await this.usersService.getActivePlan(req.user.userId);
-
-    return this.transformUser(user, isPremium, activePlan);
-  }
-
-  private transformUser(user: User, isPremium?: boolean, plan?: { name: string; expiresAt: string } | null) {
-    const { password, ...result } = user;
+  private transformUser(user: Partial<User>, isPremium?: boolean, plan?: { name: string; expiresAt: string } | null) {
+    // Create a copy and ensure password is never included
+    const { password, ...result } = user as any;
 
     // Override with computed values if provided
     if (isPremium !== undefined) {

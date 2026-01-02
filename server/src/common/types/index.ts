@@ -24,13 +24,13 @@ export interface UserPlan extends Record<string, any> {
 
 /**
  * User Create Data Interface
+ * NOTE: isPremium is always computed from active subscriptions, not stored.
+ * New users start with isPremium=false (database default).
  */
 export interface CreateUserData {
   email: string;
   name: string;
   password: string;
-  isPremium?: boolean;
-  plan?: UserPlan | null;
   preferences?: UserPreferences;
   avatarUrl?: string;
 }

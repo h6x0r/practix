@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { CacheService } from '../cache/cache.service';
 
 // XP rewards by difficulty
 const XP_REWARDS = {
@@ -34,9 +35,15 @@ const LEVEL_THRESHOLDS = [
   // Beyond level 20: +10000 per level
 ];
 
+// Cache TTL for rank (5 minutes - frequently changing data)
+const RANK_CACHE_TTL = 300;
+
 @Injectable()
 export class GamificationService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private cache: CacheService,
+  ) {}
 
   /**
    * Calculate level from XP
@@ -65,6 +72,7 @@ export class GamificationService {
 
   /**
    * Award XP for completing a task
+   * Uses atomic increment to prevent race conditions
    */
   async awardTaskXp(userId: string, difficulty: string): Promise<{
     xpEarned: number;
@@ -75,72 +83,116 @@ export class GamificationService {
   }> {
     const xpEarned = XP_REWARDS[difficulty] || XP_REWARDS.easy;
 
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: { xp: true, level: true, currentStreak: true, maxStreak: true, lastActivityAt: true },
+    // Use transaction for atomic XP increment and level calculation
+    const result = await this.prisma.$transaction(async (tx) => {
+      // Get current user state
+      const user = await tx.user.findUnique({
+        where: { id: userId },
+        select: { xp: true, level: true, currentStreak: true, maxStreak: true, lastActivityAt: true },
+      });
+
+      const oldLevel = user?.level || 1;
+
+      // Calculate streak
+      const { newStreak, newMaxStreak } = this.calculateStreak(
+        user?.currentStreak || 0,
+        user?.maxStreak || 0,
+        user?.lastActivityAt,
+      );
+
+      // Atomically increment XP and update other fields
+      const updatedUser = await tx.user.update({
+        where: { id: userId },
+        data: {
+          xp: { increment: xpEarned }, // Atomic increment!
+          currentStreak: newStreak,
+          maxStreak: newMaxStreak,
+          lastActivityAt: new Date(),
+        },
+        select: { xp: true },
+      });
+
+      const newXp = updatedUser.xp;
+      const newLevel = this.calculateLevel(newXp);
+
+      // Update level if changed
+      if (newLevel !== oldLevel) {
+        await tx.user.update({
+          where: { id: userId },
+          data: { level: newLevel },
+        });
+      }
+
+      return {
+        oldLevel,
+        newXp,
+        newLevel,
+        newStreak,
+        newMaxStreak,
+      };
     });
 
-    const oldLevel = user?.level || 1;
-    const oldXp = user?.xp || 0;
-    const newXp = oldXp + xpEarned;
-    const newLevel = this.calculateLevel(newXp);
+    // Invalidate rank cache since XP changed
+    await this.invalidateRankCache(userId);
 
-    // Update streak
-    const { newStreak, newMaxStreak } = this.calculateStreak(
-      user?.currentStreak || 0,
-      user?.maxStreak || 0,
-      user?.lastActivityAt,
+    // Check for new badges (outside transaction to avoid long lock)
+    const newBadges = await this.checkAndAwardBadges(
+      userId,
+      result.newXp,
+      result.newLevel,
+      result.newStreak,
+      result.newMaxStreak,
     );
-
-    // Update user
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: {
-        xp: newXp,
-        level: newLevel,
-        currentStreak: newStreak,
-        maxStreak: newMaxStreak,
-        lastActivityAt: new Date(),
-      },
-    });
-
-    // Check for new badges
-    const newBadges = await this.checkAndAwardBadges(userId, newXp, newLevel, newStreak, newMaxStreak);
 
     return {
       xpEarned,
-      totalXp: newXp,
-      level: newLevel,
-      leveledUp: newLevel > oldLevel,
+      totalXp: result.newXp,
+      level: result.newLevel,
+      leveledUp: result.newLevel > result.oldLevel,
       newBadges,
     };
   }
 
   /**
    * Calculate streak based on last activity
+   * Uses UTC dates to avoid timezone issues
+   * Uses hour-based calculation with grace period for timezone tolerance
    */
   private calculateStreak(
     currentStreak: number,
     maxStreak: number,
     lastActivityAt: Date | null,
   ): { newStreak: number; newMaxStreak: number } {
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
     if (!lastActivityAt) {
       return { newStreak: 1, newMaxStreak: Math.max(1, maxStreak) };
     }
 
+    const now = new Date();
     const lastActivity = new Date(lastActivityAt);
-    const lastActivityDay = new Date(lastActivity.getFullYear(), lastActivity.getMonth(), lastActivity.getDate());
 
-    const diffDays = Math.floor((today.getTime() - lastActivityDay.getTime()) / (1000 * 60 * 60 * 24));
+    // Calculate hours since last activity (more precise and timezone-agnostic)
+    const hoursSinceLastActivity = (now.getTime() - lastActivity.getTime()) / (1000 * 60 * 60);
+
+    // Use UTC dates for day comparison
+    const todayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    const lastActivityUTC = new Date(Date.UTC(
+      lastActivity.getUTCFullYear(),
+      lastActivity.getUTCMonth(),
+      lastActivity.getUTCDate()
+    ));
+
+    const diffDays = Math.floor((todayUTC.getTime() - lastActivityUTC.getTime()) / (1000 * 60 * 60 * 24));
 
     if (diffDays === 0) {
-      // Same day - no streak change
+      // Same UTC day - no streak change
       return { newStreak: currentStreak, newMaxStreak: maxStreak };
     } else if (diffDays === 1) {
       // Consecutive day - increment streak
+      const newStreak = currentStreak + 1;
+      return { newStreak, newMaxStreak: Math.max(newStreak, maxStreak) };
+    } else if (diffDays === 2 && hoursSinceLastActivity <= 36) {
+      // Grace period: if it's been less than 36 hours, still consider it consecutive
+      // This helps users in edge timezone cases (e.g., activity at 11pm, next at 11am = 36h)
       const newStreak = currentStreak + 1;
       return { newStreak, newMaxStreak: Math.max(newStreak, maxStreak) };
     } else {
@@ -222,9 +274,15 @@ export class GamificationService {
           });
 
           newBadges.push({ slug: badge.slug, name: badge.name, icon: badge.icon });
-        } catch (error) {
-          // If transaction fails (e.g., duplicate key), just skip this badge
-          // This handles race conditions gracefully
+        } catch (error: any) {
+          // Only silently ignore unique constraint violations (race condition case)
+          // P2002 = unique constraint violation in Prisma
+          if (error?.code === 'P2002') {
+            // Race condition: badge was awarded by another concurrent request
+            continue;
+          }
+          // Log unexpected errors but don't throw (don't block user experience)
+          console.error(`Failed to award badge ${badge.slug} to user ${userId}:`, error);
           continue;
         }
       }
@@ -308,9 +366,18 @@ export class GamificationService {
   }
 
   /**
-   * Get user's rank
+   * Get user's rank with caching
+   * Rank is cached per-user for RANK_CACHE_TTL seconds
    */
   async getUserRank(userId: string): Promise<number> {
+    const cacheKey = `rank:${userId}`;
+
+    // Try cache first
+    const cachedRank = await this.cache.get<number>(cacheKey);
+    if (cachedRank !== null) {
+      return cachedRank;
+    }
+
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: { xp: true },
@@ -322,6 +389,19 @@ export class GamificationService {
       where: { xp: { gt: user.xp } },
     });
 
-    return higherRanked + 1;
+    const rank = higherRanked + 1;
+
+    // Cache the rank
+    await this.cache.set(cacheKey, rank, RANK_CACHE_TTL);
+
+    return rank;
+  }
+
+  /**
+   * Invalidate rank cache for a user
+   * Called after XP changes to ensure fresh rank on next request
+   */
+  async invalidateRankCache(userId: string): Promise<void> {
+    await this.cache.delete(`rank:${userId}`);
   }
 }

@@ -25,13 +25,11 @@ export class AuthService {
     // Hash password
     const hashedPassword = await bcrypt.hash(registerDto.password, 10);
 
-    // Create user
+    // Create user (isPremium defaults to false, computed from subscriptions)
     const user = await this.usersService.create({
       email: registerDto.email,
       name: registerDto.name,
       password: hashedPassword,
-      isPremium: false,
-      plan: null, // Explicitly set no plan
       preferences: {
         editorFontSize: 14,
         editorMinimap: false,
@@ -58,7 +56,8 @@ export class AuthService {
   }
 
   async login(loginDto: LoginDto, deviceInfo?: string, ipAddress?: string) {
-    const user = await this.usersService.findOne(loginDto.email);
+    // Use findOneForAuth to get password for verification
+    const user = await this.usersService.findOneForAuth(loginDto.email);
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }

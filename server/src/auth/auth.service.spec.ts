@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
+import { SessionsService } from '../sessions/sessions.service';
 import { JwtService } from '@nestjs/jwt';
 import { ConflictException, UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
@@ -12,7 +13,17 @@ describe('AuthService', () => {
 
   const mockUsersService = {
     findOne: jest.fn(),
+    findOneForAuth: jest.fn(),
     create: jest.fn(),
+    isPremiumUser: jest.fn().mockResolvedValue(false),
+    getActivePlan: jest.fn().mockResolvedValue(null),
+  };
+
+  const mockSessionsService = {
+    createSession: jest.fn().mockResolvedValue({ id: 'session-123', token: 'mock-token' }),
+    validateSession: jest.fn(),
+    invalidateSession: jest.fn(),
+    invalidateUserSessions: jest.fn(),
   };
 
   const mockJwtService = {
@@ -26,6 +37,10 @@ describe('AuthService', () => {
         {
           provide: UsersService,
           useValue: mockUsersService,
+        },
+        {
+          provide: SessionsService,
+          useValue: mockSessionsService,
         },
         {
           provide: JwtService,
@@ -86,8 +101,6 @@ describe('AuthService', () => {
         expect.objectContaining({
           email: registerDto.email,
           name: registerDto.name,
-          isPremium: false,
-          plan: null,
           preferences: expect.any(Object),
         })
       );
@@ -185,12 +198,12 @@ describe('AuthService', () => {
         updatedAt: new Date(),
       };
 
-      mockUsersService.findOne.mockResolvedValue(mockUser);
+      mockUsersService.findOneForAuth.mockResolvedValue(mockUser);
       mockJwtService.sign.mockReturnValue('mock-jwt-token');
 
       const result = await service.login(loginDto);
 
-      expect(mockUsersService.findOne).toHaveBeenCalledWith(loginDto.email);
+      expect(mockUsersService.findOneForAuth).toHaveBeenCalledWith(loginDto.email);
       expect(result).toEqual({
         user: expect.objectContaining({
           id: mockUser.id,
@@ -208,11 +221,11 @@ describe('AuthService', () => {
         password: 'password123',
       };
 
-      mockUsersService.findOne.mockResolvedValue(null);
+      mockUsersService.findOneForAuth.mockResolvedValue(null);
 
       await expect(service.login(loginDto)).rejects.toThrow(UnauthorizedException);
       await expect(service.login(loginDto)).rejects.toThrow('Invalid credentials');
-      expect(mockUsersService.findOne).toHaveBeenCalledWith(loginDto.email);
+      expect(mockUsersService.findOneForAuth).toHaveBeenCalledWith(loginDto.email);
     });
 
     it('should throw UnauthorizedException if password is incorrect', async () => {
@@ -235,11 +248,11 @@ describe('AuthService', () => {
         updatedAt: new Date(),
       };
 
-      mockUsersService.findOne.mockResolvedValue(mockUser);
+      mockUsersService.findOneForAuth.mockResolvedValue(mockUser);
 
       await expect(service.login(loginDto)).rejects.toThrow(UnauthorizedException);
       await expect(service.login(loginDto)).rejects.toThrow('Invalid credentials');
-      expect(mockUsersService.findOne).toHaveBeenCalledWith(loginDto.email);
+      expect(mockUsersService.findOneForAuth).toHaveBeenCalledWith(loginDto.email);
     });
 
     it('should not include password in response', async () => {
@@ -262,7 +275,7 @@ describe('AuthService', () => {
         updatedAt: new Date(),
       };
 
-      mockUsersService.findOne.mockResolvedValue(mockUser);
+      mockUsersService.findOneForAuth.mockResolvedValue(mockUser);
       mockJwtService.sign.mockReturnValue('mock-jwt-token');
 
       const result = await service.login(loginDto);
@@ -289,7 +302,7 @@ describe('AuthService', () => {
         updatedAt: new Date(),
       };
 
-      mockUsersService.findOne.mockResolvedValue(mockUser);
+      mockUsersService.findOneForAuth.mockResolvedValue(mockUser);
 
       // Note: This test assumes validateUser method exists in AuthService
       // If it doesn't exist, this test should be removed or the method should be added
@@ -317,7 +330,7 @@ describe('AuthService', () => {
         updatedAt: new Date(),
       };
 
-      mockUsersService.findOne.mockResolvedValue(mockUser);
+      mockUsersService.findOneForAuth.mockResolvedValue(mockUser);
 
       await expect(service.login({ email, password })).rejects.toThrow(
         UnauthorizedException

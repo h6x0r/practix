@@ -3,24 +3,20 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CodeExecutionService } from '../queue/code-execution.service';
 import { CacheService } from '../cache/cache.service';
 import { ExecutionResult, LANGUAGES } from '../piston/piston.service';
-import { TasksService } from '../tasks/tasks.service';
 import { AccessControlService } from '../subscriptions/access-control.service';
 import { GamificationService } from '../gamification/gamification.service';
+import { SecurityValidationService } from '../security/security-validation.service';
+import { TestParserService, TestCaseResult } from './test-parser.service';
+import { ResultFormatterService } from './result-formatter.service';
+
+// Re-export TestCaseResult for backward compatibility
+export { TestCaseResult };
 
 export interface SubmissionDto {
   code: string;
   taskId?: string;
   language?: string;
   stdin?: string;
-}
-
-export interface TestCaseResult {
-  name: string;
-  passed: boolean;
-  input?: string;
-  expectedOutput?: string;
-  actualOutput?: string;
-  error?: string;
 }
 
 export interface SubmissionResult {
@@ -46,17 +42,28 @@ export interface SubmissionResult {
   newBadges?: Array<{ slug: string; name: string; icon: string }>;
 }
 
+/**
+ * SubmissionsService
+ *
+ * Orchestrates code submission and execution flow.
+ * Refactored to delegate to specialized services:
+ * - SecurityValidationService: Code security scanning
+ * - TestParserService: Test output parsing
+ * - ResultFormatterService: Output formatting
+ */
 @Injectable()
 export class SubmissionsService {
   private readonly logger = new Logger(SubmissionsService.name);
 
   constructor(
-    private prisma: PrismaService,
-    private codeExecutionService: CodeExecutionService,
-    private cacheService: CacheService,
-    private tasksService: TasksService,
-    private accessControlService: AccessControlService,
-    private gamificationService: GamificationService
+    private readonly prisma: PrismaService,
+    private readonly codeExecutionService: CodeExecutionService,
+    private readonly cacheService: CacheService,
+    private readonly accessControlService: AccessControlService,
+    private readonly gamificationService: GamificationService,
+    private readonly securityValidation: SecurityValidationService,
+    private readonly testParser: TestParserService,
+    private readonly resultFormatter: ResultFormatterService,
   ) {}
 
   /**
@@ -66,109 +73,51 @@ export class SubmissionsService {
     userId: string,
     taskIdentifier: string,
     code: string,
-    language: string
+    language: string,
+    ip?: string,
   ): Promise<SubmissionResult> {
-    // 1. Resolve Task with topic/module/course info for priority
-    let task = await this.prisma.task.findUnique({
-      where: { id: taskIdentifier },
-      include: {
-        topic: {
-          include: {
-            module: { select: { courseId: true } },
-          },
-        },
-      },
-    });
+    // 1. Security: Validate code for malicious patterns
+    await this.securityValidation.validateCode(code, language, { ip, userId });
 
-    if (!task) {
-      task = await this.prisma.task.findUnique({
-        where: { slug: taskIdentifier },
-        include: {
-          topic: {
-            include: {
-              module: { select: { courseId: true } },
-            },
-          },
-        },
-      });
-    }
+    // 2. Resolve Task with topic/module/course info for priority
+    const task = await this.findTaskByIdentifier(taskIdentifier);
 
-    if (!task) {
-      throw new NotFoundException(`Task not found: ${taskIdentifier}`);
-    }
+    // 3. Validate language
+    this.validateLanguage(language);
 
-    // 2. Get queue priority based on user's subscription
+    // 4. Get queue priority based on user's subscription
     const courseId = task.topic?.module?.courseId;
     const queuePriority = courseId
       ? await this.accessControlService.getQueuePriority(userId, courseId)
-      : 10; // Default to low priority if no course
-
-    // 3. Validate language
-    const langConfig = LANGUAGES[language.toLowerCase()];
-    if (!langConfig) {
-      throw new BadRequestException(
-        `Unsupported language: ${language}. Supported: ${Object.keys(LANGUAGES).join(', ')}`
-      );
-    }
+      : 10;
 
     this.logger.log(
-      `Submission: user=${userId}, task=${task.slug}, lang=${langConfig.name}, hasTests=${!!task.testCode}, priority=${queuePriority}`
+      `Submission: user=${userId}, task=${task.slug}, lang=${language}, hasTests=${!!task.testCode}, priority=${queuePriority}`,
     );
 
-    // 4. Execute code via Piston + Queue
-    // TODO: Pass queuePriority to async execution when queue mode is enabled
-    let result;
-    if (task.testCode) {
-      // Execute user code with task's test code
-      result = await this.codeExecutionService.executeSyncWithTests(
-        code,
-        task.testCode,
-        language
-      );
-    } else {
-      // No test code - just run the user's code
-      result = await this.codeExecutionService.executeSync(code, language);
-    }
+    // 5. Execute code
+    const result = await this.executeCode(code, language, task.testCode);
 
-    // 4. Parse test output (supports JSON and legacy formats)
-    const { testCases, passed: testsPassed, total: testsTotal } = this.parseTestOutput(
-      result.stdout,
-      result.stderr
+    // 6. Parse test output
+    const testOutput = this.testParser.parseTestOutput(result.stdout, result.stderr);
+
+    // 7. Determine final status and score
+    const finalStatus = this.testParser.determineStatus(
+      result.status,
+      testOutput.passed,
+      testOutput.total,
+    );
+    const score = this.testParser.calculateScore(
+      testOutput.passed,
+      testOutput.total,
+      finalStatus,
     );
 
-    // 5. Determine final status:
-    // - 'error' for compile errors
-    // - 'failed' for test failures (some or all tests fail)
-    // - 'passed' for all tests passing
-    let finalStatus: string;
-    if (result.status === 'compileError') {
-      finalStatus = 'error';
-    } else if (testsTotal > 0 && testsPassed < testsTotal) {
-      finalStatus = 'failed';
-    } else if (result.status === 'error' || result.status === 'timeout') {
-      finalStatus = 'error';
-    } else {
-      finalStatus = 'passed';
-    }
+    // 8. Format output metrics
+    const { runtime, memory } = this.resultFormatter.formatMetrics(result);
+    const message = this.resultFormatter.formatMessage(result);
 
-    // 6. Format output message
-    const message = this.formatMessage(result);
-
-    // 7. Calculate score based on tests passed
-    const score = testsTotal > 0
-      ? Math.round((testsPassed / testsTotal) * 100)
-      : (finalStatus === 'passed' ? 100 : 0);
-
-    // Format runtime - show '-' if not available, otherwise show time in ms
-    const runtime = result.time === '-' ? '-' : `${Math.round(parseFloat(result.time) * 1000)}ms`;
-
-    // Format memory - Piston returns unreliable memory values, so we don't show it
-    // If memory is 0 or unrealistically high (>1GB), show '-'
-    const memoryBytes = result.memory || 0;
-    const memoryMB = memoryBytes / (1024 * 1024);
-    const memory = (memoryBytes === 0 || memoryMB > 1024) ? '-' : `${memoryMB.toFixed(1)}MB`;
-
-    // 8. Save to database with all fields
+    // 9. Save submission to database
     const submission = await this.prisma.submission.create({
       data: {
         userId,
@@ -179,33 +128,22 @@ export class SubmissionsService {
         runtime,
         memory,
         message,
-        testsPassed: testsTotal > 0 ? testsPassed : null,
-        testsTotal: testsTotal > 0 ? testsTotal : null,
-        testCases: testCases.length > 0 ? JSON.parse(JSON.stringify(testCases)) : undefined,
+        testsPassed: testOutput.total > 0 ? testOutput.passed : null,
+        testsTotal: testOutput.total > 0 ? testOutput.total : null,
+        testCases: testOutput.testCases.length > 0
+          ? JSON.parse(JSON.stringify(testOutput.testCases))
+          : undefined,
       },
     });
 
-    // 9. Award XP and check badges if task passed (first time)
-    let gamificationResult = null;
-    if (finalStatus === 'passed') {
-      // Check if this is first successful submission for this task
-      const previousPassed = await this.prisma.submission.count({
-        where: {
-          userId,
-          taskId: task.id,
-          status: 'passed',
-          id: { not: submission.id },
-        },
-      });
-
-      if (previousPassed === 0) {
-        // First time solving this task - award XP
-        gamificationResult = await this.gamificationService.awardTaskXp(userId, task.difficulty);
-        this.logger.log(
-          `XP awarded: user=${userId}, task=${task.slug}, xp=${gamificationResult.xpEarned}, level=${gamificationResult.level}, leveledUp=${gamificationResult.leveledUp}`
-        );
-      }
-    }
+    // 10. Award XP for first completion
+    const gamificationResult = await this.awardXpIfFirstCompletion(
+      userId,
+      task.id,
+      task.slug,
+      task.difficulty,
+      finalStatus,
+    );
 
     return {
       id: submission.id,
@@ -217,11 +155,10 @@ export class SubmissionsService {
       stdout: result.stdout,
       stderr: result.stderr,
       compileOutput: result.compileOutput,
-      testsPassed: testsTotal > 0 ? testsPassed : undefined,
-      testsTotal: testsTotal > 0 ? testsTotal : undefined,
-      testCases: testCases.length > 0 ? testCases : undefined,
+      testsPassed: testOutput.total > 0 ? testOutput.passed : undefined,
+      testsTotal: testOutput.total > 0 ? testOutput.total : undefined,
+      testCases: testOutput.testCases.length > 0 ? testOutput.testCases : undefined,
       createdAt: submission.createdAt.toISOString(),
-      // Gamification rewards
       xpEarned: gamificationResult?.xpEarned,
       totalXp: gamificationResult?.totalXp,
       level: gamificationResult?.level,
@@ -237,29 +174,35 @@ export class SubmissionsService {
   async runCode(
     code: string,
     language: string,
-    stdin?: string
+    stdin?: string,
+    ip?: string,
+    userId?: string,
   ): Promise<ExecutionResult> {
-    const langKey = language.toLowerCase();
-    if (!LANGUAGES[langKey]) {
-      throw new BadRequestException(
-        `Unsupported language: ${language}. Supported: ${Object.keys(LANGUAGES).join(', ')}`
-      );
-    }
+    // Validate language
+    this.validateLanguage(language);
+
+    // Security: Validate code for malicious patterns
+    await this.securityValidation.validateCode(code, language, { ip, userId });
 
     // Check cache first
-    const cached = await this.cacheService.getExecutionResult<ExecutionResult>(code, language, stdin);
+    const cached = await this.cacheService.getExecutionResult<ExecutionResult>(
+      code,
+      language,
+      stdin,
+      userId,
+    );
     if (cached) {
-      this.logger.log(`Cache hit: lang=${LANGUAGES[langKey].name}`);
+      this.logger.log(`Cache hit: lang=${language}, user=${userId}`);
       return cached;
     }
 
-    this.logger.log(`Run code: lang=${LANGUAGES[langKey].name}, stdin=${stdin ? 'yes' : 'no'}`);
+    this.logger.log(`Run code: lang=${language}, stdin=${stdin ? 'yes' : 'no'}, user=${userId}`);
 
     // Execute code
     const result = await this.codeExecutionService.executeSync(code, language, stdin);
 
-    // Cache the result (only successful executions are cached by the service)
-    await this.cacheService.setExecutionResult(code, language, stdin, result);
+    // Cache the result
+    await this.cacheService.setExecutionResult(code, language, stdin, result, userId);
 
     return result;
   }
@@ -271,7 +214,9 @@ export class SubmissionsService {
   async runQuickTests(
     taskIdentifier: string,
     code: string,
-    language: string
+    language: string,
+    ip?: string,
+    userId?: string,
   ): Promise<{
     status: string;
     testsPassed: number;
@@ -280,78 +225,37 @@ export class SubmissionsService {
     runtime: string;
     message: string;
   }> {
-    // 1. Resolve Task
-    let task = await this.prisma.task.findUnique({
-      where: { id: taskIdentifier },
-    });
+    // Security: Validate code
+    await this.securityValidation.validateCode(code, language, { ip, userId });
 
-    if (!task) {
-      task = await this.prisma.task.findUnique({
-        where: { slug: taskIdentifier },
-      });
-    }
+    // Resolve Task
+    const task = await this.findTaskByIdentifier(taskIdentifier, false);
 
-    if (!task) {
-      throw new NotFoundException(`Task not found: ${taskIdentifier}`);
-    }
+    // Validate language
+    this.validateLanguage(language);
 
-    // 2. Validate language
-    const langConfig = LANGUAGES[language.toLowerCase()];
-    if (!langConfig) {
-      throw new BadRequestException(
-        `Unsupported language: ${language}. Supported: ${Object.keys(LANGUAGES).join(', ')}`
-      );
-    }
+    this.logger.log(`Quick test: task=${task.slug}, lang=${language}`);
 
-    this.logger.log(
-      `Quick test: task=${task.slug}, lang=${langConfig.name}`
+    // Execute code with tests (quick mode - only first 5 tests)
+    const result = await this.executeCode(code, language, task.testCode, 5);
+
+    // Parse test output
+    const testOutput = this.testParser.parseTestOutput(result.stdout, result.stderr);
+
+    // Determine status
+    const status = this.testParser.determineStatus(
+      result.status,
+      testOutput.passed,
+      testOutput.total,
     );
-
-    // 3. Execute code with tests (quick mode - only first 5 tests)
-    let result;
-    if (task.testCode) {
-      result = await this.codeExecutionService.executeSyncWithTests(
-        code,
-        task.testCode,
-        language,
-        5 // Limit to 5 tests for quick mode
-      );
-    } else {
-      // No test code - just run the user's code
-      result = await this.codeExecutionService.executeSync(code, language);
-    }
-
-    // 4. Parse test output
-    const { testCases, passed: testsPassed, total: testsTotal } = this.parseTestOutput(
-      result.stdout,
-      result.stderr
-    );
-
-    // 5. Determine status
-    let status: string;
-    if (result.status === 'compileError') {
-      status = 'error';
-    } else if (testsTotal > 0 && testsPassed < testsTotal) {
-      status = 'failed';
-    } else if (result.status === 'error' || result.status === 'timeout') {
-      status = 'error';
-    } else {
-      status = 'passed';
-    }
-
-    // 6. Format runtime
-    const runtime = result.time === '-' ? '-' : `${Math.round(parseFloat(result.time) * 1000)}ms`;
-
-    // 7. Format message for errors
-    const message = this.formatMessage(result);
 
     return {
       status,
-      testsPassed,
-      testsTotal,
-      testCases,
-      runtime,
-      message,
+      testsPassed: testOutput.passed,
+      testsTotal: testOutput.total,
+      testCases: testOutput.testCases,
+      runtime: this.resultFormatter.formatRuntime(result.time),
+      message: this.resultFormatter.formatMessage(result),
     };
   }
 
@@ -436,166 +340,117 @@ export class SubmissionsService {
     };
   }
 
-  /**
-   * Format execution result into readable message
-   * Returns concise error information only - the UI handles detailed display
-   */
-  private formatMessage(result: ExecutionResult): string {
-    // For passed submissions, no message needed (UI shows status badge)
-    if (result.status === 'passed') {
-      return '';
-    }
-
-    // For errors, include relevant error information
-    if (result.status === 'compileError') {
-      return result.compileOutput || 'Compilation failed';
-    }
-
-    if (result.status === 'timeout') {
-      return 'Time limit exceeded';
-    }
-
-    if (result.status === 'error') {
-      // Include stderr for runtime errors
-      if (result.stderr) {
-        return result.stderr;
-      }
-      return result.message || 'Runtime error';
-    }
-
-    // For failed tests, the UI uses testCases for detailed display
-    // Just return a simple message
-    if (result.status === 'failed') {
-      return result.message || 'Tests failed';
-    }
-
-    return '';
-  }
+  // ============================================
+  // Private Helper Methods
+  // ============================================
 
   /**
-   * Get status emoji
+   * Find task by ID or slug
    */
-  private getStatusEmoji(status: string): string {
-    switch (status) {
-      case 'passed':
-        return 'PASSED';
-      case 'failed':
-        return 'FAILED';
-      case 'timeout':
-        return 'TIMEOUT';
-      case 'compileError':
-        return 'COMPILE_ERROR';
-      case 'error':
-        return 'ERROR';
-      default:
-        return 'UNKNOWN';
-    }
-  }
-
-  /**
-   * Parse test output - supports JSON format from our test runners
-   */
-  private parseTestOutput(stdout: string, stderr: string): {
-    testCases: TestCaseResult[];
-    passed: number;
-    total: number;
-  } {
-    const output = stdout.trim();
-
-    // Try to parse JSON output from test runner
-    try {
-      // Find JSON in output (might have other text before/after)
-      const jsonMatch = output.match(/\{[\s\S]*"tests"[\s\S]*\}/);
-      if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0]);
-        if (parsed.tests && Array.isArray(parsed.tests)) {
-          const testCases: TestCaseResult[] = parsed.tests.map((t: any) => ({
-            name: t.name || 'test',
-            passed: t.passed || false,
-            expectedOutput: t.expected,
-            actualOutput: t.output,
-            error: t.error,
-          }));
-          return {
-            testCases,
-            passed: parsed.passed || 0,
-            total: parsed.total || testCases.length,
-          };
-        }
-      }
-    } catch {
-      // JSON parse failed, try legacy format
-    }
-
-    // Legacy format: === RUN / --- PASS/FAIL
-    const testCases: TestCaseResult[] = [];
-    const runPattern = /=== RUN\s+(\S+)/g;
-    const passPattern = /--- PASS:\s*(\S+)/g;
-    const failPattern = /--- FAIL:\s*(\S+)/g;
-
-    const fullOutput = stdout + '\n' + stderr;
-    const testNames: string[] = [];
-    let match;
-
-    while ((match = runPattern.exec(fullOutput)) !== null) {
-      if (!testNames.includes(match[1])) {
-        testNames.push(match[1]);
-      }
-    }
-
-    const passedTests = new Set<string>();
-    while ((match = passPattern.exec(fullOutput)) !== null) {
-      passedTests.add(match[1]);
-    }
-
-    const failedTests = new Set<string>();
-    while ((match = failPattern.exec(fullOutput)) !== null) {
-      failedTests.add(match[1]);
-    }
-
-    for (const testName of testNames) {
-      const passed = passedTests.has(testName);
-      const failed = failedTests.has(testName);
-
-      const testCase: TestCaseResult = {
-        name: testName,
-        passed: passed && !failed,
-      };
-
-      if (failed) {
-        const errorMatch = fullOutput.match(new RegExp(
-          `--- FAIL:\\s*${testName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[\\s\\S]*?error:\\s*([^\\n]+)`,
-          'i'
-        ));
-        if (errorMatch) {
-          testCase.error = errorMatch[1].trim();
-          const expectedActual = testCase.error.match(
-            /(?:expected|want)[:\s]+(.+?)(?:,\s*|\s+)(?:got|actual|but was)[:\s]+(.+)/i
-          );
-          if (expectedActual) {
-            testCase.expectedOutput = expectedActual[1].trim();
-            testCase.actualOutput = expectedActual[2].trim();
+  private async findTaskByIdentifier(
+    identifier: string,
+    includeRelations = true,
+  ): Promise<any> {
+    const task = await this.prisma.task.findFirst({
+      where: {
+        OR: [{ id: identifier }, { slug: identifier }],
+      },
+      include: includeRelations
+        ? {
+            topic: {
+              include: {
+                module: { select: { courseId: true } },
+              },
+            },
           }
-        }
+        : undefined,
+    });
+
+    if (!task) {
+      throw new NotFoundException(`Task not found: ${identifier}`);
+    }
+
+    return task;
+  }
+
+  /**
+   * Validate language is supported
+   */
+  private validateLanguage(language: string): void {
+    const langKey = language.toLowerCase();
+    if (!LANGUAGES[langKey]) {
+      throw new BadRequestException(
+        `Unsupported language: ${language}. Supported: ${Object.keys(LANGUAGES).join(', ')}`,
+      );
+    }
+  }
+
+  /**
+   * Execute code with or without tests
+   */
+  private async executeCode(
+    code: string,
+    language: string,
+    testCode?: string | null,
+    maxTests?: number,
+  ): Promise<ExecutionResult> {
+    if (testCode) {
+      return this.codeExecutionService.executeSyncWithTests(
+        code,
+        testCode,
+        language,
+        maxTests,
+      );
+    }
+    return this.codeExecutionService.executeSync(code, language);
+  }
+
+  /**
+   * Award XP for first task completion
+   * Uses TaskCompletion table with unique constraint for race-safe operation
+   */
+  private async awardXpIfFirstCompletion(
+    userId: string,
+    taskId: string,
+    taskSlug: string,
+    difficulty: string,
+    status: string,
+  ): Promise<{
+    xpEarned: number;
+    totalXp: number;
+    level: number;
+    leveledUp: boolean;
+    newBadges: Array<{ slug: string; name: string; icon: string }>;
+  } | null> {
+    if (status !== 'passed') {
+      return null;
+    }
+
+    const xpEarned = this.resultFormatter.getXpForDifficulty(difficulty);
+
+    try {
+      // Try to create TaskCompletion record - will fail if already exists (race-safe)
+      await this.prisma.taskCompletion.create({
+        data: {
+          userId,
+          taskId,
+          xpAwarded: xpEarned,
+        },
+      });
+
+      // First completion - award XP
+      const result = await this.gamificationService.awardTaskXp(userId, difficulty);
+      this.logger.log(
+        `XP awarded: user=${userId}, task=${taskSlug}, xp=${result.xpEarned}, level=${result.level}, leveledUp=${result.leveledUp}`,
+      );
+      return result;
+    } catch (error: any) {
+      // Unique constraint violation = already completed, skip XP award
+      if (error.code === 'P2002') {
+        this.logger.debug(`Task already completed: user=${userId}, task=${taskSlug}`);
+        return null;
       }
-
-      testCases.push(testCase);
+      throw error;
     }
-
-    // Try to get count from RESULT line
-    const resultMatch = fullOutput.match(/RESULT:\s*(\d+)\/(\d+)/);
-    if (resultMatch) {
-      return {
-        testCases,
-        passed: parseInt(resultMatch[1], 10),
-        total: parseInt(resultMatch[2], 10),
-      };
-    }
-
-    return {
-      testCases,
-      passed: testCases.filter(t => t.passed).length,
-      total: testCases.length,
-    };
   }
 }

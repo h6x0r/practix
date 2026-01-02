@@ -1,6 +1,8 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios, { AxiosInstance } from 'axios';
+import * as http from 'http';
+import * as https from 'https';
 
 /**
  * Piston Language Runtime Configuration
@@ -152,25 +154,51 @@ export const LANGUAGES: Record<string, LanguageConfig> = {
 };
 
 @Injectable()
-export class PistonService implements OnModuleInit {
+export class PistonService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(PistonService.name);
   private readonly client: AxiosInstance;
   private readonly pistonUrl: string;
+  private readonly httpAgent: http.Agent;
+  private readonly httpsAgent: https.Agent;
   private availableRuntimes: PistonRuntime[] = [];
   private isAvailable = false;
 
   constructor(private config: ConfigService) {
     this.pistonUrl = this.config.get('PISTON_URL') || 'http://piston:2000';
 
+    // Create HTTP agents with connection pooling for better performance
+    this.httpAgent = new http.Agent({
+      keepAlive: true,
+      maxSockets: 10, // Max concurrent connections
+      maxFreeSockets: 5, // Max idle connections to keep open
+      timeout: 60000, // Socket timeout
+    });
+
+    this.httpsAgent = new https.Agent({
+      keepAlive: true,
+      maxSockets: 10,
+      maxFreeSockets: 5,
+      timeout: 60000,
+    });
+
     this.client = axios.create({
       baseURL: `${this.pistonUrl}/api/v2`,
       timeout: 60000,
+      httpAgent: this.httpAgent,
+      httpsAgent: this.httpsAgent,
       headers: {
         'Content-Type': 'application/json',
       },
     });
 
-    this.logger.log(`Piston configured: ${this.pistonUrl}`);
+    this.logger.log(`Piston configured: ${this.pistonUrl} (connection pooling enabled)`);
+  }
+
+  async onModuleDestroy() {
+    // Destroy HTTP agents to close all open connections
+    this.httpAgent.destroy();
+    this.httpsAgent.destroy();
+    this.logger.log('HTTP agents destroyed');
   }
 
   async onModuleInit() {
@@ -260,11 +288,11 @@ export class PistonService implements OnModuleInit {
       return this.errorResult(`Unsupported language: ${language}`);
     }
 
-    // Check availability first - if not available, use smart mock with real test names
+    // Check availability first - return user-friendly error if unavailable
     const available = await this.checkHealth();
     if (!available) {
-      this.logger.warn('Piston unavailable, using mock execution with test extraction');
-      return this.mockTestExecution(testCode, langConfig, maxTests);
+      this.logger.warn('Piston unavailable, returning service unavailable error');
+      return this.serviceUnavailableResult();
     }
 
     // Build combined code based on language
@@ -319,36 +347,6 @@ export class PistonService implements OnModuleInit {
     return testNames.length > 0 ? testNames : ['test_1', 'test_2', 'test_3'];
   }
 
-  /**
-   * Mock test execution that extracts real test names from testCode
-   */
-  private mockTestExecution(testCode: string, langConfig: LanguageConfig, maxTests?: number): ExecutionResult {
-    let testNames = this.extractTestNames(testCode);
-
-    // Limit tests if maxTests is specified
-    if (maxTests && testNames.length > maxTests) {
-      testNames = testNames.slice(0, maxTests);
-    }
-
-    // Generate parseable output for test counting (minimal format)
-    let output = '';
-    testNames.forEach(name => {
-      output += `=== RUN   ${name}\n`;
-      output += `--- PASS: ${name}\n`;
-    });
-
-    return {
-      status: 'passed',
-      statusId: 3,
-      description: 'Accepted',
-      stdout: output,
-      stderr: '',
-      compileOutput: '',
-      time: '-',
-      memory: 0,
-      exitCode: 0,
-    };
-  }
 
   /**
    * Build Python code that runs tests without pytest dependency
@@ -670,11 +668,11 @@ ${cleanTests}
       return this.errorResult(`Unsupported language: ${language}`);
     }
 
-    // Check availability
+    // Check availability - return user-friendly error if unavailable
     const available = await this.checkHealth();
     if (!available) {
-      this.logger.warn('Piston unavailable, using mock execution');
-      return this.mockExecution(code, langConfig);
+      this.logger.warn('Piston unavailable, returning service unavailable error');
+      return this.serviceUnavailableResult();
     }
 
     try {
@@ -722,30 +720,38 @@ ${cleanTests}
 
       // Check for 400 error (usually means language not available)
       if (statusCode === 400) {
-        this.logger.warn(`Language runtime not available, falling back to mock`);
-        return this.mockExecution(code, langConfig);
+        this.logger.warn(`Language runtime not available: ${langConfig.name}`);
+        return this.errorResult(`Language ${langConfig.name} is temporarily unavailable. Please try again later.`);
       }
 
-      // Connection errors
+      // Connection errors - return user-friendly message
       if (errorCode === 'ECONNREFUSED' || errorCode === 'ENOTFOUND') {
-        this.logger.warn(`Piston connection failed, falling back to mock`);
-        return this.mockExecution(code, langConfig);
+        this.logger.warn(`Piston connection failed`);
+        return this.serviceUnavailableResult();
       }
 
       // Generic error with user-friendly message
-      return {
-        status: 'error',
-        statusId: 13,
-        description: 'Service Temporarily Unavailable',
-        stdout: '',
-        stderr: 'Code execution service is temporarily unavailable. Please try again in a moment.',
-        compileOutput: '',
-        time: '-',
-        memory: 0,
-        exitCode: null,
-        message: 'Please try again later',
-      };
+      return this.serviceUnavailableResult();
     }
+  }
+
+  /**
+   * Return user-friendly error when service is unavailable
+   * No mock execution - honest feedback to user
+   */
+  private serviceUnavailableResult(): ExecutionResult {
+    return {
+      status: 'error',
+      statusId: 13,
+      description: 'Service Temporarily Unavailable',
+      stdout: '',
+      stderr: '',
+      compileOutput: '',
+      time: '-',
+      memory: 0,
+      exitCode: null,
+      message: 'Code execution service is temporarily unavailable. Please try again in a few minutes.',
+    };
   }
 
   /**
@@ -812,81 +818,6 @@ ${cleanTests}
       time,
       memory,
       exitCode: run.code,
-    };
-  }
-
-  /**
-   * Mock execution for development/fallback
-   * Provides user-friendly feedback when execution service is unavailable
-   */
-  private mockExecution(code: string, langConfig: LanguageConfig): ExecutionResult {
-    this.logger.debug(`Mock execution for ${langConfig.name} - service unavailable`);
-
-    // Check for obvious syntax errors we can detect
-    const hasError = code.includes('panic') || code.includes('throw') || code.includes('raise');
-    const hasCompileError = code.includes('syntax error') || code.includes('undefined:');
-
-    if (hasCompileError) {
-      return {
-        status: 'compileError',
-        statusId: 6,
-        description: 'Compilation Error',
-        stdout: '',
-        stderr: '',
-        compileOutput: 'Syntax error detected in your code',
-        time: '-',
-        memory: 0,
-        exitCode: 1,
-        message: 'Please check your code syntax',
-      };
-    }
-
-    if (hasError) {
-      return {
-        status: 'error',
-        statusId: 11,
-        description: 'Runtime Error',
-        stdout: '',
-        stderr: 'Your code may contain runtime errors (panic/throw detected)',
-        compileOutput: '',
-        time: '-',
-        memory: 0,
-        exitCode: 1,
-        message: 'Check for runtime errors in your code',
-      };
-    }
-
-    // Check if this is a test execution (contains test runner code)
-    const isTestExecution = code.includes('=== RUN') ||
-                            code.includes('test_') ||
-                            code.includes('Test') && code.includes('def ');
-
-    if (isTestExecution) {
-      // Mock test execution - return minimal parseable output
-      return {
-        status: 'passed',
-        statusId: 3,
-        description: 'Accepted',
-        stdout: `=== RUN   test_1\n--- PASS: test_1\n=== RUN   test_2\n--- PASS: test_2\n`,
-        stderr: '',
-        compileOutput: '',
-        time: '-',
-        memory: 0,
-        exitCode: 0,
-      };
-    }
-
-    // Success case
-    return {
-      status: 'passed',
-      statusId: 3,
-      description: 'Accepted',
-      stdout: '',
-      stderr: '',
-      compileOutput: '',
-      time: '-',
-      memory: 0,
-      exitCode: 0,
     };
   }
 

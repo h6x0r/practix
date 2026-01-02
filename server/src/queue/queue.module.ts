@@ -3,8 +3,9 @@ import { BullModule } from '@nestjs/bullmq';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { CodeExecutionProcessor } from './code-execution.processor';
 import { CodeExecutionService } from './code-execution.service';
+import { DeadLetterService } from './dead-letter.service';
 import { PistonModule } from '../piston/piston.module';
-import { CODE_EXECUTION_QUEUE } from './constants';
+import { CODE_EXECUTION_QUEUE, DEAD_LETTER_QUEUE } from './constants';
 
 @Module({
   imports: [
@@ -16,30 +17,43 @@ import { CODE_EXECUTION_QUEUE } from './constants';
         connection: {
           host: configService.get('REDIS_HOST') || 'redis',
           port: parseInt(configService.get('REDIS_PORT') || '6379', 10),
+          password: configService.get('REDIS_PASSWORD') || undefined,
         },
       }),
       inject: [ConfigService],
     }),
-    BullModule.registerQueue({
-      name: CODE_EXECUTION_QUEUE,
-      defaultJobOptions: {
-        attempts: 3,
-        backoff: {
-          type: 'exponential',
-          delay: 5000, // 5s → 10s → 20s (covers ~15s Piston restart)
-        },
-        removeOnComplete: {
-          count: 100, // Keep last 100 completed jobs
-          age: 3600,  // Remove jobs older than 1 hour
-        },
-        removeOnFail: {
-          count: 50,  // Keep last 50 failed jobs
-          age: 86400, // Remove failed jobs older than 24 hours
+    BullModule.registerQueue(
+      {
+        name: CODE_EXECUTION_QUEUE,
+        defaultJobOptions: {
+          attempts: 3,
+          backoff: {
+            type: 'exponential',
+            delay: 5000, // 5s → 10s → 20s (covers ~15s Piston restart)
+          },
+          removeOnComplete: {
+            count: 100, // Keep last 100 completed jobs
+            age: 3600,  // Remove jobs older than 1 hour
+          },
+          removeOnFail: false, // Keep failed jobs for DLQ processing
         },
       },
-    }),
+      {
+        name: DEAD_LETTER_QUEUE,
+        defaultJobOptions: {
+          removeOnComplete: {
+            count: 500, // Keep more DLQ jobs for analysis
+            age: 604800, // 7 days
+          },
+          removeOnFail: {
+            count: 100,
+            age: 604800, // 7 days
+          },
+        },
+      },
+    ),
   ],
-  providers: [CodeExecutionProcessor, CodeExecutionService],
-  exports: [CodeExecutionService],
+  providers: [CodeExecutionProcessor, CodeExecutionService, DeadLetterService],
+  exports: [CodeExecutionService, DeadLetterService],
 })
 export class QueueModule {}

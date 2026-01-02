@@ -1,4 +1,5 @@
 import { Controller, Post, Body, UseGuards, Request } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { AiService } from './ai.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { AskAiDto } from './dto/ai.dto';
@@ -9,6 +10,7 @@ export class AiController {
 
   @UseGuards(JwtAuthGuard)
   @Post('tutor')
+  @Throttle({ default: { limit: 1, ttl: 5000 } }) // 1 request per 5 seconds - prevents spam while allowing reasonable usage
   async askTutor(
     @Request() req,
     @Body() body: AskAiDto

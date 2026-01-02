@@ -1,15 +1,24 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Session } from '@prisma/client';
+import * as crypto from 'crypto';
 
 @Injectable()
 export class SessionsService {
   constructor(private prisma: PrismaService) {}
 
   /**
+   * Hash a token using SHA256
+   * This is a one-way hash to protect tokens if DB is compromised
+   */
+  private hashToken(token: string): string {
+    return crypto.createHash('sha256').update(token).digest('hex');
+  }
+
+  /**
    * Create a new session for a user
    * @param userId - User ID
-   * @param token - JWT token
+   * @param token - JWT token (will be hashed before storage)
    * @param deviceInfo - Optional device information (browser, OS)
    * @param ipAddress - Optional IP address
    * @returns Created session
@@ -24,10 +33,13 @@ export class SessionsService {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
 
+    // Hash token before storing - protects against DB leaks
+    const tokenHash = this.hashToken(token);
+
     return this.prisma.session.create({
       data: {
         userId,
-        token,
+        token: tokenHash, // Store hash, not plaintext
         deviceInfo,
         ipAddress,
         expiresAt,
@@ -39,12 +51,15 @@ export class SessionsService {
   /**
    * Validate a session by token
    * Returns the session if valid and active, null otherwise
-   * @param token - JWT token
+   * @param token - JWT token (will be hashed for lookup)
    * @returns Session or null
    */
   async validateSession(token: string): Promise<Session | null> {
+    // Hash the incoming token for comparison
+    const tokenHash = this.hashToken(token);
+
     const session = await this.prisma.session.findUnique({
-      where: { token },
+      where: { token: tokenHash },
     });
 
     if (!session) {
@@ -117,13 +132,16 @@ export class SessionsService {
 
   /**
    * Update the last active timestamp for a session
-   * @param token - JWT token
+   * @param token - JWT token (will be hashed for lookup)
    * @returns Updated session or null if not found
    */
   async updateLastActive(token: string): Promise<Session | null> {
     try {
+      // Hash the incoming token for lookup
+      const tokenHash = this.hashToken(token);
+
       return await this.prisma.session.update({
-        where: { token },
+        where: { token: tokenHash },
         data: {
           lastActiveAt: new Date(),
         },
@@ -132,5 +150,49 @@ export class SessionsService {
       // Session not found
       return null;
     }
+  }
+
+  /**
+   * Clean up old invalidated or expired sessions
+   * Should be called periodically (e.g., daily via cron)
+   * @param olderThanDays - Delete sessions older than this many days (default: 30)
+   * @returns Number of sessions deleted
+   */
+  async cleanupOldSessions(olderThanDays = 30): Promise<number> {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - olderThanDays);
+
+    const result = await this.prisma.session.deleteMany({
+      where: {
+        OR: [
+          // Delete invalidated sessions older than cutoff
+          {
+            isActive: false,
+            lastActiveAt: { lt: cutoffDate },
+          },
+          // Delete expired sessions older than cutoff
+          {
+            expiresAt: { lt: cutoffDate },
+          },
+        ],
+      },
+    });
+
+    return result.count;
+  }
+
+  /**
+   * Get session count per user (for monitoring/limiting)
+   * @param userId - User ID
+   * @returns Count of active sessions
+   */
+  async getActiveSessionCount(userId: string): Promise<number> {
+    return this.prisma.session.count({
+      where: {
+        userId,
+        isActive: true,
+        expiresAt: { gte: new Date() },
+      },
+    });
   }
 }

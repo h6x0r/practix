@@ -1,7 +1,7 @@
 
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateUserData, UserPreferences, UserPlan } from '../common/types';
+import { CreateUserData, UserPreferences } from '../common/types';
 
 export interface UserStats {
   totalSolved: number;
@@ -25,15 +25,69 @@ export interface DayActivity {
 export class UsersService {
   constructor(private prisma: PrismaService) {}
 
-  async findOne(email: string) {
+  /**
+   * Find user by email for authentication (includes password hash)
+   * ONLY use this for login verification!
+   */
+  async findOneForAuth(email: string) {
     return this.prisma.user.findUnique({
       where: { email },
     });
   }
 
+  /**
+   * Find user by email (excludes password)
+   * Safe for general use
+   */
+  async findOne(email: string) {
+    return this.prisma.user.findUnique({
+      where: { email },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        avatarUrl: true,
+        isPremium: true,
+        plan: true,
+        preferences: true,
+        role: true,
+        xp: true,
+        level: true,
+        currentStreak: true,
+        maxStreak: true,
+        lastActivityAt: true,
+        createdAt: true,
+        updatedAt: true,
+        // password explicitly NOT selected
+      },
+    });
+  }
+
+  /**
+   * Find user by ID (excludes password)
+   * Safe for general use
+   */
   async findById(id: string) {
     return this.prisma.user.findUnique({
       where: { id },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        avatarUrl: true,
+        isPremium: true,
+        plan: true,
+        preferences: true,
+        role: true,
+        xp: true,
+        level: true,
+        currentStreak: true,
+        maxStreak: true,
+        lastActivityAt: true,
+        createdAt: true,
+        updatedAt: true,
+        // password explicitly NOT selected
+      },
     });
   }
 
@@ -50,15 +104,9 @@ export class UsersService {
     });
   }
 
-  async updatePlan(userId: string, isPremium: boolean, plan: UserPlan) {
-    return this.prisma.user.update({
-      where: { id: userId },
-      data: {
-        isPremium,
-        plan
-      },
-    });
-  }
+  // NOTE: updatePlan method removed - isPremium should always be computed
+  // from active subscriptions, not stored as a cached field.
+  // Use SubscriptionsService to manage subscriptions.
 
   /**
    * Update user avatar URL

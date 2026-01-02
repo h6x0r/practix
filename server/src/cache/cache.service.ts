@@ -20,9 +20,12 @@ export class CacheService implements OnModuleInit, OnModuleDestroy {
 
   async onModuleInit() {
     try {
+      const redisPassword = this.config.get('REDIS_PASSWORD');
+
       this.redis = new Redis({
         host: this.config.get('REDIS_HOST') || 'redis',
         port: parseInt(this.config.get('REDIS_PORT') || '6379', 10),
+        password: redisPassword || undefined,
         maxRetriesPerRequest: 3,
         retryStrategy: (times) => {
           if (times > 3) {
@@ -66,20 +69,28 @@ export class CacheService implements OnModuleInit, OnModuleDestroy {
 
   /**
    * Generate cache key for code execution
+   * Includes userId to prevent cross-user cache pollution and information leakage
    */
-  getExecutionCacheKey(code: string, language: string, stdin?: string): string {
-    const hash = this.generateHash(`${code}:${language}:${stdin || ''}`);
+  getExecutionCacheKey(code: string, language: string, stdin?: string, userId?: string): string {
+    // Include userId in hash to isolate cache per user
+    // This prevents: 1) cross-user data leakage 2) test cheating via cache
+    const hash = this.generateHash(`${userId || 'anon'}:${code}:${language}:${stdin || ''}`);
     return `exec:${language}:${hash}`;
   }
 
   /**
    * Get cached execution result
    */
-  async getExecutionResult<T = Record<string, any>>(code: string, language: string, stdin?: string): Promise<T | null> {
+  async getExecutionResult<T = Record<string, any>>(
+    code: string,
+    language: string,
+    stdin?: string,
+    userId?: string,
+  ): Promise<T | null> {
     if (!this.isConnected) return null;
 
     try {
-      const key = this.getExecutionCacheKey(code, language, stdin);
+      const key = this.getExecutionCacheKey(code, language, stdin, userId);
       const cached = await this.redis.get(key);
 
       if (cached) {
@@ -102,6 +113,7 @@ export class CacheService implements OnModuleInit, OnModuleDestroy {
     language: string,
     stdin: string | undefined,
     result: T & { status?: string },
+    userId?: string,
   ): Promise<void> {
     if (!this.isConnected) return;
 
@@ -109,7 +121,7 @@ export class CacheService implements OnModuleInit, OnModuleDestroy {
     if (result.status !== 'passed') return;
 
     try {
-      const key = this.getExecutionCacheKey(code, language, stdin);
+      const key = this.getExecutionCacheKey(code, language, stdin, userId);
       await this.redis.setex(key, this.EXECUTION_CACHE_TTL, JSON.stringify(result));
       this.logger.debug(`Cached result for ${key}`);
     } catch (error) {
@@ -160,17 +172,36 @@ export class CacheService implements OnModuleInit, OnModuleDestroy {
 
   /**
    * Delete cache entries by pattern (e.g., "courses:*")
+   * Uses SCAN instead of KEYS to avoid blocking Redis
    */
   async deleteByPattern(pattern: string): Promise<number> {
     if (!this.isConnected) return 0;
 
     try {
-      const keys = await this.redis.keys(pattern);
-      if (keys.length > 0) {
-        await this.redis.del(...keys);
-        this.logger.log(`Deleted ${keys.length} cache entries matching: ${pattern}`);
+      let deletedCount = 0;
+      let cursor = '0';
+
+      // Use SCAN to iterate through keys non-blocking
+      do {
+        const [nextCursor, keys] = await this.redis.scan(
+          cursor,
+          'MATCH',
+          pattern,
+          'COUNT',
+          100, // Process 100 keys per iteration
+        );
+        cursor = nextCursor;
+
+        if (keys.length > 0) {
+          await this.redis.del(...keys);
+          deletedCount += keys.length;
+        }
+      } while (cursor !== '0');
+
+      if (deletedCount > 0) {
+        this.logger.log(`Deleted ${deletedCount} cache entries matching: ${pattern}`);
       }
-      return keys.length;
+      return deletedCount;
     } catch (error) {
       this.logger.warn(`Cache deleteByPattern error: ${error.message}`);
       return 0;

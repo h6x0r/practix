@@ -28,6 +28,7 @@ services:
 
   ##############################################################################
   # Redis for BullMQ Queue
+  # SECURITY: Password protected, port not exposed in production
   ##############################################################################
   redis:
     image: redis:7-alpine
@@ -35,15 +36,21 @@ services:
     restart: unless-stopped
     command: >
       redis-server
-      --maxmemory 256mb
+      --maxmemory 1gb
       --maxmemory-policy allkeys-lru
       --appendonly yes
-    ports:
-      - "6379:6379"
+      --requirepass ${REDIS_PASSWORD:-kodla_redis_secure_password_2025}
+    # NOTE: Remove port exposure in production - only internal access
+    # For local development, you can uncomment this:
+    # ports:
+    #   - "127.0.0.1:6379:6379"
     volumes:
       - redis_data:/data
+    # Container memory limits
+    mem_limit: 1200m  # Slightly more than maxmemory to allow for overhead
+    memswap_limit: 1200m
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-kodla_redis_secure_password_2025}", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -93,16 +100,28 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     environment:
-      DATABASE_URL: postgresql://kodla_user:kodla_secure_password@db:5432/kodla_db?schema=public
+      DATABASE_URL: postgresql://kodla_user:kodla_secure_password@db:5432/kodla_db?schema=public&connection_limit=20&pool_timeout=10
       JWT_SECRET: ${JWT_SECRET:-super_secret_jwt_key_kodla_v1_production_ready_2025}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       PORT: 8080
       SKIP_SEED: ${SKIP_SEED:-false}
+      NODE_ENV: ${NODE_ENV:-production}
       # Piston Configuration
       PISTON_URL: http://piston:2000
-      # Redis Configuration
+      # Redis Configuration (with password)
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-kodla_redis_secure_password_2025}
+      # Security Configuration
+      ENABLE_IP_BAN: ${ENABLE_IP_BAN:-true}
+      SUSPICIOUS_ACTIVITY_LOG: ${SUSPICIOUS_ACTIVITY_LOG:-true}
+      MALICIOUS_CODE_CHECK: ${MALICIOUS_CODE_CHECK:-true}
+      IP_BAN_THRESHOLD: ${IP_BAN_THRESHOLD:-5}
+      IP_BAN_DURATION_HOURS: ${IP_BAN_DURATION_HOURS:-24}
+      # Rate Limiting
+      RATE_LIMIT_RUN_FREE: ${RATE_LIMIT_RUN_FREE:-10}
+      RATE_LIMIT_RUN_AUTH: ${RATE_LIMIT_RUN_AUTH:-10}
+      RATE_LIMIT_RUN_PREMIUM: ${RATE_LIMIT_RUN_PREMIUM:-5}
     ports:
       - "8080:8080"
     depends_on:

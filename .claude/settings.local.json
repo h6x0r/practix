@@ -141,7 +141,12 @@
       "mcp__playwright__browser_take_screenshot",
       "Bash(docker cp:*)",
       "mcp__playwright__browser_close",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(npm run test:coverage:*)",
+      "WebSearch",
+      "WebFetch(domain:deepmind.google)",
+      "Bash(git reset:*)"
     ],
     "deny": [],
     "ask": []

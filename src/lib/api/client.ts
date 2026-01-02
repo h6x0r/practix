@@ -43,20 +43,19 @@ const fetchWithRetry = async (
   url: string,
   options: RequestInit
 ): Promise<Response> => {
-  let lastError: unknown;
+  let attempt = 1;
 
-  for (let attempt = 1; attempt <= RETRY_CONFIG.maxAttempts; attempt++) {
+  while (true) {
     try {
       return await fetch(url, options);
     } catch (error) {
-      lastError = error;
-
       // Don't retry aborted requests
       if (isAbortError(error)) {
         throw error;
       }
 
-      if (!isNetworkError(error) || attempt === RETRY_CONFIG.maxAttempts) {
+      // Don't retry non-network errors or if we've exhausted retries
+      if (!isNetworkError(error) || attempt >= RETRY_CONFIG.maxAttempts) {
         throw error;
       }
 
@@ -67,10 +66,9 @@ const fetchWithRetry = async (
 
       log.warn(`Network error, retry ${attempt}/${RETRY_CONFIG.maxAttempts} in ${delay}ms`);
       await sleep(delay);
+      attempt++;
     }
   }
-
-  throw lastError;
 };
 
 // Global callback registry for auth failures (e.g. 401)

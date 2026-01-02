@@ -9,48 +9,38 @@ import { AccessControlService } from '../subscriptions/access-control.service';
 export class AiService {
   private readonly logger = new Logger(AiService.name);
   private genAI: GoogleGenAI;
-  
-  // Rate Limits
-  private readonly LIMIT_FREE = 3;
-  private readonly LIMIT_PREMIUM = 15;
 
-  private readonly PROMPT_TEMPLATE = `
-You are KODLA AI Tutor - an expert programming mentor for \${language}.
+  // Daily request limits by subscription type
+  private readonly LIMIT_COURSE_SUBSCRIPTION = 30; // Course subscription
+  private readonly LIMIT_GLOBAL_PREMIUM = 50; // Global premium subscription
 
-## CRITICAL RULES:
-1. **NEVER give the complete solution code** - this is the most important rule
-2. **ALWAYS respond in \${uiLanguage}** (the user's interface language)
-3. Guide students to discover answers themselves through hints and explanations
-4. Be encouraging but honest about mistakes
+  // Optimized prompt for Flash-Lite: concise, instruction-following
+  private readonly PROMPT_TEMPLATE = `You are KODLA AI Tutor for \${language}.
 
-## CONTEXT:
-- Task: "\${taskTitle}"
-- Programming Language: \${language}
-- User's UI Language: \${uiLanguage}
+RULES:
+- NEVER give complete solution code
+- Respond in \${uiLanguage} only
+- Be concise (under 250 words)
+- One code example max (2-3 lines)
 
-## Student's Current Code:
+CONTEXT:
+Task: "\${taskTitle}"
+Language: \${language}
+
+Student's Code:
 \`\`\`\${language}
 \${userCode}
 \`\`\`
 
-## Student's Question:
-"\${question}"
+Question: "\${question}"
 
-## YOUR RESPONSE APPROACH:
-1. First, acknowledge what the student is trying to do
-2. If there's a bug: explain WHY it's wrong conceptually, don't just fix it
-3. Give a small hint or pseudo-code, never the full implementation
-4. Ask a guiding question to make them think
-5. If they're stuck on syntax, you can show a small 1-2 line example (not the solution)
+RESPONSE FORMAT:
+1. Brief acknowledgment (1 sentence)
+2. Explain the issue conceptually
+3. One small hint or pseudo-code snippet
+4. End with ONE guiding question
 
-## LANGUAGE MAPPING:
-- "en" = English
-- "ru" = Russian (respond entirely in Russian)
-- "uz" = Uzbek (respond entirely in Uzbek)
-
-Remember: Your goal is to TEACH, not to solve. A good tutor asks questions that lead to understanding.
-Use Markdown formatting for clarity (code blocks, bullet points, etc.).
-  `;
+Languages: en=English, ru=Russian, uz=Uzbek`;
 
   constructor(
     private prisma: PrismaService,
@@ -75,12 +65,15 @@ Use Markdown formatting for clarity (code blocks, bullet points, etc.).
       throw new ForbiddenException('AI Tutor requires a subscription. Upgrade to Premium to access this feature.');
     }
 
-    // 2. Check Rate Limit with atomic transaction to prevent race conditions
-    const user = await this.usersService.findById(userId);
-    const today = new Date().toISOString().split('T')[0];
-    const limit = user.isPremium ? this.LIMIT_PREMIUM : this.LIMIT_FREE;
+    // 2. Determine limit based on subscription type (global vs course)
+    const hasGlobalAccess = await this.accessControlService.hasGlobalAccess(userId);
+    const limit = hasGlobalAccess
+      ? this.LIMIT_GLOBAL_PREMIUM   // 50/day for global premium
+      : this.LIMIT_COURSE_SUBSCRIPTION; // 30/day for course subscription
 
-    // Atomic upsert and check within transaction
+    // 3. Check Rate Limit with atomic transaction to prevent race conditions
+    const today = new Date().toISOString().split('T')[0];
+
     const usageResult = await this.prisma.$transaction(async (tx) => {
       // Create or get usage record
       const usage = await tx.aiUsage.upsert({
@@ -91,7 +84,7 @@ Use Markdown formatting for clarity (code blocks, bullet points, etc.).
 
       // Check limit BEFORE incrementing
       if (usage.count >= limit) {
-        return { exceeded: true, count: usage.count };
+        return { exceeded: true, count: usage.count, limit };
       }
 
       // Atomic increment - only succeeds if count still < limit
@@ -99,28 +92,27 @@ Use Markdown formatting for clarity (code blocks, bullet points, etc.).
         where: {
           userId,
           date: today,
-          count: { lt: limit }, // Only increment if still under limit
+          count: { lt: limit },
         },
         data: { count: { increment: 1 } },
       });
 
       // If no rows were updated, another request beat us
       if (updated.count === 0) {
-        return { exceeded: true, count: limit };
+        return { exceeded: true, count: limit, limit };
       }
 
-      return { exceeded: false, count: usage.count + 1 };
+      return { exceeded: false, count: usage.count + 1, limit };
     });
 
     if (usageResult.exceeded) {
-      throw new ForbiddenException(
-        `Daily AI limit reached (${usageResult.count}/${limit}). Upgrade to Premium for more.`
-      );
+      // Don't expose exact numbers - cleaner error message
+      throw new ForbiddenException('Daily AI Tutor limit reached. Try again tomorrow.');
     }
 
     const currentCount = usageResult.count;
 
-    // 2. Prepare Prompt with language mapping
+    // 4. Prepare Prompt with language mapping
     const languageNames: Record<string, string> = {
       en: 'English',
       ru: 'Russian',
@@ -136,25 +128,36 @@ Use Markdown formatting for clarity (code blocks, bullet points, etc.).
         .replace(/\${uiLanguage}/g, uiLangFull);
 
     try {
-        // 3. Call Gemini
+        // 5. Call Gemini Flash-Lite (cost-efficient, faster, better for hints)
         const response = await this.genAI.models.generateContent({
-            model: 'gemini-2.5-flash',
+            model: 'gemini-2.5-flash-lite',
             contents: prompt,
         });
 
         const text = response.text;
 
-        // Usage was already incremented in the transaction above
-        return { answer: text, remaining: limit - currentCount };
+        // Return remaining requests count for UI
+        return {
+          answer: text,
+          remaining: usageResult.limit - currentCount,
+          isGlobalPremium: hasGlobalAccess,
+        };
 
     } catch (error) {
         this.logger.error('Gemini API call failed', error instanceof Error ? error.stack : String(error));
 
         // Rollback the usage increment on failure
+        // Use exact count match to prevent race conditions:
+        // - Won't decrement below 0
+        // - Won't decrement if another request already decremented
+        // - Only affects our specific increment
         await this.prisma.aiUsage.updateMany({
-          where: { userId, date: today, count: { gt: 0 } },
+          where: { userId, date: today, count: currentCount },
           data: { count: { decrement: 1 } },
-        }).catch(() => {}); // Ignore rollback errors
+        }).catch((rollbackError) => {
+          // Log rollback failures for debugging, but don't block
+          this.logger.warn(`Usage rollback failed: ${rollbackError.message}`);
+        });
 
         throw new ServiceUnavailableException("AI is currently overloaded. Please try again.");
     }

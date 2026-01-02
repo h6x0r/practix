@@ -3,7 +3,8 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 // Mock localStorage before importing storage
 const mockStorage: Record<string, string> = {};
 
-vi.stubGlobal('localStorage', {
+// Create localStorage mock with Proxy to support Object.keys()
+const localStorageMock = {
   getItem: vi.fn((key: string) => mockStorage[key] || null),
   setItem: vi.fn((key: string, value: string) => {
     mockStorage[key] = value;
@@ -14,7 +15,24 @@ vi.stubGlobal('localStorage', {
   clear: vi.fn(() => {
     Object.keys(mockStorage).forEach((key) => delete mockStorage[key]);
   }),
+  get length() {
+    return Object.keys(mockStorage).length;
+  },
+  key: vi.fn((index: number) => Object.keys(mockStorage)[index] || null),
+};
+
+// Use a Proxy to make Object.keys(localStorage) return mockStorage keys
+const localStorageProxy = new Proxy(localStorageMock, {
+  ownKeys: () => Object.keys(mockStorage),
+  getOwnPropertyDescriptor: (_, key) => {
+    if (key in mockStorage) {
+      return { enumerable: true, configurable: true, value: mockStorage[key as string] };
+    }
+    return Object.getOwnPropertyDescriptor(localStorageMock, key);
+  },
 });
+
+vi.stubGlobal('localStorage', localStorageProxy);
 
 import { storage } from './storage';
 
@@ -30,7 +48,7 @@ describe('storage utility', () => {
       storage.setTaskCode('hello-world', 'package main');
 
       expect(localStorage.setItem).toHaveBeenCalledWith(
-        'kodla_task_hello-world',
+        'kodla_task_code_hello-world',
         'package main',
       );
 
@@ -94,9 +112,246 @@ describe('storage utility', () => {
       expect(result).toBe('dark');
     });
 
-    it('should return null when no theme set', () => {
+    it('should return dark as default when no theme set', () => {
       const result = storage.getTheme();
+      expect(result).toBe('dark');
+    });
+
+    it('should save and retrieve light theme', () => {
+      storage.setTheme('light');
+
+      const result = storage.getTheme();
+      expect(result).toBe('light');
+    });
+  });
+
+  describe('getToken / setToken / removeToken', () => {
+    it('should save and retrieve token', () => {
+      storage.setToken('jwt-token-123');
+
+      expect(localStorage.setItem).toHaveBeenCalledWith('kodla_token', 'jwt-token-123');
+
+      const result = storage.getToken();
+      expect(result).toBe('jwt-token-123');
+    });
+
+    it('should return null when no token', () => {
+      const result = storage.getToken();
       expect(result).toBeNull();
+    });
+
+    it('should remove token', () => {
+      storage.setToken('token-to-remove');
+      storage.removeToken();
+
+      expect(localStorage.removeItem).toHaveBeenCalledWith('kodla_token');
+    });
+  });
+
+  describe('removeTaskCode', () => {
+    it('should remove task code', () => {
+      storage.setTaskCode('task-1', 'some code');
+      storage.removeTaskCode('task-1');
+
+      expect(localStorage.removeItem).toHaveBeenCalledWith('kodla_task_code_task-1');
+    });
+  });
+
+  describe('getMockUser / setMockUser', () => {
+    it('should save and retrieve mock user', () => {
+      const mockUser = { id: 'user-1', email: 'test@test.com', name: 'Test' };
+      storage.setMockUser(mockUser);
+
+      expect(localStorage.setItem).toHaveBeenCalledWith(
+        'kodla_mock_db_user',
+        JSON.stringify(mockUser)
+      );
+
+      const result = storage.getMockUser();
+      expect(result).toEqual(mockUser);
+    });
+
+    it('should return null when no mock user', () => {
+      const result = storage.getMockUser();
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('getStartedCourses / setStartedCourses / addStartedCourse', () => {
+    it('should save and retrieve started courses', () => {
+      storage.setStartedCourses(['go-basics', 'java-core']);
+
+      const result = storage.getStartedCourses();
+      expect(result).toEqual(['go-basics', 'java-core']);
+    });
+
+    it('should add started course', () => {
+      storage.addStartedCourse('go-basics');
+      storage.addStartedCourse('java-core');
+
+      const result = storage.getStartedCourses();
+      expect(result).toContain('go-basics');
+      expect(result).toContain('java-core');
+    });
+
+    it('should not add duplicate started course', () => {
+      storage.addStartedCourse('go-basics');
+      storage.addStartedCourse('go-basics');
+
+      const result = storage.getStartedCourses();
+      expect(result.filter(c => c === 'go-basics')).toHaveLength(1);
+    });
+
+    it('should return empty array when no started courses', () => {
+      const result = storage.getStartedCourses();
+      expect(result).toEqual([]);
+    });
+
+    it('should handle invalid JSON gracefully', () => {
+      mockStorage['kodla_started_courses'] = 'invalid json';
+
+      const result = storage.getStartedCourses();
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('setCompletedTasks', () => {
+    it('should set completed tasks array', () => {
+      storage.setCompletedTasks(['task-1', 'task-2']);
+
+      expect(localStorage.setItem).toHaveBeenCalledWith(
+        'kodla_completed_tasks',
+        JSON.stringify(['task-1', 'task-2'])
+      );
+    });
+
+    it('should handle invalid JSON gracefully for getCompletedTasks', () => {
+      mockStorage['kodla_completed_tasks'] = 'invalid json';
+
+      const result = storage.getCompletedTasks();
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('getRoadmapPrefs / setRoadmapPrefs / removeRoadmapPrefs', () => {
+    it('should save and retrieve roadmap preferences', () => {
+      const prefs = { role: 'developer', level: 'junior', goal: 'learn go' };
+      storage.setRoadmapPrefs(prefs);
+
+      const result = storage.getRoadmapPrefs();
+      expect(result).toEqual(prefs);
+    });
+
+    it('should return default prefs when none set', () => {
+      const result = storage.getRoadmapPrefs();
+      expect(result).toEqual({ role: '', level: '', goal: '' });
+    });
+
+    it('should remove roadmap prefs', () => {
+      storage.setRoadmapPrefs({ role: 'dev', level: 'mid', goal: 'test' });
+      storage.removeRoadmapPrefs();
+
+      expect(localStorage.removeItem).toHaveBeenCalledWith('kodla_roadmap_prefs');
+    });
+
+    it('should handle invalid JSON gracefully', () => {
+      mockStorage['kodla_roadmap_prefs'] = 'invalid json';
+
+      const result = storage.getRoadmapPrefs();
+      expect(result).toEqual({ role: '', level: '', goal: '' });
+    });
+  });
+
+  describe('getSidebarCollapsed / setSidebarCollapsed', () => {
+    it('should save and retrieve sidebar collapsed state', () => {
+      storage.setSidebarCollapsed(true);
+
+      expect(localStorage.setItem).toHaveBeenCalledWith('kodla_sidebar_collapsed', 'true');
+
+      const result = storage.getSidebarCollapsed();
+      expect(result).toBe(true);
+    });
+
+    it('should return false when not set', () => {
+      const result = storage.getSidebarCollapsed();
+      expect(result).toBe(false);
+    });
+
+    it('should handle false value', () => {
+      storage.setSidebarCollapsed(false);
+
+      const result = storage.getSidebarCollapsed();
+      expect(result).toBe(false);
+    });
+  });
+
+  describe('getTimerState / setTimerState / removeTimerState', () => {
+    it('should save and retrieve timer state', () => {
+      const timerState = { elapsed: 120, isRunning: true, mode: 'stopwatch' };
+      storage.setTimerState(timerState as any);
+
+      const result = storage.getTimerState();
+      expect(result).toEqual(timerState);
+    });
+
+    it('should return null when no timer state', () => {
+      const result = storage.getTimerState();
+      expect(result).toBeNull();
+    });
+
+    it('should remove timer state', () => {
+      storage.setTimerState({ elapsed: 100, isRunning: false, mode: 'timer' } as any);
+      storage.removeTimerState();
+
+      expect(localStorage.removeItem).toHaveBeenCalledWith('kodla_timer_state');
+    });
+
+    it('should handle invalid JSON gracefully', () => {
+      mockStorage['kodla_timer_state'] = 'invalid json';
+
+      const result = storage.getTimerState();
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('clearAll', () => {
+    it('should clear all kodla storage keys', () => {
+      // Set some values
+      storage.setToken('token');
+      storage.setTheme('dark');
+      storage.setTaskCode('task-1', 'code');
+      storage.setLanguage('en');
+
+      // Clear all
+      storage.clearAll();
+
+      // Verify removeItem was called for various keys
+      expect(localStorage.removeItem).toHaveBeenCalled();
+    });
+
+    it('should clear task code keys with dynamic prefix', () => {
+      // Manually populate mockStorage with task code keys to test the filter/forEach branch
+      mockStorage['kodla_task_code_task-1'] = 'code1';
+      mockStorage['kodla_task_code_task-2'] = 'code2';
+      mockStorage['kodla_task_code_another-task'] = 'code3';
+
+      // Clear all
+      storage.clearAll();
+
+      // Verify task code keys were cleared
+      expect(localStorage.removeItem).toHaveBeenCalledWith('kodla_task_code_task-1');
+      expect(localStorage.removeItem).toHaveBeenCalledWith('kodla_task_code_task-2');
+      expect(localStorage.removeItem).toHaveBeenCalledWith('kodla_task_code_another-task');
+    });
+
+    it('should clear language and timer state', () => {
+      mockStorage['kodla_language'] = 'ru';
+      mockStorage['kodla_timer_state'] = JSON.stringify({ elapsed: 100 });
+
+      storage.clearAll();
+
+      expect(localStorage.removeItem).toHaveBeenCalledWith('kodla_language');
+      expect(localStorage.removeItem).toHaveBeenCalledWith('kodla_timer_state');
     });
   });
 });

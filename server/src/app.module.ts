@@ -1,6 +1,7 @@
-import { Module } from '@nestjs/common';
+import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { ScheduleModule } from '@nestjs/schedule';
 import { PrismaModule } from './prisma/prisma.module';
 import { CacheModule } from './cache/cache.module';
 import { AuthModule } from './auth/auth.module';
@@ -18,12 +19,16 @@ import { SessionsModule } from './sessions/sessions.module';
 import { AdminModule } from './admin/admin.module';
 import { SentryModule } from './common/sentry/sentry.module';
 import { LoggerModule } from './common/logger/logger.module';
+import { SecurityModule } from './security/security.module';
+import { SecurityMiddleware } from './security/middleware/security.middleware';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    ScheduleModule.forRoot(), // Enable scheduled tasks (session cleanup, etc.)
     LoggerModule,
     SentryModule,
+    SecurityModule, // Security features (IP ban, code scanner, activity logger)
     // Rate limiting configuration
     ThrottlerModule.forRoot([
       {
@@ -61,4 +66,9 @@ import { LoggerModule } from './common/logger/logger.module';
   controllers: [],
   providers: [],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    // Apply security middleware to all routes
+    consumer.apply(SecurityMiddleware).forRoutes('*');
+  }
+}

@@ -4,6 +4,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { GlobalExceptionFilter } from './common/filters/http-exception.filter';
 import { SentryInterceptor } from './common/sentry/sentry.interceptor';
+import helmet from 'helmet';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
@@ -13,6 +14,47 @@ async function bootstrap() {
   // Use Winston logger
   const logger = app.get(WINSTON_MODULE_NEST_PROVIDER);
   app.useLogger(logger);
+
+  // Security headers with Helmet
+  const isProduction = process.env.NODE_ENV === 'production';
+  app.use(
+    helmet({
+      // Content Security Policy
+      contentSecurityPolicy: isProduction
+        ? {
+            directives: {
+              defaultSrc: ["'self'"],
+              scriptSrc: ["'self'", "'unsafe-inline'", 'cdn.jsdelivr.net'],
+              styleSrc: ["'self'", "'unsafe-inline'", 'fonts.googleapis.com'],
+              fontSrc: ["'self'", 'fonts.gstatic.com'],
+              imgSrc: ["'self'", 'data:', 'blob:'],
+              connectSrc: ["'self'"],
+              frameSrc: ["'none'"],
+              objectSrc: ["'none'"],
+              upgradeInsecureRequests: [],
+            },
+          }
+        : false, // Disable in development for easier debugging
+      // HTTP Strict Transport Security
+      hsts: isProduction
+        ? {
+            maxAge: 31536000, // 1 year
+            includeSubDomains: true,
+            preload: true,
+          }
+        : false,
+      // Prevent clickjacking
+      frameguard: { action: 'deny' },
+      // Hide X-Powered-By header
+      hidePoweredBy: true,
+      // Prevent MIME type sniffing
+      noSniff: true,
+      // Enable XSS filter
+      xssFilter: true,
+      // Referrer policy
+      referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+    }),
+  );
 
   // Enable validation for DTOs
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
@@ -25,15 +67,23 @@ async function bootstrap() {
 
   // CORS configuration
   const allowedOrigins = process.env.CORS_ORIGINS
-    ? process.env.CORS_ORIGINS.split(',').map(o => o.trim())
+    ? process.env.CORS_ORIGINS.split(',').map(o => o.trim()).filter(o => o !== '*') // Never allow wildcard with credentials
     : ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173'];
 
   app.enableCors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (mobile apps, curl, etc.)
-      if (!origin) return callback(null, true);
+      // In production: require Origin header for security
+      // In development: allow requests without Origin (curl, Postman)
+      if (!origin) {
+        if (isProduction) {
+          logger.warn('CORS blocked request without Origin header', 'CORS');
+          return callback(new Error('Origin header required'));
+        }
+        // Development: allow no-origin requests
+        return callback(null, true);
+      }
 
-      if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
+      if (allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
         logger.warn(`CORS blocked request from origin: ${origin}`, 'CORS');

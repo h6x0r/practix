@@ -86,49 +86,48 @@ export class SubscriptionsService {
   /**
    * Create a subscription for a user
    * This is called after successful payment
+   * Uses upsert to prevent race conditions
    */
   async createSubscription(userId: string, dto: CreateSubscriptionDto) {
     const plan = await this.getPlanById(dto.planId);
 
-    // Check if user already has this subscription
-    const existing = await this.prisma.subscription.findUnique({
+    // Calculate end date (1 month from now)
+    // Use proper date arithmetic to handle month overflow
+    // e.g., Jan 31 + 1 month = Feb 28, not Mar 3
+    const now = new Date();
+    const endDate = new Date(now);
+    endDate.setMonth(endDate.getMonth() + 1);
+    // Handle month overflow (e.g., Jan 31 -> Feb 31 which becomes Mar 3)
+    // If the day changed, set to last day of the target month
+    if (endDate.getDate() !== now.getDate()) {
+      endDate.setDate(0); // Sets to last day of previous month (which is our target month)
+    }
+
+    // Use upsert to atomically create or update subscription
+    // This prevents race conditions where two parallel requests
+    // could both pass a check and try to create
+    const subscription = await this.prisma.subscription.upsert({
       where: {
         userId_planId: { userId, planId: dto.planId },
       },
-    });
-
-    if (existing && existing.status === 'active') {
-      throw new ConflictException('User already has an active subscription to this plan');
-    }
-
-    // Calculate end date (1 month from now)
-    const endDate = new Date();
-    endDate.setMonth(endDate.getMonth() + 1);
-
-    // Update existing or create new
-    if (existing) {
-      return this.prisma.subscription.update({
-        where: { id: existing.id },
-        data: {
-          status: 'active',
-          startDate: new Date(),
-          endDate,
-          autoRenew: dto.autoRenew ?? true,
-        },
-        include: { plan: true },
-      });
-    }
-
-    return this.prisma.subscription.create({
-      data: {
+      create: {
         userId,
         planId: dto.planId,
         status: 'active',
+        startDate: now,
+        endDate,
+        autoRenew: dto.autoRenew ?? true,
+      },
+      update: {
+        status: 'active',
+        startDate: now,
         endDate,
         autoRenew: dto.autoRenew ?? true,
       },
       include: { plan: true },
     });
+
+    return subscription;
   }
 
   /**
@@ -168,8 +167,15 @@ export class SubscriptionsService {
       throw new NotFoundException('Subscription not found');
     }
 
-    const endDate = new Date(subscription.endDate);
+    // Calculate new end date with proper month overflow handling
+    const currentEnd = new Date(subscription.endDate);
+    const originalDay = currentEnd.getDate();
+    const endDate = new Date(currentEnd);
     endDate.setMonth(endDate.getMonth() + 1);
+    // Handle month overflow (e.g., Jan 31 -> Feb 31 which becomes Mar 3)
+    if (endDate.getDate() !== originalDay) {
+      endDate.setDate(0); // Sets to last day of target month
+    }
 
     return this.prisma.subscription.update({
       where: { id: subscriptionId },
