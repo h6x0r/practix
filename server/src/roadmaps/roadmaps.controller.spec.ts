@@ -318,7 +318,7 @@ describe('RoadmapsController', () => {
   });
 
   describe('selectVariant', () => {
-    // Matches SelectRoadmapVariantDto
+    // Matches SelectRoadmapVariantDto - using full phase structure
     const selectDto = {
       variantId: 'variant-1',
       name: 'Fast Track',
@@ -328,7 +328,15 @@ describe('RoadmapsController', () => {
       estimatedMonths: 2,
       targetRole: 'Backend Developer',
       difficulty: 'medium' as const,
-      phases: [{ order: 1, name: 'Fundamentals', courses: ['go-basics'] }],
+      phases: [{
+        id: 'phase_1',
+        title: 'Fundamentals',
+        description: 'Learn the basics',
+        colorTheme: 'blue',
+        order: 1,
+        steps: [],
+        progressPercentage: 0,
+      }],
     };
 
     const alternateSelectDto = {

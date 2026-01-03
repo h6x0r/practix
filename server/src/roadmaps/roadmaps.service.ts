@@ -129,6 +129,35 @@ export interface RoadmapVariantData {
   phases: RoadmapPhase[];
 }
 
+/**
+ * AI response interfaces for type safety
+ */
+interface AIPhaseResponse {
+  title: string;
+  description: string;
+  taskSlugs: string[];
+}
+
+interface AIVariantResponse {
+  id?: string;
+  name: string;
+  description: string;
+  isRecommended?: boolean;
+  difficulty: 'easy' | 'medium' | 'hard';
+  targetRole: string;
+  topics: string[];
+  taskSlugs?: string[];
+  phases?: AIPhaseResponse[];
+}
+
+interface AIVariantsResponse {
+  variants: AIVariantResponse[];
+}
+
+interface AIPhasesResponse {
+  phases: AIPhaseResponse[];
+}
+
 @Injectable()
 export class RoadmapsService {
   private readonly logger = new Logger(RoadmapsService.name);
@@ -663,7 +692,7 @@ IMPORTANT:
    * Convert AI response to structured variants
    */
   private convertAIResponseToVariants(
-    parsed: any,
+    parsed: AIVariantsResponse,
     taskMap: Map<string, TaskWithCourseInfo>,
     dto: GenerateRoadmapVariantsDto
   ): RoadmapVariantData[] {
@@ -723,7 +752,7 @@ IMPORTANT:
         .sort((a, b) => b.taskCount - a.taskCount);
 
       // Build phases
-      const phases: RoadmapPhase[] = (variant.phases || []).map((phase: any, index: number) => {
+      const phases: RoadmapPhase[] = (variant.phases || []).map((phase: AIPhaseResponse, index: number) => {
         const phaseTasks = (phase.taskSlugs || [])
           .map((slug: string) => taskMap.get(slug))
           .filter(Boolean) as TaskWithCourseInfo[];
@@ -755,11 +784,12 @@ IMPORTANT:
         fromCourse: t.courseTitle,
       }));
 
+      const variantId = variant.id || `variant_${variants.length + 1}`;
       variants.push({
-        id: variant.id,
+        id: variantId,
         name: variant.name,
         description: variant.description,
-        isRecommended: variant.id === 'balanced' || variant.name?.toLowerCase().includes('recommend'),
+        isRecommended: variantId === 'balanced' || variant.name?.toLowerCase().includes('recommend'),
         totalTasks,
         estimatedHours,
         estimatedMonths,
@@ -1068,7 +1098,7 @@ IMPORTANT:
     const taskMap = new Map(tasks.map(t => [t.slug, t]));
 
     // Convert AI response to phases
-    const phases: RoadmapPhase[] = parsed.phases.map((phase: any, index: number) => {
+    const phases: RoadmapPhase[] = (parsed as AIPhasesResponse).phases.map((phase: AIPhaseResponse, index: number) => {
       const steps: RoadmapStep[] = (phase.taskSlugs || [])
         .map((slug: string) => {
           const task = taskMap.get(slug);

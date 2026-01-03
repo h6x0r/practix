@@ -37,7 +37,7 @@ services:
     command: >
       redis-server
       --maxmemory 1gb
-      --maxmemory-policy allkeys-lru
+      --maxmemory-policy volatile-lru
       --appendonly yes
       --requirepass ${REDIS_PASSWORD:-kodla_redis_secure_password_2025}
     # NOTE: Remove port exposure in production - only internal access

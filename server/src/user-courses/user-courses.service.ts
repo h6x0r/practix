@@ -13,41 +13,60 @@ export class UserCoursesService {
    */
   async getUserCourses(userId: string) {
     try {
+      // Get user courses first
       const userCourses = await this.prisma.userCourse.findMany({
         where: { userId },
         orderBy: { lastAccessedAt: 'desc' },
       });
 
+      if (userCourses.length === 0) {
+        this.logger.log(`No courses found for user ${userId}`);
+        return [];
+      }
+
+      // Optimized: Single query for all courses using WHERE IN instead of N+1
+      const courseSlugs = userCourses.map((uc) => uc.courseSlug);
+      const courses = await this.prisma.course.findMany({
+        where: { slug: { in: courseSlugs } },
+        select: {
+          id: true,
+          slug: true,
+          title: true,
+          description: true,
+          category: true,
+          icon: true,
+          estimatedTime: true,
+          translations: true,
+        },
+      });
+
+      // Create a map for O(1) lookup
+      const courseMap = new Map(courses.map((c) => [c.slug, c]));
+
       this.logger.log(`Retrieved ${userCourses.length} courses for user ${userId}`);
 
-      // Fetch course details for each user course
-      const coursesWithDetails = await Promise.all(
-        userCourses.map(async (userCourse) => {
-          const course = await this.prisma.course.findUnique({
-            where: { slug: userCourse.courseSlug },
-            select: {
-              id: true,
-              slug: true,
-              title: true,
-              description: true,
-              category: true,
-              icon: true,
-              estimatedTime: true,
-              translations: true,
-            },
-          });
-
+      // Map to flattened structure
+      const coursesWithDetails = userCourses
+        .filter((uc) => courseMap.has(uc.courseSlug)) // Filter out orphaned records
+        .map((userCourse) => {
+          const course = courseMap.get(userCourse.courseSlug)!;
           return {
-            ...course,
+            id: course.id,
+            slug: course.slug,
+            title: course.title,
+            description: course.description,
+            category: course.category,
+            icon: course.icon,
+            estimatedTime: course.estimatedTime,
+            translations: course.translations,
             progress: userCourse.progress,
             startedAt: userCourse.startedAt,
             lastAccessedAt: userCourse.lastAccessedAt,
             completedAt: userCourse.completedAt,
           };
-        })
-      );
+        });
 
-      return coursesWithDetails.filter((course) => course.id); // Filter out courses that don't exist
+      return coursesWithDetails;
     } catch (error) {
       this.logger.error(
         'Error in getUserCourses',

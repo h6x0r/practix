@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CacheService } from '../cache/cache.service';
 
@@ -274,10 +275,10 @@ export class GamificationService {
           });
 
           newBadges.push({ slug: badge.slug, name: badge.name, icon: badge.icon });
-        } catch (error: any) {
+        } catch (error: unknown) {
           // Only silently ignore unique constraint violations (race condition case)
           // P2002 = unique constraint violation in Prisma
-          if (error?.code === 'P2002') {
+          if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
             // Race condition: badge was awarded by another concurrent request
             continue;
           }

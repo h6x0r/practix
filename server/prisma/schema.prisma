@@ -50,6 +50,11 @@ model User {
   courses          UserCourse[]
   sessions         Session[]
   taskCompletions  TaskCompletion[]
+
+  // Performance indexes for leaderboard and gamification queries
+  @@index([level, xp])        // Leaderboard sorting
+  @@index([xp])               // XP-based rankings
+  @@index([currentStreak])    // Streak leaderboard
 }
 
 model Course {
@@ -249,6 +254,8 @@ model Subscription {
   @@unique([userId, planId]) // One subscription per plan per user
   @@index([userId])
   @@index([status])
+  @@index([endDate])          // For active subscription queries by expiry
+  @@index([userId, status])   // For user's active subscriptions
 }
 
 // Payment history (for future payment integration)
@@ -338,6 +345,10 @@ model Session {
 
   @@index([userId])
   @@index([token])
+  // Indexes for session cleanup queries
+  @@index([expiresAt])                    // Expired sessions cleanup
+  @@index([isActive, lastActiveAt])       // Inactive sessions cleanup
+  @@index([createdAt])                    // Old sessions cleanup (30 days)
 }
 
 // === TASK COMPLETION TRACKING ===

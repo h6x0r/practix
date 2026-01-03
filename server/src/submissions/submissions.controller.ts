@@ -11,6 +11,7 @@ import {
   HttpStatus,
   ForbiddenException,
 } from '@nestjs/common';
+import { Request as ExpressRequest } from 'express';
 import { ThrottlerGuard, Throttle, SkipThrottle } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { OptionalJwtAuthGuard } from '../auth/guards/optional-jwt.guard';
@@ -31,13 +32,13 @@ export class SubmissionsController {
   /**
    * Extract client IP from request (considering proxies)
    */
-  private getClientIp(req: any): string {
+  private getClientIp(req: ExpressRequest): string {
     const forwardedFor = req.headers['x-forwarded-for'];
-    if (forwardedFor) {
+    if (typeof forwardedFor === 'string') {
       const ips = forwardedFor.split(',').map((ip: string) => ip.trim());
       return ips[0];
     }
-    return req.ip || req.connection?.remoteAddress || 'unknown';
+    return req.ip || req.socket?.remoteAddress || 'unknown';
   }
 
   /**

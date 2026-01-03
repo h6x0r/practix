@@ -312,21 +312,31 @@ export class ActivityLoggerService {
   /**
    * Get recent security events (for admin dashboard)
    */
-  async getRecentEvents(limit = 100, severity?: EventSeverity): Promise<any[]> {
+  async getRecentEvents(limit = 100, severity?: EventSeverity): Promise<SecurityEvent[]> {
     if (!this.storeInDb) {
       return [];
     }
 
-    const where: any = {};
+    const where: { severity?: EventSeverity } = {};
     if (severity) {
       where.severity = severity;
     }
 
-    return this.prisma.securityEvent.findMany({
+    const events = await this.prisma.securityEvent.findMany({
       where,
       orderBy: { createdAt: 'desc' },
       take: limit,
     });
+
+    return events.map(e => ({
+      type: e.type as SecurityEventType,
+      severity: e.severity as EventSeverity,
+      ip: e.ip,
+      userId: e.userId ?? undefined,
+      userEmail: e.userEmail ?? undefined,
+      details: e.details as Record<string, unknown>,
+      timestamp: e.createdAt,
+    }));
   }
 
   /**

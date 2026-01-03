@@ -22,6 +22,17 @@ export interface ParsedTestOutput {
 }
 
 /**
+ * Raw JSON test result from test runner
+ */
+interface RawTestResult {
+  name?: string;
+  passed?: boolean;
+  expected?: string;
+  output?: string;
+  error?: string;
+}
+
+/**
  * TestParserService
  *
  * Parses test output from various test runners.
@@ -71,7 +82,7 @@ export class TestParserService {
         return null;
       }
 
-      const testCases: TestCaseResult[] = parsed.tests.map((t: any) => ({
+      const testCases: TestCaseResult[] = parsed.tests.map((t: RawTestResult) => ({
         name: t.name || 'test',
         passed: t.passed || false,
         expectedOutput: t.expected,

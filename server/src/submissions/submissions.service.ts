@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CodeExecutionService } from '../queue/code-execution.service';
 import { CacheService } from '../cache/cache.service';
@@ -444,9 +445,9 @@ export class SubmissionsService {
         `XP awarded: user=${userId}, task=${taskSlug}, xp=${result.xpEarned}, level=${result.level}, leveledUp=${result.leveledUp}`,
       );
       return result;
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Unique constraint violation = already completed, skip XP award
-      if (error.code === 'P2002') {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
         this.logger.debug(`Task already completed: user=${userId}, task=${taskSlug}`);
         return null;
       }

@@ -1,5 +1,27 @@
 import { IsString, IsNotEmpty, IsOptional, IsArray, IsNumber, IsIn } from 'class-validator';
 
+/**
+ * Phase data structure for DTO validation
+ */
+export interface RoadmapPhaseDto {
+  id: string;
+  title: string;
+  description: string;
+  colorTheme: string;
+  order: number;
+  steps: {
+    id: string;
+    title: string;
+    type: 'practice' | 'video' | 'project' | 'reading';
+    durationEstimate: string;
+    deepLink: string;
+    resourceType: 'task' | 'topic' | 'module';
+    relatedResourceId: string;
+    status: 'available' | 'completed' | 'locked';
+  }[];
+  progressPercentage: number;
+}
+
 // Legacy DTO - kept for backward compatibility
 export class GenerateRoadmapDto {
   @IsString()
@@ -85,5 +107,5 @@ export class SelectRoadmapVariantDto {
   difficulty: string;
 
   // Phases JSON - will be parsed on backend
-  phases: any[];
+  phases: RoadmapPhaseDto[];
 }

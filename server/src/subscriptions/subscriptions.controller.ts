@@ -100,7 +100,7 @@ export class SubscriptionsController {
    */
   @Post('webhook/stripe')
   async handleStripeWebhook(
-    @Body() payload: any,
+    @Body() payload: Record<string, unknown>,
     @Headers('stripe-signature') signature: string,
   ) {
     if (!this.webhookSecret) {
