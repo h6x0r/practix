@@ -1,12 +1,102 @@
 # Task Creation Guide
 
+> Last updated: 2026-01-04
+
 ## Table of Contents
-1. [Translation Rules](#translation-rules)
-2. [WhyItMatters Requirements](#whyitmatters-translation-requirements)
-3. [Estimated Time Rules](#estimated-time-rules)
-4. [Test Code Requirements](#test-code-requirements)
-5. [Python ML Tasks](#python-ml-tasks)
-6. [Task Quality Checklist](#task-quality-checklist)
+1. [Complete Task Interface](#complete-task-interface)
+2. [Translation Rules](#translation-rules)
+3. [WhyItMatters Requirements](#whyitmatters-translation-requirements)
+4. [Estimated Time Rules](#estimated-time-rules)
+5. [Test Code Requirements](#test-code-requirements)
+6. [Python ML Tasks](#python-ml-tasks)
+7. [Task Quality Checklist](#task-quality-checklist)
+
+---
+
+## Complete Task Interface
+
+Every task file must export a `Task` object with the following structure:
+
+```typescript
+import { Task } from '../../types';
+
+export const task: Task = {
+    // REQUIRED FIELDS
+    slug: string,           // Unique identifier: 'module-topic-task-name'
+    title: string,          // English title (descriptive)
+    difficulty: 'easy' | 'medium' | 'hard',
+    tags: string[],         // ['go', 'concurrency', 'channels']
+    estimatedTime: string,  // '15m', '30m', '1h'
+    isPremium: boolean,     // Free (false) or Premium (true)
+
+    description: string,    // Markdown task description with examples
+    initialCode: string,    // Starting code template with TODO
+    solutionCode: string,   // Complete solution with English comments
+    testCode: string,       // 10 unit tests (language-specific)
+
+    hint1: string,          // Gentle hint (concept direction)
+    hint2: string,          // More specific hint (code pattern)
+    whyItMatters: string,   // Real-world relevance + production pattern
+
+    order: number,          // Position within topic (0-indexed)
+
+    // REQUIRED TRANSLATIONS
+    translations: {
+        ru: {
+            title: string,
+            solutionCode: string,   // Solution with Russian comments
+            description: string,
+            hint1: string,
+            hint2: string,
+            whyItMatters: string    // Includes "Продакшен паттерн:" section
+        },
+        uz: {
+            title: string,
+            solutionCode: string,   // Solution with Uzbek comments
+            description: string,
+            hint1: string,
+            hint2: string,
+            whyItMatters: string    // Includes "Ishlab chiqarish patterni:" section
+        }
+    },
+
+    // OPTIONAL FIELDS
+    youtubeUrl?: string,            // YouTube tutorial link
+    visualizationType?: 'none' | 'line' | 'bar' | 'scatter' | 'heatmap'
+};
+
+export default task;
+```
+
+### Directory Structure
+
+```
+server/prisma/seeds/
+├── types.ts                    # Task interface definition
+├── courses/                    # Course definitions
+│   └── {course-slug}/
+│       ├── index.ts            # Course export
+│       └── modules/{module}/
+│           └── topics/{topic}/
+│               └── tasks/
+│                   ├── 01-task-name.ts
+│                   ├── 02-task-name.ts
+│                   └── index.ts
+└── shared/
+    └── modules/                # Reusable modules
+        ├── go/                 # 25+ Go modules
+        ├── java/               # 35+ Java modules
+        └── python/             # Python modules
+```
+
+### Current Statistics
+
+| Category | Count |
+|----------|-------|
+| Total Courses | 18 |
+| Total Tasks | ~921 |
+| Languages | Go, Java, Python, TypeScript |
+| Translations | EN, RU, UZ |
 
 ---
 

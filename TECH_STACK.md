@@ -1,6 +1,6 @@
 # KODLA Tech Stack & Integrations
 
-> Last updated: 2024-12-12
+> Last updated: 2026-01-04
 
 ---
 
@@ -74,9 +74,14 @@ server/src/ai/
 └── ai.service.ts       # Gemini API integration
 ```
 
-**Rate Limiting:**
-- Free users: 3 requests/day
-- Premium users: 15 requests/day
+**Rate Limiting (AI Tutor):**
+
+| Tier | Daily Limit | Notes |
+|------|-------------|-------|
+| Free (no subscription) | 5 | Basic access |
+| Course subscription | 30 | Per-course purchase |
+| Global Premium | 100 | Full platform access |
+| Prompt Engineering course | 100 | Special limit for PE course |
 
 **Features:**
 - Multi-language responses (EN, RU, UZ)
@@ -385,4 +390,4 @@ PORT=8080
 
 ---
 
-*Last updated: 2025-12-12*
+*Last updated: 2026-01-04*

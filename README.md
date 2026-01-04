@@ -8,12 +8,14 @@ Learn Go and Java through hands-on coding exercises with real-time code executio
 
 ## Features
 
-- **7 Courses** (4 Go + 3 Java) with ~403 tasks
+- **18 Courses** (Go, Java, Python, Algorithms, AI/ML, Design Patterns) with ~921 tasks
 - **Multi-language** support (EN, RU, UZ)
-- **Real code execution** with Piston + BullMQ
+- **Real code execution** with Piston + BullMQ (8 languages)
 - **Web IDE Playground** at `/playground`
-- **AI Tutor** powered by Gemini 2.0 Flash
-- **Progress tracking** and premium tiers
+- **AI Tutor** powered by Gemini 2.0 Flash (100 req/day premium)
+- **Gamification** - XP, levels, badges, streaks
+- **Swagger API docs** at `/api/docs`
+- **Health checks** and Prometheus metrics
 
 ## Quick Start
 

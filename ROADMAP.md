@@ -447,6 +447,30 @@ server/prisma/seeds/
 
 # Future Courses
 
+## Math for Data Science
+**Status:** Planned | **Tasks:** ~50 | **Priority:** Medium
+**Language:** Python (NumPy, SciPy, SymPy)
+
+```
+math-for-data-science/
+├── linear-algebra/           # Vectors, matrices, eigenvalues, SVD (10-12 tasks)
+├── calculus/                 # Derivatives, integrals, optimization (10-12 tasks)
+├── probability-statistics/   # Distributions, hypothesis testing (10-12 tasks)
+├── numerical-methods/        # Root finding, integration, ODEs (8-10 tasks)
+└── discrete-math/            # Graphs, combinatorics, logic (8-10 tasks)
+```
+
+**Execution Strategy:**
+- Uses existing Piston Python runtime (no new infrastructure)
+- NumPy for numerical math, SymPy for symbolic math
+- Standard unit test verification (same as other courses)
+- Visualization support with matplotlib
+
+**Sample Task Types:**
+- "Implement matrix multiplication" → NumPy array comparison
+- "Compute derivative symbolically" → SymPy expression comparison
+- "Perform t-test" → Statistical result verification
+
 ## System Design
 **Status:** Planned | **Tasks:** 30+ | **Priority:** Medium
 
@@ -480,8 +504,8 @@ data-engineering/
 - Each task returns verifiable output (DataFrame shape, values, etc.)
 
 ## Prompt Engineering
-**Status:** Experimental | **Tasks:** 35+ | **Priority:** Low
-**Challenge:** Requires LLM API integration for verification
+**Status:** HIGH PRIORITY | **Tasks:** 35+ | **Priority:** HIGH
+**Special Feature:** 100 AI Tutor requests/day for this course
 
 ```
 prompt-engineering/
@@ -497,11 +521,12 @@ prompt-engineering/
 
 **Technical Notes:**
 - Requires new task type: "prompt" instead of "code"
+- AI Tutor limit: 100 requests/day (same as Global Premium)
 - Verification options:
   1. Structure validation (regex, JSON schema)
-  2. LLM-as-judge (expensive but accurate)
+  2. LLM-as-judge (uses Gemini for evaluation)
   3. Output comparison (for deterministic prompts)
-- May need UI changes for prompt input/output
+- UI will need prompt-specific input/output panels
 
 ---
 
@@ -623,11 +648,12 @@ export const task: Task = {
 | Software Engineering | 6 | 65 | Done |
 | Algorithms (2) | 13 | 91 | Done |
 | AI/ML Courses (6) | 31 | 316 | Done |
+| **Prompt Engineering** | 8 | 35 | **HIGH** |
+| Math for Data Science | TBD | TBD | Medium |
 | System Design | 4 | 30 | Medium |
 | Data Engineering | 8 | 50 | Medium |
-| Prompt Engineering | 8 | 35 | Low |
-| **Total** | **136** | **~1036** | - |
+| **Total** | **136+** | **~1100** | - |
 
 ---
 
-*Last updated: 2025-12-22*
+*Last updated: 2026-01-04*

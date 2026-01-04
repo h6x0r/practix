@@ -1,4 +1,4 @@
-# KODLA Project Documentation Map
+# KODLA Project Configuration
 
 ## Agent Rules
 
@@ -9,46 +9,39 @@
 
 ---
 
+## MCP Tools Usage
+
+### When to use Sequential Thinking (`mcp__sequentialthinking`)
+Use for complex problem-solving that requires step-by-step analysis:
+- Architecture decisions with multiple trade-offs
+- Debugging complex issues
+- Planning multi-step implementations
+- Analyzing code for refactoring
+
+### When to use Memory (`mcp__memory`)
+Use for storing/retrieving persistent knowledge across sessions:
+- User preferences and decisions
+- Project-specific conventions discovered
+- Important context that should persist
+- Notes about code patterns used in this project
+
+### When to use Context7 (`mcp__context7`)
+Use for retrieving up-to-date documentation:
+- Library/framework documentation (React, NestJS, Prisma, etc.)
+- API references and examples
+- Best practices from official docs
+
+---
+
 ## Quick Reference
 
 | File | Purpose |
 |------|---------|
-| `docs/NEXT_STEPS.md` | Current development plan (subscriptions, AI/ML courses, gamification) |
-| `docs/TECH_DEBT_AND_ROADMAP.md` | Technical debt tracker and long-term roadmap |
-| `ROADMAP.md` | High-level product roadmap |
-| `TECH_STACK.md` | Technology stack overview |
-| `RUN_GUIDE.md` | How to run the project locally |
-| `TASK_CREATION_GUIDE.md` | Guide for creating new tasks/courses |
-
----
-
-## Documentation Structure
-
-### `/docs/` - Technical Documentation
-
-| File | Description |
-|------|-------------|
-| `NEXT_STEPS.md` | **ACTIVE PLAN** - Current sprint/iteration work |
-| `TECH_DEBT_AND_ROADMAP.md` | Tech debt items and long-term technical roadmap |
-| `API_ARCHITECTURE.md` | Backend API design and patterns |
-| `API_CLIENT_USAGE.md` | Frontend API client usage guide |
-| `API_SERVICES_MIGRATION.md` | Migration notes for API services |
-| `API_UNIFICATION_SUMMARY.md` | Summary of API unification work |
-| `README_API.md` | API documentation overview |
-| `TASK_MIGRATION_GUIDE.md` | Guide for migrating tasks to new structure |
-| `ai-ml-course-research.md` | Research for Python AI/ML course |
-| `java-ai-ml-course-research.md` | Research for Java AI/ML course |
-| `ai-ml-implementation-plan.md` | Implementation plan for AI/ML courses |
-
-### Root Level `.md` Files
-
-| File | Description |
-|------|-------------|
-| `README.md` | Project overview and quick start |
-| `ROADMAP.md` | Product roadmap (features, timeline) |
+| `ROADMAP.md` | Complete course catalog and development status |
+| `TECH_STACK.md` | Technology stack and integrations |
 | `RUN_GUIDE.md` | Local development setup |
-| `TECH_STACK.md` | Technologies used |
-| `TASK_CREATION_GUIDE.md` | How to create new course content |
+| `TASK_CREATION_GUIDE.md` | How to create new tasks/courses |
+| `docs/TECH_DEBT_AND_ROADMAP.md` | Technical debt and implementation plans |
 
 ---
 
@@ -60,53 +53,99 @@ server/
 ├── prisma/
 │   ├── schema.prisma      # Database schema
 │   ├── seed.ts            # Database seeder
-│   └── seeds/             # Course content (tasks, modules, topics)
+│   └── seeds/             # Course content
 │       └── courses/       # All course definitions
 ├── src/
-│   ├── subscriptions/     # NEW: Subscription system
+│   ├── subscriptions/     # Subscription system
 │   ├── submissions/       # Code execution & grading
 │   ├── ai/                # AI Tutor (Gemini)
 │   ├── piston/            # Code execution engine
-│   └── queue/             # BullMQ job queue
+│   ├── queue/             # BullMQ job queue
+│   ├── health/            # Health checks & metrics
+│   └── gamification/      # XP, levels, badges
 ```
 
 ### Frontend (`/src/`)
 ```
 src/
 ├── features/
-│   ├── subscriptions/     # NEW: Subscription types & API
+│   ├── subscriptions/     # Subscription UI & API
 │   ├── tasks/             # Task workspace
 │   ├── courses/           # Course catalog
-│   └── dashboard/         # User dashboard & stats
-├── contexts/
-│   ├── SubscriptionContext.tsx  # NEW: Subscription state
-│   └── LanguageContext.tsx      # i18n
+│   ├── playground/        # Web IDE
+│   └── dashboard/         # User stats
+├── contexts/              # React contexts
 └── components/            # Shared UI components
 ```
 
 ---
 
-## Current Focus Areas
+## Current Platform Status
 
-### 1. Subscription System (DONE - needs testing)
-- Backend: `/server/src/subscriptions/`
-- Frontend: `/src/features/subscriptions/`, `/src/contexts/SubscriptionContext.tsx`
-- Schema: `SubscriptionPlan`, `Subscription`, `Payment` models
+### Production Ready
+- **18 Courses** (~921 tasks) with full localization (EN/RU/UZ)
+- **Piston Code Execution** - 8 languages
+- **BullMQ Queue + Redis Caching**
+- **Playground (Web IDE)** - /playground
+- **AI Tutor** - Gemini 2.0 Flash (100 req/day premium)
+- **Gamification** - XP, levels, badges, streaks
+- **Health Checks** - /health, /health/metrics
+- **Swagger Docs** - /api/docs (dev only)
 
-### 2. AI/ML Courses (PLANNING)
-- Research: `docs/ai-ml-course-research.md`, `docs/java-ai-ml-course-research.md`
-- Plan: `docs/ai-ml-implementation-plan.md`
+### Planned Courses
+- **Prompt Engineering** (Priority: HIGH) - 35+ tasks
+- **Math for Data Science** (Priority: MEDIUM) - Discussion needed
+- **System Design** (Priority: MEDIUM) - 30+ tasks
 
-### 3. Gamification (TODO)
-- Current: `/server/src/users/users.service.ts` (streak, skillPoints, rank)
-- Planned: XP system, levels, badges, achievements
+---
+
+## AI Tutor Limits
+
+| Tier | Daily Limit | Notes |
+|------|-------------|-------|
+| Free (no subscription) | 5 | Basic access |
+| Course subscription | 30 | Per-course purchase |
+| Global Premium | 100 | Full platform access |
+| Prompt Engineering course | 100 | Special limit for PE course |
+
+---
+
+## Adding New Courses
+
+See `TASK_CREATION_GUIDE.md` for complete instructions.
+
+### Required Task Fields
+```typescript
+{
+  slug: string,           // unique identifier
+  title: string,          // English title
+  difficulty: 'easy' | 'medium' | 'hard',
+  tags: string[],
+  estimatedTime: string,  // '15m', '30m', '1h'
+  isPremium: boolean,
+  description: string,
+  initialCode: string,
+  solutionCode: string,
+  testCode: string,       // 10 test cases required
+  hint1: string,
+  hint2: string,
+  whyItMatters: string,
+  order: number,
+  translations: { ru: {...}, uz: {...} }
+}
+```
 
 ---
 
 ## Session Notes
 
-### Dec 20, 2024
-- Implemented subscription system (backend + frontend)
-- Created plan for AI/ML courses
-- Analyzed current gamification state
-- Need to: test subscriptions, plan AI/ML UI for charts, implement XP/levels/badges
+### Jan 4, 2025
+- Added Swagger/OpenAPI documentation
+- Added Prometheus metrics and health checks
+- Implemented graceful shutdown for BullMQ
+- Test coverage at 80%+ for all services
+- Updated AI tutor limits: 100/day for premium
+
+### Next Priority
+1. Prompt Engineering course (with 100 AI req/day limit)
+2. Math for Data Science (needs execution strategy)
