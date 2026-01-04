@@ -21,6 +21,7 @@ import { SentryModule } from './common/sentry/sentry.module';
 import { LoggerModule } from './common/logger/logger.module';
 import { SecurityModule } from './security/security.module';
 import { SecurityMiddleware } from './security/middleware/security.middleware';
+import { HealthModule } from './health/health.module';
 
 @Module({
   imports: [
@@ -62,6 +63,7 @@ import { SecurityMiddleware } from './security/middleware/security.middleware';
     GamificationModule,
     SessionsModule,
     AdminModule,
+    HealthModule, // Health checks and Prometheus metrics
   ],
   controllers: [],
   providers: [],

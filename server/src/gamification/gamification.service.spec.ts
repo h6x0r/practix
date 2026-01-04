@@ -130,11 +130,20 @@ describe('GamificationService', () => {
       expect(service.calculateLevel(60000)).toBe(20);
     });
 
-    it('should handle XP beyond max threshold', () => {
-      // 60000 is level 20, any XP >= 60000 is level 20
-      // (The service caps at level 20 based on current thresholds)
-      expect(service.calculateLevel(70000)).toBe(20);
-      expect(service.calculateLevel(80000)).toBe(20);
+    it('should handle XP at and beyond max threshold', () => {
+      // The for loop in calculateLevel iterates from the highest threshold down
+      // Any XP >= 60000 returns level 20 (since 60000 is LEVEL_THRESHOLDS[19] and i+1=20)
+      // Lines 59-60 are for negative XP (unreachable in practice)
+      expect(service.calculateLevel(60000)).toBe(20); // Exactly at threshold
+      expect(service.calculateLevel(69999)).toBe(20); // Still level 20
+      expect(service.calculateLevel(70000)).toBe(20); // Still level 20
+      expect(service.calculateLevel(100000)).toBe(20); // Still level 20 (max defined level)
+    });
+
+    it('should handle edge case of very low XP', () => {
+      // XP 0 should always be level 1 (LEVEL_THRESHOLDS[0] = 0)
+      expect(service.calculateLevel(0)).toBe(1);
+      expect(service.calculateLevel(1)).toBe(1);
     });
   });
 
@@ -491,6 +500,30 @@ describe('GamificationService', () => {
       expect(result.newBadges).toHaveLength(1);
     });
 
+    it('should award XP badges (lines 246-247)', async () => {
+      const xpBadge = {
+        id: 'badge-xp-1000',
+        slug: 'xp-champion',
+        name: 'XP Champion',
+        description: 'Reach 1000 XP',
+        icon: '💰',
+        category: 'xp',
+        requirement: 1000,
+        xpReward: 25,
+      };
+
+      setupBadgeTransactionMock({
+        ...mockUser,
+        xp: 990, // Will become 1000 after awarding 10 XP
+      });
+      mockPrismaService.badge.findMany.mockResolvedValue([xpBadge]);
+
+      const result = await service.awardTaskXp('user-123', 'easy');
+
+      expect(result.newBadges).toHaveLength(1);
+      expect(result.newBadges[0].slug).toBe('xp-champion');
+    });
+
     it('should not duplicate badges', async () => {
       setupBadgeTransactionMock();
       mockPrismaService.badge.findMany.mockResolvedValue([mockBadge]);
@@ -500,6 +533,77 @@ describe('GamificationService', () => {
 
       const result = await service.awardTaskXp('user-123', 'easy');
 
+      expect(result.newBadges).toHaveLength(0);
+    });
+
+    it('should check for existing badge in transaction (line 261)', async () => {
+      // Simulate: badge check inside transaction (findUnique returns existing badge)
+      // Note: Due to current code structure, even if badge exists, it completes without error
+      // and the badge gets added to newBadges. The transaction just exits early.
+      let callCount = 0;
+      let badgeCreateCalled = false;
+      mockPrismaService.$transaction.mockImplementation(async (fn) => {
+        callCount++;
+        if (callCount === 1) {
+          // First transaction: awardTaskXp
+          const tx = {
+            user: {
+              findUnique: jest.fn().mockResolvedValue(mockUser),
+              update: jest.fn().mockResolvedValue({ xp: 10 }),
+            },
+          };
+          return fn(tx);
+        }
+        // Badge transaction: findUnique returns existing badge
+        const tx = {
+          userBadge: {
+            findUnique: jest.fn().mockResolvedValue({ id: 'existing-badge' }),
+            create: jest.fn().mockImplementation(() => {
+              badgeCreateCalled = true;
+              return Promise.resolve({});
+            }),
+          },
+          user: {
+            update: jest.fn(),
+          },
+        };
+        return fn(tx);
+      });
+      mockPrismaService.badge.findMany.mockResolvedValue([mockBadge]);
+
+      await service.awardTaskXp('user-123', 'easy');
+
+      // Key assertion: create should NOT be called when badge already exists
+      expect(badgeCreateCalled).toBe(false);
+    });
+
+    it('should handle Prisma P2002 race condition error (line 283)', async () => {
+      // Import Prisma to create proper error
+      const { Prisma } = require('@prisma/client');
+
+      let callCount = 0;
+      mockPrismaService.$transaction.mockImplementation(async (fn) => {
+        callCount++;
+        if (callCount === 1) {
+          const tx = {
+            user: {
+              findUnique: jest.fn().mockResolvedValue(mockUser),
+              update: jest.fn().mockResolvedValue({ xp: 10 }),
+            },
+          };
+          return fn(tx);
+        }
+        // Badge transaction throws P2002 unique constraint error
+        throw new Prisma.PrismaClientKnownRequestError('Unique constraint violation', {
+          code: 'P2002',
+          clientVersion: '5.0.0',
+        });
+      });
+      mockPrismaService.badge.findMany.mockResolvedValue([mockBadge]);
+
+      const result = await service.awardTaskXp('user-123', 'easy');
+
+      // Should handle gracefully - no badges awarded due to race condition
       expect(result.newBadges).toHaveLength(0);
     });
 

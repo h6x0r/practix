@@ -4,6 +4,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { CodeExecutionProcessor } from './code-execution.processor';
 import { CodeExecutionService } from './code-execution.service';
 import { DeadLetterService } from './dead-letter.service';
+import { ShutdownService } from './shutdown.service';
 import { PistonModule } from '../piston/piston.module';
 import { CODE_EXECUTION_QUEUE, DEAD_LETTER_QUEUE } from './constants';
 
@@ -55,7 +56,7 @@ import { CODE_EXECUTION_QUEUE, DEAD_LETTER_QUEUE } from './constants';
       },
     ),
   ],
-  providers: [CodeExecutionProcessor, CodeExecutionService, DeadLetterService],
-  exports: [CodeExecutionService, DeadLetterService],
+  providers: [CodeExecutionProcessor, CodeExecutionService, DeadLetterService, ShutdownService],
+  exports: [CodeExecutionService, DeadLetterService, ShutdownService],
 })
 export class QueueModule {}

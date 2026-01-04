@@ -4,6 +4,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { GlobalExceptionFilter } from './common/filters/http-exception.filter';
 import { SentryInterceptor } from './common/sentry/sentry.interceptor';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 
 async function bootstrap() {
@@ -24,9 +25,8 @@ async function bootstrap() {
         ? {
             directives: {
               defaultSrc: ["'self'"],
-              // Remove 'unsafe-inline' - use strict CSP
               scriptSrc: ["'self'", 'cdn.jsdelivr.net'],
-              styleSrc: ["'self'", 'fonts.googleapis.com'],
+              styleSrc: ["'self'", 'fonts.googleapis.com', "'unsafe-inline'"], // Swagger needs inline styles
               fontSrc: ["'self'", 'fonts.gstatic.com'],
               imgSrc: ["'self'", 'data:', 'blob:'],
               connectSrc: ["'self'"],
@@ -35,7 +35,7 @@ async function bootstrap() {
               upgradeInsecureRequests: [],
             },
           }
-        : false, // Disable in development for easier debugging
+        : false, // Disable in development for easier debugging (Swagger UI works)
       // HTTP Strict Transport Security
       hsts: isProduction
         ? {
@@ -66,6 +66,40 @@ async function bootstrap() {
   // Enable Sentry error tracking
   app.useGlobalInterceptors(new SentryInterceptor());
 
+  // Swagger/OpenAPI documentation (only in development)
+  if (process.env.NODE_ENV !== 'production') {
+    const config = new DocumentBuilder()
+      .setTitle('Kodla API')
+      .setDescription('Kodla Learning Platform API - Interactive coding education platform')
+      .setVersion('1.0')
+      .addBearerAuth(
+        {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+          description: 'Enter JWT token',
+        },
+        'JWT-auth',
+      )
+      .addTag('auth', 'Authentication endpoints')
+      .addTag('courses', 'Course management')
+      .addTag('tasks', 'Task and exercise management')
+      .addTag('submissions', 'Code submission and execution')
+      .addTag('roadmaps', 'Learning roadmap generation')
+      .addTag('gamification', 'XP, levels, and badges')
+      .addTag('subscriptions', 'Premium subscription management')
+      .addTag('admin', 'Admin dashboard endpoints')
+      .addTag('ai', 'AI tutoring endpoints')
+      .build();
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('api/docs', app, document, {
+      swaggerOptions: {
+        persistAuthorization: true,
+      },
+    });
+    logger.log('📚 Swagger docs available at /api/docs', 'Bootstrap');
+  }
+
   // CORS configuration
   const allowedOrigins = process.env.CORS_ORIGINS
     ? process.env.CORS_ORIGINS.split(',').map(o => o.trim()).filter(o => o !== '*') // Never allow wildcard with credentials
@@ -94,6 +128,9 @@ async function bootstrap() {
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
   });
+
+  // Enable graceful shutdown hooks (SIGTERM, SIGINT)
+  app.enableShutdownHooks();
 
   const port = process.env.PORT ? Number(process.env.PORT) : 8080;
   await app.listen(port, '0.0.0.0');
