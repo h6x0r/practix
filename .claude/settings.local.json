@@ -285,7 +285,11 @@
       "Bash(docker stats:*)",
       "Bash(docker top:*)",
       "Bash(git push)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(brew --version:*)",
+      "Bash(brew install:*)",
+      "Bash(railway version:*)",
+      "Bash(railway:*)"
     ],
     "deny": [],
     "ask": []
