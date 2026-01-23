@@ -144,11 +144,13 @@ class Test3 {
     @Test
     void testConsoleLoggerLog() {
         ByteArrayOutputStream outContent = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
         System.setOut(new PrintStream(outContent));
 
         Logger logger = new ConsoleLogger();
         logger.log("Test message");
 
+        System.setOut(oldOut);
         String output = outContent.toString();
         assertTrue(output.contains("Console") || output.contains("Test message"));
     }
@@ -159,11 +161,13 @@ class Test4 {
     @Test
     void testConsoleLoggerDefaultLogError() {
         ByteArrayOutputStream outContent = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
         System.setOut(new PrintStream(outContent));
 
         Logger logger = new ConsoleLogger();
         logger.logError("Error occurred");
 
+        System.setOut(oldOut);
         String output = outContent.toString();
         assertTrue(output.contains("ERROR"));
     }
@@ -174,11 +178,13 @@ class Test5 {
     @Test
     void testConsoleLoggerDefaultLogWarning() {
         ByteArrayOutputStream outContent = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
         System.setOut(new PrintStream(outContent));
 
         Logger logger = new ConsoleLogger();
         logger.logWarning("Warning message");
 
+        System.setOut(oldOut);
         String output = outContent.toString();
         assertTrue(output.contains("WARNING"));
     }
@@ -189,11 +195,13 @@ class Test6 {
     @Test
     void testFileLoggerLog() {
         ByteArrayOutputStream outContent = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
         System.setOut(new PrintStream(outContent));
 
         Logger logger = new FileLogger();
         logger.log("File message");
 
+        System.setOut(oldOut);
         String output = outContent.toString();
         assertTrue(output.contains("File") || output.contains("message"));
     }
@@ -204,11 +212,13 @@ class Test7 {
     @Test
     void testFileLoggerOverridesLogError() {
         ByteArrayOutputStream outContent = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
         System.setOut(new PrintStream(outContent));
 
         Logger logger = new FileLogger();
         logger.logError("Critical error");
 
+        System.setOut(oldOut);
         String output = outContent.toString();
         assertTrue(output.contains("ERROR"));
     }
@@ -219,11 +229,13 @@ class Test8 {
     @Test
     void testFileLoggerDefaultLogWarning() {
         ByteArrayOutputStream outContent = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
         System.setOut(new PrintStream(outContent));
 
         Logger logger = new FileLogger();
         logger.logWarning("Warning");
 
+        System.setOut(oldOut);
         String output = outContent.toString();
         assertTrue(output.contains("WARNING"));
     }

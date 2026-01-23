@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { User } from './types';
 import { authService } from './features/auth/api/authService';
 import { setupInterceptors } from '@/lib/api';
@@ -104,7 +104,7 @@ const App = () => {
             <GlobalKeyboardHandler />
             <AuthContext.Provider value={authValue}>
               <SubscriptionProvider>
-                <HashRouter>
+                <BrowserRouter>
                 <Routes>
                     {routes.map((route, index) => {
                     // 1. Wrap in Layout if needed
@@ -130,7 +130,7 @@ const App = () => {
                     {/* Fallback */}
                     <Route path="*" element={<Navigate to="/" />} />
                 </Routes>
-                </HashRouter>
+                </BrowserRouter>
               </SubscriptionProvider>
             </AuthContext.Provider>
           </ToastProvider>

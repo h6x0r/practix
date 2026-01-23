@@ -98,7 +98,8 @@ While loop: 5 4 3 2 1
     }
 
     public static void demonstrateLoops() {
-        System.out.println("\n=== Loop Statements ===");
+        System.out.println("");
+        System.out.println("=== Loop Statements ===");
 
         // Traditional for loop
         System.out.print("For loop (1-5): ");
@@ -135,7 +136,8 @@ While loop: 5 4 3 2 1
     }
 
     public static void demonstrateFlowControl() {
-        System.out.println("\n=== Flow Control (break, continue) ===");
+        System.out.println("");
+        System.out.println("=== Flow Control (break, continue) ===");
 
         // Break statement
         System.out.print("Break at 5: ");
@@ -158,7 +160,8 @@ While loop: 5 4 3 2 1
         System.out.println();
 
         // Labeled break (for nested loops)
-        System.out.println("\nLabeled break example:");
+        System.out.println("");
+        System.out.println("Labeled break example:");
         outer: // Label for outer loop
         for (int i = 1; i <= 3; i++) {
             for (int j = 1; j <= 3; j++) {
@@ -172,14 +175,16 @@ While loop: 5 4 3 2 1
     }
 
     public static void nestedLoopsExample() {
-        System.out.println("\n=== Multiplication Table (5x5) ===");
+        System.out.println("");
+        System.out.println("=== Multiplication Table (5x5) ===");
 
         // Print header
         System.out.print("    ");
         for (int i = 1; i <= 5; i++) {
             System.out.printf("%4d", i);
         }
-        System.out.println("\n    --------------------");
+        System.out.println("");
+        System.out.println("    --------------------");
 
         // Print multiplication table
         for (int i = 1; i <= 5; i++) {
@@ -191,7 +196,8 @@ While loop: 5 4 3 2 1
         }
 
         // Pattern printing with nested loops
-        System.out.println("\n=== Triangle Pattern ===");
+        System.out.println("");
+        System.out.println("=== Triangle Pattern ===");
         for (int i = 1; i <= 5; i++) {
             for (int j = 1; j <= i; j++) {
                 System.out.print("* ");
@@ -235,125 +241,150 @@ public void processBatch(List<Task> tasks) {
     order: 2,
     testCode: `import static org.junit.Assert.*;
 import org.junit.Test;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 
-// Test1: Test grade A
+// Test1: demonstrateConditionals should show grade A for score 95
 class Test1 {
     @Test
     public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
         ControlFlowDemo.demonstrateConditionals(95);
-        assertTrue("Grade A should be assigned for score 95", true);
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should contain 'A' for score 95", output.contains("A"));
     }
 }
 
-// Test2: Test grade B
+// Test2: demonstrateConditionals should show grade B for score 85
 class Test2 {
     @Test
     public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
         ControlFlowDemo.demonstrateConditionals(85);
-        assertTrue("Grade B should be assigned for score 85", true);
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should contain 'B' for score 85", output.contains("B"));
     }
 }
 
-// Test3: Test grade F
+// Test3: demonstrateConditionals should show grade F for score 45
 class Test3 {
     @Test
     public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
         ControlFlowDemo.demonstrateConditionals(45);
-        assertTrue("Grade F should be assigned for score 45", true);
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should contain 'F' for score 45", output.contains("F"));
     }
 }
 
-// Test4: Test for loop iteration
+// Test4: demonstrateLoops should show for loop output
 class Test4 {
     @Test
     public void test() {
-        int sum = 0;
-        for (int i = 1; i <= 5; i++) {
-            sum += i;
-        }
-        assertEquals(15, sum);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        ControlFlowDemo.demonstrateLoops();
+        System.setOut(oldOut);
+        String output = out.toString().toLowerCase();
+        assertTrue("Should contain 'for'", output.contains("for"));
     }
 }
 
-// Test5: Test while loop iteration
+// Test5: demonstrateLoops should show while loop output
 class Test5 {
     @Test
     public void test() {
-        int counter = 5;
-        int sum = 0;
-        while (counter > 0) {
-            sum += counter;
-            counter--;
-        }
-        assertEquals(15, sum);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        ControlFlowDemo.demonstrateLoops();
+        System.setOut(oldOut);
+        String output = out.toString().toLowerCase();
+        assertTrue("Should contain 'while'", output.contains("while"));
     }
 }
 
-// Test6: Test do-while loop
+// Test6: demonstrateLoops should output numbers
 class Test6 {
     @Test
     public void test() {
-        int num = 1;
-        int sum = 0;
-        do {
-            sum += num;
-            num++;
-        } while (num <= 5);
-        assertEquals(15, sum);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        ControlFlowDemo.demonstrateLoops();
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should contain '1' in loop output", output.contains("1"));
+        assertTrue("Should contain '5' in loop output", output.contains("5"));
     }
 }
 
-// Test7: Test break statement
+// Test7: demonstrateFlowControl should show break statement
 class Test7 {
     @Test
     public void test() {
-        int result = 0;
-        for (int i = 1; i <= 10; i++) {
-            if (i == 5) break;
-            result = i;
-        }
-        assertEquals(4, result);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        ControlFlowDemo.demonstrateFlowControl();
+        System.setOut(oldOut);
+        String output = out.toString().toLowerCase();
+        assertTrue("Should contain 'break'", output.contains("break"));
     }
 }
 
-// Test8: Test continue statement
+// Test8: demonstrateFlowControl should show continue or skip behavior
 class Test8 {
     @Test
     public void test() {
-        int sum = 0;
-        for (int i = 1; i <= 10; i++) {
-            if (i % 2 == 0) continue;
-            sum += i;
-        }
-        assertEquals(25, sum); // 1+3+5+7+9 = 25
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        ControlFlowDemo.demonstrateFlowControl();
+        System.setOut(oldOut);
+        String output = out.toString().toLowerCase();
+        assertTrue("Should show skipping or continue behavior",
+            output.contains("skip") || output.contains("continue") ||
+            output.contains("пропуск") || output.contains("o'tkazib"));
     }
 }
 
-// Test9: Test nested loops
+// Test9: nestedLoopsExample should show multiplication table
 class Test9 {
     @Test
     public void test() {
-        int product = 1;
-        for (int i = 1; i <= 3; i++) {
-            for (int j = 1; j <= 2; j++) {
-                product *= i;
-            }
-        }
-        assertEquals(36, product); // 1^2 * 2^2 * 3^2 = 1 * 4 * 9 = 36
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        ControlFlowDemo.nestedLoopsExample();
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should contain multiplication result (e.g., 25 for 5x5)", output.contains("25"));
     }
 }
 
-// Test10: Test ternary operator
+// Test10: nestedLoopsExample should show pattern or table
 class Test10 {
     @Test
     public void test() {
-        int score = 75;
-        String result = (score >= 60) ? "Pass" : "Fail";
-        assertEquals("Pass", result);
-
-        score = 45;
-        result = (score >= 60) ? "Pass" : "Fail";
-        assertEquals("Fail", result);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        ControlFlowDemo.nestedLoopsExample();
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should contain asterisks (*) for pattern or table dividers",
+            output.contains("*") || output.contains("-") || output.contains("|"));
     }
 }
 `,
@@ -394,7 +425,8 @@ class Test10 {
     }
 
     public static void demonstrateLoops() {
-        System.out.println("\n=== Операторы циклов ===");
+        System.out.println("");
+        System.out.println("=== Операторы циклов ===");
 
         // Традиционный цикл for
         System.out.print("Цикл for (1-5): ");
@@ -431,7 +463,8 @@ class Test10 {
     }
 
     public static void demonstrateFlowControl() {
-        System.out.println("\n=== Управление потоком (break, continue) ===");
+        System.out.println("");
+        System.out.println("=== Управление потоком (break, continue) ===");
 
         // Оператор break
         System.out.print("Прерывание на 5: ");
@@ -454,7 +487,8 @@ class Test10 {
         System.out.println();
 
         // Метка break (для вложенных циклов)
-        System.out.println("\nПример с меткой break:");
+        System.out.println("");
+        System.out.println("Пример с меткой break:");
         outer: // Метка для внешнего цикла
         for (int i = 1; i <= 3; i++) {
             for (int j = 1; j <= 3; j++) {
@@ -468,14 +502,16 @@ class Test10 {
     }
 
     public static void nestedLoopsExample() {
-        System.out.println("\n=== Таблица умножения (5x5) ===");
+        System.out.println("");
+        System.out.println("=== Таблица умножения (5x5) ===");
 
         // Печать заголовка
         System.out.print("    ");
         for (int i = 1; i <= 5; i++) {
             System.out.printf("%4d", i);
         }
-        System.out.println("\n    --------------------");
+        System.out.println("");
+        System.out.println("    --------------------");
 
         // Печать таблицы умножения
         for (int i = 1; i <= 5; i++) {
@@ -487,7 +523,8 @@ class Test10 {
         }
 
         // Печать узора с вложенными циклами
-        System.out.println("\n=== Треугольный узор ===");
+        System.out.println("");
+        System.out.println("=== Треугольный узор ===");
         for (int i = 1; i <= 5; i++) {
             for (int j = 1; j <= i; j++) {
                 System.out.print("* ");
@@ -587,7 +624,8 @@ public void processBatch(List<Task> tasks) {
     }
 
     public static void demonstrateLoops() {
-        System.out.println("\n=== Sikl operatorlari ===");
+        System.out.println("");
+        System.out.println("=== Sikl operatorlari ===");
 
         // An'anaviy for sikli
         System.out.print("For sikli (1-5): ");
@@ -624,7 +662,8 @@ public void processBatch(List<Task> tasks) {
     }
 
     public static void demonstrateFlowControl() {
-        System.out.println("\n=== Oqimni boshqarish (break, continue) ===");
+        System.out.println("");
+        System.out.println("=== Oqimni boshqarish (break, continue) ===");
 
         // Break operatori
         System.out.print("5 da to'xtatish: ");
@@ -647,7 +686,8 @@ public void processBatch(List<Task> tasks) {
         System.out.println();
 
         // Yorliqli break (ichki sikllar uchun)
-        System.out.println("\nYorliqli break misoli:");
+        System.out.println("");
+        System.out.println("Yorliqli break misoli:");
         outer: // Tashqi sikl uchun yorliq
         for (int i = 1; i <= 3; i++) {
             for (int j = 1; j <= 3; j++) {
@@ -661,14 +701,16 @@ public void processBatch(List<Task> tasks) {
     }
 
     public static void nestedLoopsExample() {
-        System.out.println("\n=== Ko'paytirish jadvali (5x5) ===");
+        System.out.println("");
+        System.out.println("=== Ko'paytirish jadvali (5x5) ===");
 
         // Sarlavhani chop etish
         System.out.print("    ");
         for (int i = 1; i <= 5; i++) {
             System.out.printf("%4d", i);
         }
-        System.out.println("\n    --------------------");
+        System.out.println("");
+        System.out.println("    --------------------");
 
         // Ko'paytirish jadvalini chop etish
         for (int i = 1; i <= 5; i++) {
@@ -680,7 +722,8 @@ public void processBatch(List<Task> tasks) {
         }
 
         // Ichki sikllar bilan naqsh chop etish
-        System.out.println("\n=== Uchburchak naqshi ===");
+        System.out.println("");
+        System.out.println("=== Uchburchak naqshi ===");
         for (int i = 1; i <= 5; i++) {
             for (int j = 1; j <= i; j++) {
                 System.out.print("* ");

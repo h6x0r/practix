@@ -24,6 +24,7 @@ describe('AuthService', () => {
     validateSession: jest.fn(),
     invalidateSession: jest.fn(),
     invalidateUserSessions: jest.fn(),
+    invalidateUserSessionsByDevice: jest.fn().mockResolvedValue(1),
   };
 
   const mockJwtService = {
@@ -335,6 +336,41 @@ describe('AuthService', () => {
       await expect(service.login({ email, password })).rejects.toThrow(
         UnauthorizedException
       );
+    });
+  });
+
+  describe('logout', () => {
+    it('should invalidate session when valid session exists', async () => {
+      const mockSession = {
+        id: 'session-123',
+        token: 'mock-token',
+        userId: 'user-123',
+        isValid: true,
+      };
+
+      mockSessionsService.validateSession.mockResolvedValue(mockSession);
+      mockSessionsService.invalidateSession.mockResolvedValue(undefined);
+
+      await service.logout('mock-token');
+
+      expect(mockSessionsService.validateSession).toHaveBeenCalledWith('mock-token');
+      expect(mockSessionsService.invalidateSession).toHaveBeenCalledWith('session-123');
+    });
+
+    it('should not call invalidateSession when session not found', async () => {
+      mockSessionsService.validateSession.mockResolvedValue(null);
+
+      await service.logout('invalid-token');
+
+      expect(mockSessionsService.validateSession).toHaveBeenCalledWith('invalid-token');
+      expect(mockSessionsService.invalidateSession).not.toHaveBeenCalled();
+    });
+
+    it('should handle undefined session gracefully', async () => {
+      mockSessionsService.validateSession.mockResolvedValue(undefined);
+
+      await expect(service.logout('some-token')).resolves.not.toThrow();
+      expect(mockSessionsService.invalidateSession).not.toHaveBeenCalled();
     });
   });
 });

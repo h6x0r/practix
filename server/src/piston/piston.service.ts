@@ -100,7 +100,7 @@ export const LANGUAGES: Record<string, LanguageConfig> = {
     name: 'Java',
     extension: '.java',
     monacoId: 'java',
-    timeLimit: 10000,
+    timeLimit: 15000, // Java needs more time for compilation
     memoryLimit: 512 * 1024 * 1024,
   },
   javascript: {
@@ -355,14 +355,26 @@ export class PistonService implements OnModuleInit, OnModuleDestroy {
    * @param maxTests - Optional limit on number of tests to run
    */
   private buildPythonTestCode(solutionCode: string, testCode: string, maxTests?: number): string {
-    // Remove pytest and solution imports from test code
+    // Remove pytest/solution imports and unittest.main() block from test code
     const cleanedTestCode = testCode
       .replace(/^import pytest.*$/gm, '')
       .replace(/^from pytest import.*$/gm, '')
       .replace(/^from solution import.*$/gm, '')
-      .replace(/^import solution.*$/gm, '');
+      .replace(/^import solution.*$/gm, '')
+      // Remove if __name__ == '__main__': unittest.main() block (single or multi-line)
+      .replace(/if\s+__name__\s*==\s*['"]__main__['"]\s*:\s*\n?\s*unittest\.main\(\)/gm, '')
+      .replace(/if\s+__name__\s*==\s*['"]__main__['"]\s*:\s*unittest\.main\(\)/gm, '');
 
     const maxTestsLimit = maxTests ? `methods = methods[:${maxTests}]  # Quick mode: limit to ${maxTests} tests` : '';
+
+    // Escape strings for Python multiline strings
+    // Replace backslashes first, then triple quotes
+    const escapePython = (s: string) => s
+      .replace(/\\/g, '\\\\')
+      .replace(/"""/g, '\\"\\"\\"');
+
+    const escapedTestCode = escapePython(cleanedTestCode);
+    const escapedSolutionCode = escapePython(solutionCode);
 
     return `# Solution code
 ${solutionCode}
@@ -370,11 +382,160 @@ ${solutionCode}
 # Test code
 ${cleanedTestCode}
 
+import re
+
+# Pre-parsed test sources (generated at build time)
+_TEST_SOURCES = {}
+_current_method = None
+_method_lines = []
+_test_code_str = """${escapedTestCode}
+"""
+for _line in _test_code_str.split('\\n'):
+    _stripped = _line.strip()
+    if _stripped.startswith('def test_'):
+        if _current_method:
+            _TEST_SOURCES[_current_method] = '\\n'.join(_method_lines)
+        _current_method = _stripped.split('(')[0].replace('def ', '')
+        _method_lines = [_line]
+    elif _current_method:
+        _method_lines.append(_line)
+if _current_method:
+    _TEST_SOURCES[_current_method] = '\\n'.join(_method_lines)
+
+# Extract function parameter names from solution code
+_SOLUTION_CODE = """${escapedSolutionCode}
+"""
+_FUNC_PARAMS = {}
+for _match in re.finditer(r'def\\s+(\\w+)\\s*\\(([^)]*)', _SOLUTION_CODE):
+    _fname = _match.group(1)
+    _params_str = _match.group(2)
+    # Parse parameter names (handle type hints)
+    _params = []
+    for _p in _params_str.split(','):
+        _p = _p.strip()
+        if not _p or _p == 'self':
+            continue
+        # Remove type hints: "nums: List[int]" -> "nums"
+        _pname = _p.split(':')[0].split('=')[0].strip()
+        if _pname:
+            _params.append(_pname)
+    _FUNC_PARAMS[_fname] = _params
+
 # Run tests sequentially - STOP on first failure
 if __name__ == "__main__":
     import sys
     import json
-    import re
+
+    def extract_args_balanced(text, start_idx):
+        """Extract content between balanced parentheses starting at start_idx"""
+        if start_idx >= len(text) or text[start_idx] != '(':
+            return None
+        depth = 0
+        for i in range(start_idx, len(text)):
+            if text[i] == '(':
+                depth += 1
+            elif text[i] == ')':
+                depth -= 1
+                if depth == 0:
+                    return text[start_idx+1:i]
+        return None
+
+    def split_args_top_level(args_str):
+        """Split arguments at top-level commas (not inside brackets or strings)"""
+        args = []
+        current = []
+        depth = 0
+        in_string = None  # None, '"', or "'"
+        i = 0
+        while i < len(args_str):
+            char = args_str[i]
+            # Handle string literals
+            if char in '"\\'' and in_string is None:
+                in_string = char
+                current.append(char)
+            elif char == in_string and (i == 0 or args_str[i-1] != '\\\\'):
+                in_string = None
+                current.append(char)
+            elif in_string:
+                current.append(char)
+            elif char in '([{':
+                depth += 1
+                current.append(char)
+            elif char in ')]}':
+                depth -= 1
+                current.append(char)
+            elif char == ',' and depth == 0:
+                args.append(''.join(current).strip())
+                current = []
+            else:
+                current.append(char)
+            i += 1
+        if current:
+            args.append(''.join(current).strip())
+        return args
+
+    def extract_input_from_source(source):
+        """Extract function call arguments with parameter names"""
+        try:
+            func_name = None
+            args_str = None
+
+            # Pattern 1: result = func_name(args)
+            match = re.search(r'(?:result|res|output|out)\\s*=\\s*(\\w+)\\s*\\(', source)
+            if match:
+                func_name = match.group(1)
+                start = match.end() - 1
+                args_str = extract_args_balanced(source, start)
+
+            # Pattern 2: assert func_name(args) == expected (skip sorted/len)
+            if not args_str:
+                for match in re.finditer(r'assert\\s+(\\w+)\\s*\\(', source):
+                    fname = match.group(1)
+                    if fname in ('sorted', 'len', 'list', 'set', 'tuple', 'str', 'int', 'float', 'bool'):
+                        continue
+                    func_name = fname
+                    start = match.end() - 1
+                    args_str = extract_args_balanced(source, start)
+                    if args_str:
+                        break
+
+            # Pattern 3: self.assertEqual(func_name(args), expected) - unittest format
+            if not args_str:
+                for match in re.finditer(r'self\\.assert(?:Equal|IsNone|True|False)\\s*\\(\\s*(\\w+)\\s*\\(', source):
+                    fname = match.group(1)
+                    if fname in ('sorted', 'len', 'list', 'set', 'tuple', 'str', 'int', 'float', 'bool'):
+                        continue
+                    func_name = fname
+                    # Find start of function call (after assertEqual()
+                    paren_idx = source.find('(', match.start())
+                    if paren_idx != -1:
+                        inner_start = source.find('(', paren_idx + 1)
+                        if inner_start != -1:
+                            args_str = extract_args_balanced(source, inner_start)
+                            if args_str:
+                                break
+
+            if not args_str:
+                return None
+
+            # Get parameter names for this function
+            param_names = _FUNC_PARAMS.get(func_name, [])
+            if not param_names:
+                return args_str.strip()
+
+            # Split arguments and pair with parameter names
+            arg_values = split_args_top_level(args_str)
+            formatted = []
+            for i, val in enumerate(arg_values):
+                if i < len(param_names):
+                    formatted.append(f"{param_names[i]} = {val.strip()}")
+                else:
+                    formatted.append(val.strip())
+
+            return '\\n'.join(formatted)
+        except:
+            pass
+        return None
 
     test_class = None
 
@@ -393,24 +554,203 @@ if __name__ == "__main__":
 
         for i, method_name in enumerate(methods, 1):
             test_result = {"name": method_name, "passed": False}
+            method = getattr(instance, method_name)
+
+            # Extract input from pre-parsed test source
+            if method_name in _TEST_SOURCES:
+                input_args = extract_input_from_source(_TEST_SOURCES[method_name])
+                if input_args:
+                    test_result["input"] = input_args
+
             try:
-                getattr(instance, method_name)()
+                method()
                 test_result["passed"] = True
+
+                # Extract expected/actual for passed tests too
+                if method_name in _TEST_SOURCES:
+                    source_lines = _TEST_SOURCES[method_name].split('\\n')
+                    for line in source_lines:
+                        stripped = line.strip()
+                        # Handle 'assert X == Y' format
+                        if stripped.startswith('assert ') and '==' in stripped:
+                            # Parse: assert left == right
+                            assertion = stripped[7:]  # Remove 'assert '
+                            # Handle trailing comment
+                            if '#' in assertion:
+                                assertion = assertion[:assertion.index('#')]
+                            parts = assertion.split('==')
+                            if len(parts) == 2:
+                                left_expr = parts[0].strip()
+                                right_expr = parts[1].strip()
+                                try:
+                                    # Safely evaluate both parts
+                                    local_vars = {'result': None, 'two_sum': two_sum, 'sorted': sorted, 'len': len, 'list': list}
+                                    # Re-run the function call to get actual result
+                                    func_match = re.search(r'result\\s*=\\s*(\\w+)\\s*\\(', _TEST_SOURCES[method_name])
+                                    if func_match:
+                                        result_line = re.search(r'result\\s*=\\s*(.+)', _TEST_SOURCES[method_name])
+                                        if result_line:
+                                            exec(result_line.group(0), globals(), local_vars)
+                                    actual_val = eval(left_expr, globals(), local_vars)
+                                    expected_val = eval(right_expr, globals(), local_vars)
+                                    test_result["output"] = str(actual_val)
+                                    test_result["expected"] = str(expected_val)
+                                except:
+                                    pass
+                            break
+                        # Handle 'assert X in Y' format (multiple valid answers)
+                        elif stripped.startswith('assert ') and ' in ' in stripped and '==' not in stripped:
+                            assertion = stripped[7:]  # Remove 'assert '
+                            if '#' in assertion:
+                                assertion = assertion[:assertion.index('#')]
+                            # Split by ' in ' (with spaces to avoid matching 'in' inside variable names)
+                            in_match = re.match(r'(.+?)\\s+in\\s+(.+)', assertion)
+                            if in_match:
+                                left_expr = in_match.group(1).strip()
+                                right_expr = in_match.group(2).strip()
+                                try:
+                                    local_vars = {'result': None, 'two_sum': two_sum, 'sorted': sorted, 'len': len, 'list': list}
+                                    func_match = re.search(r'result\\s*=\\s*(\\w+)\\s*\\(', _TEST_SOURCES[method_name])
+                                    if func_match:
+                                        result_line = re.search(r'result\\s*=\\s*(.+)', _TEST_SOURCES[method_name])
+                                        if result_line:
+                                            exec(result_line.group(0), globals(), local_vars)
+                                    actual_val = eval(left_expr, globals(), local_vars)
+                                    expected_val = eval(right_expr, globals(), local_vars)
+                                    test_result["output"] = str(actual_val)
+                                    # For 'in' operator, show all valid options
+                                    test_result["expected"] = "one of: " + str(expected_val)
+                                except:
+                                    pass
+                            break
+                        # Handle unittest 'self.assertEqual(actual, expected)' format
+                        elif 'self.assertEqual(' in stripped:
+                            try:
+                                # Extract arguments from assertEqual
+                                eq_match = re.search(r'self\\.assertEqual\\s*\\((.+)\\)', stripped)
+                                if eq_match:
+                                    args_content = eq_match.group(1)
+                                    # Split top-level arguments
+                                    args_list = split_args_top_level(args_content)
+                                    if len(args_list) >= 2:
+                                        actual_expr = args_list[0].strip()
+                                        expected_expr = args_list[1].strip()
+                                        # Try to evaluate expected (usually a literal)
+                                        try:
+                                            expected_val = eval(expected_expr)
+                                            test_result["expected"] = repr(expected_val)
+                                        except:
+                                            # Fallback: show as-is
+                                            test_result["expected"] = expected_expr
+                                        # Try to evaluate actual (function call)
+                                        try:
+                                            actual_val = eval(actual_expr, globals())
+                                            test_result["output"] = repr(actual_val)
+                                        except:
+                                            # Fallback: for passed tests actual == expected
+                                            if test_result.get("expected"):
+                                                test_result["output"] = test_result["expected"]
+                            except:
+                                pass
+                            break
+                        # Handle unittest 'self.assertIsNone(actual)' format
+                        elif 'self.assertIsNone(' in stripped:
+                            try:
+                                eq_match = re.search(r'self\\.assertIsNone\\s*\\((.+)\\)', stripped)
+                                if eq_match:
+                                    actual_expr = eq_match.group(1).strip()
+                                    try:
+                                        actual_val = eval(actual_expr, globals())
+                                        test_result["output"] = repr(actual_val)
+                                        test_result["expected"] = "None"
+                                    except:
+                                        pass
+                            except:
+                                pass
+                            break
+
                 results.append(test_result)
             except AssertionError as e:
+                import traceback
                 error_str = str(e)
                 test_result["error"] = error_str
-                # Try to parse "expected X, got Y" or "X != Y" patterns
+
+                # Try to extract expected/actual from assertion
+                # Method 1: Parse error message if it has "expected X, got Y" pattern
                 match = re.search(r'expected[:\\s]+(.+?)[,\\s]+(?:got|but got|actual)[:\\s]+(.+)', error_str, re.I)
                 if match:
                     test_result["expected"] = match.group(1).strip()
                     test_result["output"] = match.group(2).strip()
                 else:
-                    # Try "X != Y" pattern
+                    # Method 2: Try "X != Y" pattern
                     match = re.search(r'(.+?)\\s*!=\\s*(.+)', error_str)
                     if match:
                         test_result["output"] = match.group(1).strip()
                         test_result["expected"] = match.group(2).strip()
+                    else:
+                        # Method 3: Extract from traceback and evaluate assertion parts
+                        try:
+                            tb = traceback.extract_tb(e.__traceback__)
+                            if tb:
+                                last_frame = tb[-1]
+                                # Get the assertion line from test source
+                                if method_name in _TEST_SOURCES:
+                                    source_lines = _TEST_SOURCES[method_name].split('\\n')
+                                    for line in source_lines:
+                                        stripped = line.strip()
+                                        # Handle 'assert X == Y' format
+                                        if stripped.startswith('assert ') and '==' in stripped:
+                                            # Parse: assert left == right
+                                            assertion = stripped[7:]  # Remove 'assert '
+                                            # Handle trailing comment
+                                            if '#' in assertion:
+                                                assertion = assertion[:assertion.index('#')]
+                                            parts = assertion.split('==')
+                                            if len(parts) == 2:
+                                                left_expr = parts[0].strip()
+                                                right_expr = parts[1].strip()
+                                                try:
+                                                    # Safely evaluate both parts
+                                                    local_vars = {'result': None, 'two_sum': two_sum, 'sorted': sorted, 'len': len, 'list': list}
+                                                    # Re-run the function call to get actual result
+                                                    if method_name in _TEST_SOURCES:
+                                                        func_match = re.search(r'result\\s*=\\s*(\\w+)\\s*\\(', _TEST_SOURCES[method_name])
+                                                        if func_match:
+                                                            result_line = re.search(r'result\\s*=\\s*(.+)', _TEST_SOURCES[method_name])
+                                                            if result_line:
+                                                                exec(result_line.group(0), globals(), local_vars)
+                                                    actual_val = eval(left_expr, globals(), local_vars)
+                                                    expected_val = eval(right_expr, globals(), local_vars)
+                                                    test_result["output"] = str(actual_val)
+                                                    test_result["expected"] = str(expected_val)
+                                                except:
+                                                    pass
+                                            break
+                                        # Handle 'assert X in Y' format (multiple valid answers)
+                                        elif stripped.startswith('assert ') and ' in ' in stripped and '==' not in stripped:
+                                            assertion = stripped[7:]  # Remove 'assert '
+                                            if '#' in assertion:
+                                                assertion = assertion[:assertion.index('#')]
+                                            in_match = re.match(r'(.+?)\\s+in\\s+(.+)', assertion)
+                                            if in_match:
+                                                left_expr = in_match.group(1).strip()
+                                                right_expr = in_match.group(2).strip()
+                                                try:
+                                                    local_vars = {'result': None, 'two_sum': two_sum, 'sorted': sorted, 'len': len, 'list': list}
+                                                    func_match = re.search(r'result\\s*=\\s*(\\w+)\\s*\\(', _TEST_SOURCES[method_name])
+                                                    if func_match:
+                                                        result_line = re.search(r'result\\s*=\\s*(.+)', _TEST_SOURCES[method_name])
+                                                        if result_line:
+                                                            exec(result_line.group(0), globals(), local_vars)
+                                                    actual_val = eval(left_expr, globals(), local_vars)
+                                                    expected_val = eval(right_expr, globals(), local_vars)
+                                                    test_result["output"] = str(actual_val)
+                                                    test_result["expected"] = "one of: " + str(expected_val)
+                                                except:
+                                                    pass
+                                            break
+                        except:
+                            pass
                 results.append(test_result)
                 # Output JSON and exit on first failure
                 print(json.dumps({"tests": results, "passed": len([r for r in results if r["passed"]]), "total": total_tests}))
@@ -450,14 +790,17 @@ if __name__ == "__main__":
       .replace(/\*testing\.T/g, '*T')
       .trim();
 
-    // Extract test function names from testCode
-    const testFunctions = this.extractGoTestFunctions(testCode);
+    // Extract test function names and descriptions from testCode
+    const testFunctions = this.extractGoTestFunctionsWithDescriptions(testCode);
 
     // Apply maxTests limit
     const testsToRun = maxTests ? testFunctions.slice(0, maxTests) : testFunctions;
 
-    // Generate runTest calls
-    const testCalls = testsToRun.map(name => `    runTest("${name}", ${name})`).join('\n');
+    // Generate runTest calls with descriptions
+    const testCalls = testsToRun.map(t => {
+      const escapedDesc = t.description.replace(/"/g, '\\"');
+      return `    runTest("${t.name}", ${t.name}, "${escapedDesc}")`;
+    }).join('\n');
 
     return `package main
 
@@ -475,6 +818,7 @@ type TestResult struct {
     Error    string \`json:"error,omitempty"\`
     Expected string \`json:"expected,omitempty"\`
     Output   string \`json:"output,omitempty"\`
+    Input    string \`json:"input,omitempty"\`
 }
 
 type TestOutput struct {
@@ -542,10 +886,13 @@ func parseError(errMsg string) (expected, output string) {
 }
 
 // Run single test - returns true if passed, false if failed
-func runTest(name string, fn func(*T)) bool {
+func runTest(name string, fn func(*T), description string) bool {
     totalTests++
     t := &T{name: name}
     result := TestResult{Name: name, Passed: false}
+    if description != "" {
+        result.Input = description
+    }
 
     defer func() {
         if r := recover(); r != nil {
@@ -607,8 +954,17 @@ ${testCalls}
    * Validates function names to prevent code injection
    */
   private extractGoTestFunctions(testCode: string): string[] {
-    const functions: string[] = [];
-    const regex = /func\s+(Test\w+)\s*\(/g;
+    return this.extractGoTestFunctionsWithDescriptions(testCode).map(t => t.name);
+  }
+
+  /**
+   * Extract Go test function names with descriptions from comments
+   * Validates function names to prevent code injection
+   */
+  private extractGoTestFunctionsWithDescriptions(testCode: string): { name: string; description: string }[] {
+    const functions: { name: string; description: string }[] = [];
+    // Match comments followed by test functions
+    const regex = /(?:\/\/\s*(.+?)\s*\n\s*)?func\s+(Test\w+)\s*\(/g;
     // Whitelist pattern: only alphanumeric and underscore, must start with Test
     const validNamePattern = /^Test[A-Za-z0-9_]+$/;
     // Blacklist dangerous keywords that could indicate injection attempts
@@ -619,7 +975,8 @@ ${testCalls}
 
     let match;
     while ((match = regex.exec(testCode)) !== null) {
-      const funcName = match[1];
+      const comment = match[1] || '';
+      const funcName = match[2];
 
       // Validate function name format
       if (!validNamePattern.test(funcName)) {
@@ -640,49 +997,212 @@ ${testCalls}
         continue;
       }
 
-      functions.push(funcName);
+      // Extract description from comment (remove Test1: prefix if present)
+      let description = comment;
+      const colonIdx = comment.indexOf(':');
+      if (colonIdx > 0 && colonIdx < 10) {
+        description = comment.substring(colonIdx + 1).trim();
+      }
+
+      functions.push({ name: funcName, description });
     }
     return functions;
   }
 
   /**
-   * Build Java code that runs tests
+   * Build Java code that runs tests with JSON output
+   * Tests run sequentially and STOP on first failure
+   * Output is clean JSON for parsing
    */
   private buildJavaTestCode(solutionCode: string, testCode: string): string {
-    // For Java, combine solution with simple test runner
-    const cleanTests = testCode
-      .replace(/import\s+org\.junit.*$/gm, '')
-      .replace(/@Test/g, '// @Test')
+    // Extract test class names from test code
+    const testClasses = this.extractJavaTestClasses(testCode);
+    this.logger.debug(`Java test classes found: ${testClasses.join(', ')}`);
+
+    // Clean imports from solution code (we add them in the template)
+    const cleanSolution = solutionCode
+      .replace(/import\s+java\.util\.\*;/gm, '')
+      .replace(/import\s+java\.util\.ArrayList;/gm, '')
+      .replace(/import\s+java\.util\.List;/gm, '')
+      .replace(/import\s+java\.util\.Map;/gm, '')
+      .replace(/import\s+java\.util\.HashMap;/gm, '')
+      .replace(/import\s+java\.util\.Set;/gm, '')
+      .replace(/import\s+java\.util\.HashSet;/gm, '')
       .trim();
 
-    return `${solutionCode}
+    // Clean imports and annotations from test code
+    // Also make test classes implement Testable interface
+    // And redirect assertion calls to our Assert class
+    const cleanTests = testCode
+      .replace(/import\s+org\.junit.*$/gm, '')
+      .replace(/import\s+static\s+org\.junit.*$/gm, '')
+      .replace(/import\s+java\.util\.\*;/gm, '')
+      .replace(/import\s+java\.util\.List;/gm, '')
+      .replace(/import\s+java\.util\.ArrayList;/gm, '')
+      .replace(/class\s+(Test\d+)\s*\{/g, 'class $1 implements Testable {')
+      .replace(/@Test\s*/g, '')
+      // Replace assertion calls with Assert.* (only if not already prefixed)
+      .replace(/(?<!Assert\.)assertEquals\(/g, 'Assert.assertEquals(')
+      .replace(/(?<!Assert\.)assertTrue\(/g, 'Assert.assertTrue(')
+      .replace(/(?<!Assert\.)assertFalse\(/g, 'Assert.assertFalse(')
+      .replace(/(?<!Assert\.)assertNull\(/g, 'Assert.assertNull(')
+      .replace(/(?<!Assert\.)assertNotNull\(/g, 'Assert.assertNotNull(')
+      .trim();
 
-// Test execution
-class TestRunner {
+    // Generate test execution calls
+    const testCalls = testClasses.map(name => `        runTest("${name}", new ${name}());`).join('\n');
+
+    // IMPORTANT: public class Main MUST be first for Piston to find main() method
+    // Simplified test runner with JSON output and expected/output capture
+    const result = `import java.util.ArrayList;
+import java.util.List;
+
+public class Main {
+    static List<String> results = new ArrayList<>();
+    static int totalTests = 0;
     static int passed = 0;
-    static int failed = 0;
 
-    static void assertEquals(Object expected, Object actual) {
-        if (!expected.equals(actual)) {
-            throw new AssertionError("Expected: " + expected + ", Got: " + actual);
+    static void runTest(String name, Testable t) {
+        totalTests++;
+        Assert.reset();
+        try {
+            t.test();
+            passed++;
+            String exp = Assert.lastExpected != null ? Assert.lastExpected : "";
+            String act = Assert.lastActual != null ? Assert.lastActual : "";
+            results.add("{\\"name\\":\\"" + esc(name) + "\\",\\"passed\\":true,\\"expected\\":\\"" + esc(exp) + "\\",\\"output\\":\\"" + esc(act) + "\\"}");
+        } catch (AssertionError e) {
+            String exp = Assert.lastExpected != null ? Assert.lastExpected : "";
+            String act = Assert.lastActual != null ? Assert.lastActual : "";
+            String err = e.getMessage() != null ? e.getMessage() : "Assertion failed";
+            results.add("{\\"name\\":\\"" + esc(name) + "\\",\\"passed\\":false,\\"error\\":\\"" + esc(err) + "\\",\\"expected\\":\\"" + esc(exp) + "\\",\\"output\\":\\"" + esc(act) + "\\"}");
+            printResults();
+            System.exit(1);
+        } catch (Exception e) {
+            String err = e.getClass().getSimpleName() + ": " + e.getMessage();
+            results.add("{\\"name\\":\\"" + esc(name) + "\\",\\"passed\\":false,\\"error\\":\\"" + esc(err) + "\\"}");
+            printResults();
+            System.exit(1);
         }
     }
 
-    static void assertTrue(boolean condition) {
-        if (!condition) {
-            throw new AssertionError("Expected true but got false");
-        }
+    static String esc(String s) {
+        if (s == null) return "";
+        return s.replace("\\\\", "\\\\\\\\").replace("\\"", "\\\\\\"").replace("\\n", "\\\\n").replace("\\r", "\\\\r");
     }
 
-    static void assertFalse(boolean condition) {
-        if (condition) {
-            throw new AssertionError("Expected false but got true");
+    static void printResults() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("{\\"tests\\":[");
+        for (int i = 0; i < results.size(); i++) {
+            if (i > 0) sb.append(",");
+            sb.append(results.get(i));
         }
+        sb.append("],\\"passed\\":").append(passed).append(",\\"total\\":").append(totalTests).append("}");
+        System.out.println(sb.toString());
+    }
+
+    public static void main(String[] args) {
+${testCalls}
+        printResults();
+        System.exit(0);
     }
 }
 
+// Solution code
+${cleanSolution}
+
+interface Testable { void test() throws Exception; }
+
+class Assert {
+    static String lastExpected = null;
+    static String lastActual = null;
+
+    static void assertEquals(Object expected, Object actual) {
+        lastExpected = String.valueOf(expected);
+        lastActual = String.valueOf(actual);
+        if (!java.util.Objects.equals(expected, actual))
+            throw new AssertionError("Expected: " + expected + ", Got: " + actual);
+    }
+
+    static void assertEquals(int expected, int actual) {
+        lastExpected = String.valueOf(expected);
+        lastActual = String.valueOf(actual);
+        if (expected != actual) throw new AssertionError("Expected: " + expected + ", Got: " + actual);
+    }
+
+    static void assertEquals(long expected, long actual) {
+        lastExpected = String.valueOf(expected);
+        lastActual = String.valueOf(actual);
+        if (expected != actual) throw new AssertionError("Expected: " + expected + ", Got: " + actual);
+    }
+
+    static void assertEquals(double expected, double actual, double delta) {
+        lastExpected = String.valueOf(expected);
+        lastActual = String.valueOf(actual);
+        if (Math.abs(expected - actual) > delta) throw new AssertionError("Expected: " + expected + ", Got: " + actual);
+    }
+
+    static void assertTrue(boolean condition) {
+        lastExpected = "true";
+        lastActual = String.valueOf(condition);
+        if (!condition) throw new AssertionError("Expected true but got false");
+    }
+
+    static void assertTrue(String message, boolean condition) {
+        lastExpected = "true";
+        lastActual = String.valueOf(condition);
+        if (!condition) throw new AssertionError(message);
+    }
+
+    static void assertFalse(boolean condition) {
+        lastExpected = "false";
+        lastActual = String.valueOf(condition);
+        if (condition) throw new AssertionError("Expected false but got true");
+    }
+
+    static void assertFalse(String message, boolean condition) {
+        lastExpected = "false";
+        lastActual = String.valueOf(condition);
+        if (condition) throw new AssertionError(message);
+    }
+
+    static void assertNull(Object obj) {
+        lastExpected = "null";
+        lastActual = String.valueOf(obj);
+        if (obj != null) throw new AssertionError("Expected null but got: " + obj);
+    }
+
+    static void assertNotNull(Object obj) {
+        lastExpected = "not null";
+        lastActual = obj == null ? "null" : String.valueOf(obj);
+        if (obj == null) throw new AssertionError("Expected not null but got null");
+    }
+
+    static void reset() { lastExpected = null; lastActual = null; }
+}
+
+// Test classes
 ${cleanTests}
 `;
+    // Debug: log generated code length
+    this.logger.debug(`Generated Java code length: ${result.length} chars, test calls: ${testCalls.length} chars`);
+    return result;
+  }
+
+  /**
+   * Extract Java test class names from test code
+   * Looks for classes like Test1, Test2, etc. that contain @Test methods
+   */
+  private extractJavaTestClasses(testCode: string): string[] {
+    const classes: string[] = [];
+    // Pattern: class TestN { ... @Test ... }
+    const classRegex = /class\s+(Test\d+)\s*\{/g;
+    let match;
+    while ((match = classRegex.exec(testCode)) !== null) {
+      classes.push(match[1]);
+    }
+    return classes;
   }
 
   /**
@@ -713,6 +1233,7 @@ ${cleanTests}
         version: '*', // Use latest available version
         files: [{ content: code }],
         stdin: stdin || '',
+        compile_timeout: langConfig.timeLimit, // For compiled languages like Java/Go
         run_timeout: langConfig.timeLimit,
         run_memory_limit: langConfig.memoryLimit,
       };

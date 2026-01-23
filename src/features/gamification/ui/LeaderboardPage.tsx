@@ -1,8 +1,18 @@
 import React, { useContext, useEffect, useState } from 'react';
 import { AuthContext } from '@/components/Layout';
+import { AuthRequiredOverlay } from '@/components/AuthRequiredOverlay';
 import { gamificationService, LeaderboardEntry, UserGamificationStats } from '../api/gamificationService';
 import { useUITranslation } from '@/contexts/LanguageContext';
 import { IconTrophy, IconFire, IconStar } from '@/components/Icons';
+
+// Mock data for preview (unauthenticated users)
+const MOCK_LEADERBOARD = [
+  { id: '1', name: 'Maria Chen', level: 9, xp: 6200, streak: 12, tasksSolved: 89, rank: 1 },
+  { id: '2', name: 'John Smith', level: 8, xp: 4800, streak: 5, tasksSolved: 72, rank: 2 },
+  { id: '3', name: 'Anna Ko', level: 7, xp: 3500, streak: 8, tasksSolved: 58, rank: 3 },
+  { id: '4', name: 'Mike Johnson', level: 6, xp: 2200, streak: 3, tasksSolved: 45, rank: 4 },
+  { id: '5', name: 'Sarah Lee', level: 6, xp: 1900, streak: 15, tasksSolved: 41, rank: 5 },
+];
 
 const LeaderboardPage = () => {
   const { user } = useContext(AuthContext);
@@ -47,6 +57,18 @@ const LeaderboardPage = () => {
     );
   }
 
+  // Show auth overlay for unauthenticated users with mock preview
+  if (!user) {
+    return (
+      <AuthRequiredOverlay
+        title={tUI('leaderboard.loginRequired')}
+        description={tUI('leaderboard.loginRequiredDesc')}
+      >
+        <LeaderboardPreview tUI={tUI} />
+      </AuthRequiredOverlay>
+    );
+  }
+
   return (
     <div className="max-w-4xl mx-auto space-y-8">
       {/* Header */}
@@ -71,25 +93,25 @@ const LeaderboardPage = () => {
               <div>
                 <h2 className="text-xl font-bold">{user.name}</h2>
                 <p className="text-white/80">
-                  Level {myStats.level} • {myStats.xp.toLocaleString()} XP
+                  {tUI('leaderboard.level')} {myStats.level} • {myStats.xp.toLocaleString()} {tUI('leaderboard.xp')}
                 </p>
               </div>
             </div>
             <div className="text-right">
               <div className="flex items-center gap-2 text-lg">
                 <IconFire className="w-5 h-5 text-orange-300" />
-                <span>{myStats.currentStreak} day streak</span>
+                <span>{myStats.currentStreak} {tUI('leaderboard.dayStreak')}</span>
               </div>
               <div className="text-white/70 text-sm mt-1">
-                {myStats.badges.length} badges earned
+                {myStats.badges.length} {tUI('leaderboard.badgesEarned')}
               </div>
             </div>
           </div>
           {/* XP Progress */}
           <div className="mt-4">
             <div className="flex justify-between text-sm text-white/80 mb-1">
-              <span>Progress to Level {myStats.level + 1}</span>
-              <span>{myStats.xpProgress} / {myStats.xpNeeded} XP</span>
+              <span>{tUI('leaderboard.progressToLevel')} {myStats.level + 1}</span>
+              <span>{myStats.xpProgress} / {myStats.xpNeeded} {tUI('leaderboard.xp')}</span>
             </div>
             <div className="w-full h-2 bg-white/20 rounded-full overflow-hidden">
               <div
@@ -140,12 +162,12 @@ const LeaderboardPage = () => {
                         {entry.name}
                         {isMe && (
                           <span className="text-xs bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 px-2 py-0.5 rounded-full">
-                            You
+                            {tUI('leaderboard.you')}
                           </span>
                         )}
                       </div>
                       <div className="text-sm text-gray-500 dark:text-gray-400">
-                        Level {entry.level} • {entry.tasksSolved} tasks
+                        {tUI('leaderboard.level')} {entry.level} • {entry.tasksSolved} {tUI('leaderboard.tasks')}
                       </div>
                     </div>
                   </div>
@@ -157,14 +179,14 @@ const LeaderboardPage = () => {
                     <div className="text-lg font-bold text-gray-900 dark:text-white">
                       {entry.xp.toLocaleString()}
                     </div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">XP</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">{tUI('leaderboard.xp')}</div>
                   </div>
                   <div className="text-center">
                     <div className="flex items-center gap-1 text-lg font-bold text-orange-500">
                       <IconFire className="w-4 h-4" />
                       {entry.streak}
                     </div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">Streak</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">{tUI('leaderboard.streak')}</div>
                   </div>
                 </div>
               </div>
@@ -180,6 +202,83 @@ const LeaderboardPage = () => {
           <p>{tUI('leaderboard.empty') || 'No entries yet. Be the first!'}</p>
         </div>
       )}
+    </div>
+  );
+};
+
+// Preview component for unauthenticated users
+const LeaderboardPreview = ({ tUI }: { tUI: (key: string) => string }) => {
+  const getRankBadge = (rank: number) => {
+    if (rank === 1) return { bg: 'bg-yellow-500', text: 'text-white', icon: '🥇' };
+    if (rank === 2) return { bg: 'bg-gray-400', text: 'text-white', icon: '🥈' };
+    if (rank === 3) return { bg: 'bg-amber-600', text: 'text-white', icon: '🥉' };
+    return { bg: 'bg-gray-100 dark:bg-dark-bg', text: 'text-gray-600 dark:text-gray-400', icon: null };
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto space-y-8">
+      {/* Header */}
+      <div className="text-center">
+        <h1 className="text-3xl font-display font-bold text-gray-900 dark:text-white flex items-center justify-center gap-3">
+          <IconTrophy className="w-8 h-8 text-yellow-500" />
+          {tUI('leaderboard.title') || 'Leaderboard'}
+        </h1>
+        <p className="text-gray-500 dark:text-gray-400 mt-2">
+          {tUI('leaderboard.subtitle') || 'Top coders ranked by XP'}
+        </p>
+      </div>
+
+      {/* Preview Table */}
+      <div className="bg-white dark:bg-dark-surface rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm overflow-hidden">
+        <div className="p-4 border-b border-gray-100 dark:border-dark-border">
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+            {tUI('leaderboard.top50') || 'Top 50 Coders'}
+          </h2>
+        </div>
+        <div className="divide-y divide-gray-100 dark:divide-dark-border">
+          {MOCK_LEADERBOARD.map((entry) => {
+            const rankStyle = getRankBadge(entry.rank);
+            return (
+              <div
+                key={entry.id}
+                className="flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-dark-bg/50 transition-colors"
+              >
+                <div className="flex items-center gap-4">
+                  <div className={`w-10 h-10 rounded-full ${rankStyle.bg} ${rankStyle.text} flex items-center justify-center font-bold text-sm`}>
+                    {rankStyle.icon || entry.rank}
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-brand-400 to-purple-500 flex items-center justify-center text-white font-bold">
+                      {entry.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <div className="font-medium text-gray-900 dark:text-white">{entry.name}</div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400">
+                        {tUI('leaderboard.level')} {entry.level} • {entry.tasksSolved} {tUI('leaderboard.tasks')}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-6">
+                  <div className="text-center">
+                    <div className="text-lg font-bold text-gray-900 dark:text-white">
+                      {entry.xp.toLocaleString()}
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">{tUI('leaderboard.xp')}</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="flex items-center gap-1 text-lg font-bold text-orange-500">
+                      <IconFire className="w-4 h-4" />
+                      {entry.streak}
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">{tUI('leaderboard.streak')}</div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 };

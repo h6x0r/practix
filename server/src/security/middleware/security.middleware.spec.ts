@@ -178,7 +178,9 @@ describe('SecurityMiddleware', () => {
       expect(res.status).toHaveBeenCalledWith(400);
     });
 
-    it('should detect INSERT INTO injection', async () => {
+    // Note: INSERT, UPDATE, DELETE patterns were intentionally removed
+    // to reduce false positives in legitimate code submissions
+    it('should allow INSERT INTO (not blocked to reduce false positives)', async () => {
       const req = createMockRequest({
         body: { data: "INSERT INTO users (admin) VALUES (1)" },
       });
@@ -187,10 +189,11 @@ describe('SecurityMiddleware', () => {
 
       await middleware.use(req, res, next);
 
-      expect(res.status).toHaveBeenCalledWith(400);
+      // Should pass through - these patterns are not checked anymore
+      expect(next).toHaveBeenCalled();
     });
 
-    it('should detect UPDATE SET injection', async () => {
+    it('should allow UPDATE SET (not blocked to reduce false positives)', async () => {
       const req = createMockRequest({
         body: { data: "UPDATE users SET admin = 1" },
       });
@@ -199,10 +202,10 @@ describe('SecurityMiddleware', () => {
 
       await middleware.use(req, res, next);
 
-      expect(res.status).toHaveBeenCalledWith(400);
+      expect(next).toHaveBeenCalled();
     });
 
-    it('should detect DELETE FROM injection', async () => {
+    it('should allow DELETE FROM (not blocked to reduce false positives)', async () => {
       const req = createMockRequest({
         body: { data: "DELETE FROM users WHERE 1=1" },
       });
@@ -211,7 +214,7 @@ describe('SecurityMiddleware', () => {
 
       await middleware.use(req, res, next);
 
-      expect(res.status).toHaveBeenCalledWith(400);
+      expect(next).toHaveBeenCalled();
     });
   });
 
@@ -477,7 +480,7 @@ describe('SecurityMiddleware', () => {
   // Code Submission Exclusion
   // ============================================
   describe('code submission exclusion', () => {
-    it('should not check body for /submissions/run endpoint', async () => {
+    it('should check body for /submissions/run endpoint (DROP TABLE blocked)', async () => {
       const req = createMockRequest({
         path: '/submissions/run',
         method: 'POST',
@@ -491,8 +494,27 @@ describe('SecurityMiddleware', () => {
 
       await middleware.use(req, res, next);
 
-      // Code submissions are excluded from body checks
-      // The SQL is in the body which is intentionally excluded for this path
+      // DROP TABLE pattern is detected and blocked
+      // Note: This is intentional - malicious SQL should be blocked even in code submissions
+      // Legitimate SQL learning should use proper escaping/formatting
+      expect(res.status).toHaveBeenCalledWith(400);
+    });
+
+    it('should allow safe code in /submissions/run endpoint', async () => {
+      const req = createMockRequest({
+        path: '/submissions/run',
+        method: 'POST',
+        body: {
+          code: "SELECT * FROM users WHERE id = 1",
+          language: 'sql',
+        },
+      });
+      const res = createMockResponse();
+      const next = createMockNext();
+
+      await middleware.use(req, res, next);
+
+      // Safe SQL patterns should pass
       expect(next).toHaveBeenCalled();
     });
   });

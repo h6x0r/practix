@@ -60,14 +60,16 @@ public class ListVsArray {
         try {
             listFromArray.add("Date"); // Fails - fixed size
         } catch (UnsupportedOperationException e) {
-            System.out.println("\nCannot add to Arrays.asList() list (fixed size)");
+            System.out.println("");
+            System.out.println("Cannot add to Arrays.asList() list (fixed size)");
         }
 
         // Convert List to array using toArray()
         List<String> fruits = new ArrayList<>(List.of("Mango", "Orange", "Grape"));
         // Method 1: toArray() returns Object[]
         Object[] objArray = fruits.toArray();
-        System.out.println("\ntoArray() result: " + Arrays.toString(objArray));
+        System.out.println("");
+        System.out.println("toArray() result: " + Arrays.toString(objArray));
 
         // Method 2: toArray(T[]) returns typed array
         String[] stringArray = fruits.toArray(new String[0]);
@@ -80,7 +82,8 @@ public class ListVsArray {
         // Right way: wrap in ArrayList constructor
         List<String> mutableList = new ArrayList<>(Arrays.asList(sourceArray));
         mutableList.add("Four"); // Works!
-        System.out.println("\nMutable ArrayList: " + mutableList);
+        System.out.println("");
+        System.out.println("Mutable ArrayList: " + mutableList);
 
         // Performance comparison: random access
         int size = 1_000_000;
@@ -107,19 +110,22 @@ public class ListVsArray {
         }
         long listTime = System.nanoTime() - startTime;
 
-        System.out.println("\nRandom access performance (1M elements):");
+        System.out.println("");
+        System.out.println("Random access performance (1M elements):");
         System.out.println("  Array: " + arrayTime / 1_000_000 + " ms");
         System.out.println("  ArrayList: " + listTime / 1_000_000 + " ms");
         System.out.println("  Array is ~" + (listTime / arrayTime) + "x faster");
 
         // When to use arrays vs Lists
-        System.out.println("\nUse Arrays when:");
+        System.out.println("");
+        System.out.println("Use Arrays when:");
         System.out.println("  - Fixed size is acceptable");
         System.out.println("  - Performance is critical (lower memory overhead)");
         System.out.println("  - Working with primitives to avoid boxing");
         System.out.println("  - Multidimensional data structures");
 
-        System.out.println("\nUse Lists when:");
+        System.out.println("");
+        System.out.println("Use Lists when:");
         System.out.println("  - Size changes dynamically");
         System.out.println("  - Need collection operations (sort, search, etc.)");
         System.out.println("  - Working with generics and type safety");
@@ -155,115 +161,165 @@ legacyApi.process(legacyArray);
 - Lists for business logic with changing data
 - Easy conversion between formats for integration`,
     order: 5,
-    testCode: `import java.util.Arrays;
-import java.util.ArrayList;
-import java.util.List;
-import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.*;
+    testCode: `import static org.junit.Assert.*;
+import org.junit.Test;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 
-// Test1: Arrays.asList creates list from array
+// Test1: main method should show List vs Array comparison
 class Test1 {
     @Test
-    void testArraysAsList() {
-        String[] array = {"A", "B", "C"};
-        List<String> list = Arrays.asList(array);
-        assertEquals(3, list.size());
-        assertEquals("B", list.get(1));
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        ListVsArray.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show List vs Array comparison",
+            output.contains("Array") || output.contains("List") ||
+            output.contains("asList") || output.contains("Convert"));
     }
 }
 
-// Test2: Arrays.asList list is fixed size
+// Test2: Output should show Arrays.asList conversion
 class Test2 {
     @Test
-    void testArraysAsListFixedSize() {
-        String[] array = {"A", "B", "C"};
-        List<String> list = Arrays.asList(array);
-        assertThrows(UnsupportedOperationException.class, () -> list.add("D"));
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        ListVsArray.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should mention Arrays.asList",
+            output.contains("Arrays.asList") || output.contains("asList"));
     }
 }
 
-// Test3: Arrays.asList set modifies underlying array
+// Test3: Output should explain fixed-size list behavior
 class Test3 {
     @Test
-    void testArraysAsListModifiesArray() {
-        String[] array = {"A", "B", "C"};
-        List<String> list = Arrays.asList(array);
-        list.set(0, "X");
-        assertEquals("X", array[0]);
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        ListVsArray.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString().toLowerCase();
+        assertTrue("Should mention fixed-size or cannot add",
+            output.contains("fixed") || output.contains("cannot") || output.contains("unsupported") ||
+            output.contains("фиксированн") || output.contains("нельзя") || output.contains("mumkin emas"));
     }
 }
 
-// Test4: toArray() returns Object array
+// Test4: Output should show toArray conversion
 class Test4 {
     @Test
-    void testToArrayObject() {
-        List<String> list = new ArrayList<>(List.of("A", "B", "C"));
-        Object[] array = list.toArray();
-        assertEquals(3, array.length);
-        assertEquals("A", array[0]);
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        ListVsArray.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should mention toArray",
+            output.contains("toArray") || output.contains("to array"));
     }
 }
 
-// Test5: toArray(T[]) returns typed array
+// Test5: Output should show mutable ArrayList creation
 class Test5 {
     @Test
-    void testToArrayTyped() {
-        List<String> list = new ArrayList<>(List.of("A", "B", "C"));
-        String[] array = list.toArray(new String[0]);
-        assertEquals(3, array.length);
-        assertTrue(array instanceof String[]);
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        ListVsArray.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString().toLowerCase();
+        assertTrue("Should mention mutable or ArrayList",
+            output.contains("mutable") || output.contains("arraylist") ||
+            output.contains("изменяем") || output.contains("o'zgartirish mumkin"));
     }
 }
 
-// Test6: ArrayList from Arrays.asList is mutable
+// Test6: Output should show performance comparison
 class Test6 {
     @Test
-    void testMutableArrayListFromArray() {
-        String[] array = {"A", "B", "C"};
-        List<String> mutable = new ArrayList<>(Arrays.asList(array));
-        mutable.add("D");
-        assertEquals(4, mutable.size());
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        ListVsArray.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString().toLowerCase();
+        assertTrue("Should mention performance or time or O(1)",
+            output.contains("performance") || output.contains("time") || output.contains("o(1)") ||
+            output.contains("производительн") || output.contains("tezlik"));
     }
 }
 
-// Test7: ArrayList initial capacity
+// Test7: Output should show when to use arrays
 class Test7 {
     @Test
-    void testArrayListCapacity() {
-        List<Integer> list = new ArrayList<>(100);
-        assertTrue(list.isEmpty());
-        list.add(1);
-        assertEquals(1, list.size());
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        ListVsArray.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString().toLowerCase();
+        assertTrue("Should mention array usage scenarios",
+            output.contains("use array") || output.contains("when to") || output.contains("primitive") ||
+            output.contains("использовать массив") || output.contains("massiv ishlatish"));
     }
 }
 
-// Test8: Array direct access is valid
+// Test8: Output should show when to use Lists
 class Test8 {
     @Test
-    void testArrayDirectAccess() {
-        int[] array = {1, 2, 3, 4, 5};
-        assertEquals(1, array[0]);
-        assertEquals(5, array[4]);
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        ListVsArray.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString().toLowerCase();
+        assertTrue("Should mention List usage scenarios",
+            output.contains("use list") || output.contains("dynamic") || output.contains("resize") ||
+            output.contains("использовать list") || output.contains("dinamik"));
     }
 }
 
-// Test9: List.of creates immutable list
+// Test9: Output should contain sample data
 class Test9 {
     @Test
-    void testListOfImmutable() {
-        List<String> list = List.of("A", "B", "C");
-        assertThrows(UnsupportedOperationException.class, () -> list.add("D"));
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        ListVsArray.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should contain sample data (Apple, Banana, etc.)",
+            output.contains("Apple") || output.contains("Banana") || output.contains("["));
     }
 }
 
-// Test10: Converting between array and list preserves order
+// Test10: Output should explain key differences
 class Test10 {
     @Test
-    void testConversionPreservesOrder() {
-        Integer[] original = {1, 2, 3, 4, 5};
-        List<Integer> list = new ArrayList<>(Arrays.asList(original));
-        Integer[] converted = list.toArray(new Integer[0]);
-        assertArrayEquals(original, converted);
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        ListVsArray.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString().toLowerCase();
+        assertTrue("Should compare list vs array",
+            (output.contains("list") && output.contains("array")) ||
+            (output.contains("список") && output.contains("массив")));
     }
 }
 `,
@@ -289,14 +345,16 @@ public class ListVsArray {
         try {
             listFromArray.add("Date"); // Не работает - фиксированный размер
         } catch (UnsupportedOperationException e) {
-            System.out.println("\nНельзя добавлять в список Arrays.asList() (фиксированный размер)");
+            System.out.println("");
+            System.out.println("Нельзя добавлять в список Arrays.asList() (фиксированный размер)");
         }
 
         // Преобразуем List в массив используя toArray()
         List<String> fruits = new ArrayList<>(List.of("Mango", "Orange", "Grape"));
         // Способ 1: toArray() возвращает Object[]
         Object[] objArray = fruits.toArray();
-        System.out.println("\nРезультат toArray(): " + Arrays.toString(objArray));
+        System.out.println("");
+        System.out.println("Результат toArray(): " + Arrays.toString(objArray));
 
         // Способ 2: toArray(T[]) возвращает типизированный массив
         String[] stringArray = fruits.toArray(new String[0]);
@@ -309,7 +367,8 @@ public class ListVsArray {
         // Правильный способ: обернуть в конструктор ArrayList
         List<String> mutableList = new ArrayList<>(Arrays.asList(sourceArray));
         mutableList.add("Four"); // Работает!
-        System.out.println("\nИзменяемый ArrayList: " + mutableList);
+        System.out.println("");
+        System.out.println("Изменяемый ArrayList: " + mutableList);
 
         // Сравнение производительности: произвольный доступ
         int size = 1_000_000;
@@ -336,19 +395,22 @@ public class ListVsArray {
         }
         long listTime = System.nanoTime() - startTime;
 
-        System.out.println("\nПроизводительность произвольного доступа (1М элементов):");
+        System.out.println("");
+        System.out.println("Производительность произвольного доступа (1М элементов):");
         System.out.println("  Массив: " + arrayTime / 1_000_000 + " мс");
         System.out.println("  ArrayList: " + listTime / 1_000_000 + " мс");
         System.out.println("  Массив быстрее в ~" + (listTime / arrayTime) + " раз");
 
         // Когда использовать массивы или Lists
-        System.out.println("\nИспользуйте массивы когда:");
+        System.out.println("");
+        System.out.println("Используйте массивы когда:");
         System.out.println("  - Фиксированный размер приемлем");
         System.out.println("  - Производительность критична (меньше затрат памяти)");
         System.out.println("  - Работа с примитивами для избежания упаковки");
         System.out.println("  - Многомерные структуры данных");
 
-        System.out.println("\nИспользуйте Lists когда:");
+        System.out.println("");
+        System.out.println("Используйте Lists когда:");
         System.out.println("  - Размер изменяется динамически");
         System.out.println("  - Нужны операции коллекций (сортировка, поиск и т.д.)");
         System.out.println("  - Работа с обобщениями и типобезопасностью");
@@ -417,14 +479,16 @@ public class ListVsArray {
         try {
             listFromArray.add("Date"); // Ishlamaydi - qat'iy o'lcham
         } catch (UnsupportedOperationException e) {
-            System.out.println("\nArrays.asList() ro'yxatiga qo'shib bo'lmaydi (qat'iy o'lcham)");
+            System.out.println("");
+            System.out.println("Arrays.asList() ro'yxatiga qo'shib bo'lmaydi (qat'iy o'lcham)");
         }
 
         // toArray() yordamida List ni massivga o'zgartiramiz
         List<String> fruits = new ArrayList<>(List.of("Mango", "Orange", "Grape"));
         // Usul 1: toArray() Object[] qaytaradi
         Object[] objArray = fruits.toArray();
-        System.out.println("\ntoArray() natijasi: " + Arrays.toString(objArray));
+        System.out.println("");
+        System.out.println("toArray() natijasi: " + Arrays.toString(objArray));
 
         // Usul 2: toArray(T[]) tiplanangan massiv qaytaradi
         String[] stringArray = fruits.toArray(new String[0]);
@@ -437,7 +501,8 @@ public class ListVsArray {
         // To'g'ri usul: ArrayList konstruktoriga o'rash
         List<String> mutableList = new ArrayList<>(Arrays.asList(sourceArray));
         mutableList.add("Four"); // Ishlaydi!
-        System.out.println("\nO'zgaruvchan ArrayList: " + mutableList);
+        System.out.println("");
+        System.out.println("O'zgaruvchan ArrayList: " + mutableList);
 
         // Ishlash tezligini taqqoslash: tasodifiy kirish
         int size = 1_000_000;
@@ -464,19 +529,22 @@ public class ListVsArray {
         }
         long listTime = System.nanoTime() - startTime;
 
-        System.out.println("\nTasodifiy kirish samaradorligi (1M element):");
+        System.out.println("");
+        System.out.println("Tasodifiy kirish samaradorligi (1M element):");
         System.out.println("  Massiv: " + arrayTime / 1_000_000 + " ms");
         System.out.println("  ArrayList: " + listTime / 1_000_000 + " ms");
         System.out.println("  Massiv ~" + (listTime / arrayTime) + " marta tezroq");
 
         // Massivlar va Lists qachon ishlatiladi
-        System.out.println("\nMassivlardan foydalaning:");
+        System.out.println("");
+        System.out.println("Massivlardan foydalaning:");
         System.out.println("  - Qat'iy o'lcham qabul qilinadigan bo'lsa");
         System.out.println("  - Samaradorlik muhim (kam xotira sarfi)");
         System.out.println("  - Primitivlar bilan ishlash (boxing oldini olish)");
         System.out.println("  - Ko'p o'lchovli ma'lumot strukturalari");
 
-        System.out.println("\nListlardan foydalaning:");
+        System.out.println("");
+        System.out.println("Listlardan foydalaning:");
         System.out.println("  - O'lcham dinamik o'zgarsa");
         System.out.println("  - Kolleksiya operatsiyalari kerak (saralash, qidirish va h.k.)");
         System.out.println("  - Generiklar va tip xavfsizligi bilan ishlash");

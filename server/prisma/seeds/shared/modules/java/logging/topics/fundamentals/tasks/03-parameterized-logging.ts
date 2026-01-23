@@ -174,16 +174,20 @@ class Test2 {
     }
 }
 
-// Test3: Verify ParameterizedLogging main method executes
+// Test3: main outputs performance comparison
 class Test3 {
     @Test
     public void test() {
-        try {
-            ParameterizedLogging.main(new String[]{});
-            assertTrue("Main method should execute successfully", true);
-        } catch (Exception e) {
-            fail("Main method should not throw exceptions: " + e.getMessage());
-        }
+        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+        java.io.PrintStream oldOut = System.out;
+        System.setOut(new java.io.PrintStream(out));
+        ParameterizedLogging.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should print performance comparison",
+            output.contains("comparison") || output.contains("Performance") ||
+            output.contains("сравнение") || output.contains("Сравнение") ||
+            output.contains("solishtirish") || output.contains("ns"));
     }
 }
 
@@ -221,16 +225,18 @@ class Test6 {
     }
 }
 
-// Test7: Verify logging works with User objects
+// Test7: static logger field exists
 class Test7 {
     @Test
     public void test() {
         try {
-            User user = new User("TestUser", 9999);
-            String userString = user.toString();
-            assertTrue("User should have toString", userString.length() > 0);
-        } catch (Exception e) {
-            fail("Should work with User objects");
+            java.lang.reflect.Field loggerField = ParameterizedLogging.class.getDeclaredField("logger");
+            assertTrue("Logger should be static",
+                java.lang.reflect.Modifier.isStatic(loggerField.getModifiers()));
+            assertTrue("Logger should be final",
+                java.lang.reflect.Modifier.isFinal(loggerField.getModifiers()));
+        } catch (NoSuchFieldException e) {
+            fail("Should have a 'logger' field");
         }
     }
 }
@@ -254,18 +260,19 @@ class Test9 {
     }
 }
 
-// Test10: Verify complete execution without errors
+// Test10: output shows timing results
 class Test10 {
     @Test
     public void test() {
-        try {
-            ParameterizedLogging.main(new String[]{});
-            User user = new User("FinalTest", 9999);
-            assertNotNull("User should be created", user);
-            assertTrue("Execution should complete", true);
-        } catch (Exception e) {
-            fail("Complete execution should work: " + e.getMessage());
-        }
+        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+        java.io.PrintStream oldOut = System.out;
+        System.setOut(new java.io.PrintStream(out));
+        ParameterizedLogging.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show timing results",
+            output.contains("ns") || output.contains("нс") ||
+            output.contains("faster") || output.contains("быстрее") || output.contains("tezroq"));
     }
 }
 `,

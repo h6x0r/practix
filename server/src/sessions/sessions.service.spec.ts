@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { SessionsService } from './sessions.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { DeviceType } from '@prisma/client';
 import * as crypto from 'crypto';
 
 // Helper to hash tokens like the service does
@@ -19,6 +20,7 @@ describe('SessionsService', () => {
     id: 'session-123',
     userId: 'user-123',
     token: hashedToken, // Session stores hashed token
+    deviceType: DeviceType.DESKTOP,
     deviceInfo: 'Chrome on macOS',
     ipAddress: '192.168.1.1',
     expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
@@ -76,13 +78,14 @@ describe('SessionsService', () => {
       });
     });
 
-    it('should include device info if provided', async () => {
+    it('should include device type and info if provided', async () => {
       mockPrismaService.session.create.mockResolvedValue(mockSession);
 
-      await service.createSession('user-123', 'token', 'Chrome on macOS');
+      await service.createSession('user-123', 'token', DeviceType.DESKTOP, 'Chrome on macOS');
 
       expect(mockPrismaService.session.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
+          deviceType: DeviceType.DESKTOP,
           deviceInfo: 'Chrome on macOS',
         }),
       });
@@ -91,7 +94,7 @@ describe('SessionsService', () => {
     it('should include IP address if provided', async () => {
       mockPrismaService.session.create.mockResolvedValue(mockSession);
 
-      await service.createSession('user-123', 'token', undefined, '192.168.1.1');
+      await service.createSession('user-123', 'token', DeviceType.UNKNOWN, undefined, '192.168.1.1');
 
       expect(mockPrismaService.session.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
@@ -186,6 +189,76 @@ describe('SessionsService', () => {
       mockPrismaService.session.updateMany.mockResolvedValue({ count: 0 });
 
       const result = await service.invalidateUserSessions('user-no-sessions');
+
+      expect(result).toBe(0);
+    });
+  });
+
+  // ============================================
+  // invalidateUserSessionsByDevice()
+  // ============================================
+  describe('invalidateUserSessionsByDevice()', () => {
+    it('should invalidate sessions for specific device type', async () => {
+      mockPrismaService.session.updateMany.mockResolvedValue({ count: 1 });
+
+      const result = await service.invalidateUserSessionsByDevice('user-123', DeviceType.MOBILE);
+
+      expect(result).toBe(1);
+      expect(mockPrismaService.session.updateMany).toHaveBeenCalledWith({
+        where: {
+          userId: 'user-123',
+          deviceType: DeviceType.MOBILE,
+          isActive: true,
+        },
+        data: {
+          isActive: false,
+        },
+      });
+    });
+
+    it('should not affect other device types', async () => {
+      mockPrismaService.session.updateMany.mockResolvedValue({ count: 0 });
+
+      const result = await service.invalidateUserSessionsByDevice('user-123', DeviceType.DESKTOP);
+
+      expect(result).toBe(0);
+      expect(mockPrismaService.session.updateMany).toHaveBeenCalledWith({
+        where: {
+          userId: 'user-123',
+          deviceType: DeviceType.DESKTOP,
+          isActive: true,
+        },
+        data: {
+          isActive: false,
+        },
+      });
+    });
+  });
+
+  // ============================================
+  // getActiveSessionCountByDevice()
+  // ============================================
+  describe('getActiveSessionCountByDevice()', () => {
+    it('should return count of active sessions for specific device type', async () => {
+      mockPrismaService.session.count.mockResolvedValue(1);
+
+      const result = await service.getActiveSessionCountByDevice('user-123', DeviceType.MOBILE);
+
+      expect(result).toBe(1);
+      expect(mockPrismaService.session.count).toHaveBeenCalledWith({
+        where: {
+          userId: 'user-123',
+          deviceType: DeviceType.MOBILE,
+          isActive: true,
+          expiresAt: { gte: expect.any(Date) },
+        },
+      });
+    });
+
+    it('should return 0 for device type with no active sessions', async () => {
+      mockPrismaService.session.count.mockResolvedValue(0);
+
+      const result = await service.getActiveSessionCountByDevice('user-123', DeviceType.DESKTOP);
 
       expect(result).toBe(0);
     });

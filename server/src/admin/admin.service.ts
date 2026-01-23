@@ -77,15 +77,17 @@ export class AdminService {
    * Get course analytics
    * Returns: course popularity, completion rates, average progress
    * Optimized: Single query for all userCourses with groupBy
+   * Includes translations for localization
    */
   async getCourseAnalytics() {
-    // Get all courses
+    // Get all courses with translations
     const courses = await this.prisma.course.findMany({
       select: {
         id: true,
         slug: true,
         title: true,
         category: true,
+        translations: true,
       },
     });
 
@@ -132,6 +134,7 @@ export class AdminService {
         completed,
         completionRate: totalEnrolled > 0 ? (completed / totalEnrolled) * 100 : 0,
         averageProgress: Math.round(progress.avgProgress * 100) / 100,
+        translations: course.translations as Record<string, { title?: string; description?: string }> | null,
       };
     });
 
@@ -167,10 +170,10 @@ export class AdminService {
       _count: { _all: true },
     });
 
-    // Single query for accepted submissions per task
-    const acceptedSubmissionsStats = await this.prisma.submission.groupBy({
+    // Single query for passed submissions per task
+    const passedSubmissionsStats = await this.prisma.submission.groupBy({
       by: ['taskId'],
-      where: { status: 'Accepted' },
+      where: { status: 'passed' },
       _count: { _all: true },
     });
 
@@ -184,8 +187,8 @@ export class AdminService {
       totalSubmissionsStats.map((stat) => [stat.taskId, stat._count._all]),
     );
 
-    const acceptedSubmissionsMap = new Map(
-      acceptedSubmissionsStats.map((stat) => [stat.taskId, stat._count._all]),
+    const passedSubmissionsMap = new Map(
+      passedSubmissionsStats.map((stat) => [stat.taskId, stat._count._all]),
     );
 
     // Count unique users per task from the groupBy result
@@ -198,10 +201,10 @@ export class AdminService {
     // Build task stats using the lookup maps
     const taskStats = tasks.map((task) => {
       const totalSubmissions = totalSubmissionsMap.get(task.id) || 0;
-      const acceptedSubmissions = acceptedSubmissionsMap.get(task.id) || 0;
+      const passedSubmissions = passedSubmissionsMap.get(task.id) || 0;
       const uniqueUsers = uniqueUsersMap.get(task.id) || 0;
       const passRate =
-        totalSubmissions > 0 ? (acceptedSubmissions / totalSubmissions) * 100 : 0;
+        totalSubmissions > 0 ? (passedSubmissions / totalSubmissions) * 100 : 0;
 
       return {
         taskId: task.id,
@@ -210,7 +213,7 @@ export class AdminService {
         difficulty: task.difficulty,
         isPremium: task.isPremium,
         totalSubmissions,
-        acceptedSubmissions,
+        passedSubmissions,
         uniqueUsers,
         passRate: Math.round(passRate * 100) / 100,
       };
@@ -224,6 +227,11 @@ export class AdminService {
       .sort((a, b) => a.passRate - b.passRate)
       .slice(0, 10);
 
+    // Sort by easiest (highest pass rate)
+    const easiestTasks = [...tasksWithSubmissions]
+      .sort((a, b) => b.passRate - a.passRate)
+      .slice(0, 10);
+
     // Sort by most popular (most unique users)
     const mostPopularTasks = [...tasksWithSubmissions]
       .sort((a, b) => b.uniqueUsers - a.uniqueUsers)
@@ -231,6 +239,7 @@ export class AdminService {
 
     return {
       hardestTasks,
+      easiestTasks,
       mostPopularTasks,
       totalTasks: tasks.length,
       tasksWithSubmissions: tasksWithSubmissions.length,

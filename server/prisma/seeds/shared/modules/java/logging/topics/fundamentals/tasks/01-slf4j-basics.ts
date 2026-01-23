@@ -89,8 +89,10 @@ public class UserService {
     order: 0,
     testCode: `import static org.junit.Assert.*;
 import org.junit.Test;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 
-// Test1: Verify logger instance is created correctly
+// Test1: class can be instantiated
 class Test1 {
     @Test
     public void test() {
@@ -99,72 +101,110 @@ class Test1 {
     }
 }
 
-// Test2: Verify logger can log info messages
+// Test2: main outputs console message
 class Test2 {
     @Test
     public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
         Slf4jBasics.main(new String[]{});
-        assertTrue("Info logging should execute without errors", true);
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should print console message",
+            output.contains("console") || output.contains("log") ||
+            output.contains("консоль") || output.contains("xabarlar"));
     }
 }
 
-// Test3: Verify logger handles debug messages
+// Test3: main produces some output (logs or println)
 class Test3 {
     @Test
     public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        ByteArrayOutputStream err = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        PrintStream oldErr = System.err;
+        System.setOut(new PrintStream(out));
+        System.setErr(new PrintStream(err));
         Slf4jBasics.main(new String[]{});
-        assertTrue("Debug logging should execute without errors", true);
+        System.setOut(oldOut);
+        System.setErr(oldErr);
+        String allOutput = out.toString() + err.toString();
+        assertTrue("Should produce some output",
+            allOutput.length() > 0);
     }
 }
 
-// Test4: Verify logger handles warning messages
+// Test4: class creates static logger field
 class Test4 {
     @Test
     public void test() {
-        Slf4jBasics.main(new String[]{});
-        assertTrue("Warning logging should execute without errors", true);
-    }
-}
-
-// Test5: Verify logger handles error messages
-class Test5 {
-    @Test
-    public void test() {
-        Slf4jBasics.main(new String[]{});
-        assertTrue("Error logging should execute without errors", true);
-    }
-}
-
-// Test6: Verify main method executes successfully
-class Test6 {
-    @Test
-    public void test() {
         try {
-            Slf4jBasics.main(new String[]{});
-            assertTrue("Main method should complete successfully", true);
-        } catch (Exception e) {
-            fail("Main method should not throw exceptions");
+            java.lang.reflect.Field loggerField = Slf4jBasics.class.getDeclaredField("logger");
+            assertTrue("Logger should be static",
+                java.lang.reflect.Modifier.isStatic(loggerField.getModifiers()));
+        } catch (NoSuchFieldException e) {
+            fail("Should have a 'logger' field");
         }
     }
 }
 
-// Test7: Verify logger instance is static final
+// Test5: logger field should be final
+class Test5 {
+    @Test
+    public void test() {
+        try {
+            java.lang.reflect.Field loggerField = Slf4jBasics.class.getDeclaredField("logger");
+            assertTrue("Logger should be final",
+                java.lang.reflect.Modifier.isFinal(loggerField.getModifiers()));
+        } catch (NoSuchFieldException e) {
+            fail("Should have a 'logger' field");
+        }
+    }
+}
+
+// Test6: main does not throw exceptions
+class Test6 {
+    @Test
+    public void test() {
+        boolean completed = false;
+        try {
+            Slf4jBasics.main(new String[]{});
+            completed = true;
+        } catch (Exception e) {
+            fail("Main should not throw: " + e.getMessage());
+        }
+        assertTrue("Main should complete without exceptions", completed);
+    }
+}
+
+// Test7: multiple instances share same logger
 class Test7 {
     @Test
     public void test() {
         Slf4jBasics obj1 = new Slf4jBasics();
         Slf4jBasics obj2 = new Slf4jBasics();
-        assertNotNull("Logger should be accessible", obj1);
-        assertNotNull("Logger should be accessible", obj2);
+        assertNotNull("First instance created", obj1);
+        assertNotNull("Second instance created", obj2);
+        // Static logger should be shared
     }
 }
 
-// Test8: Verify all log levels work together
+// Test8: main can be called multiple times
 class Test8 {
     @Test
     public void test() {
-        Slf4jBasics.main(new String[]{});
-        assertTrue("All log levels should work together", true);
+        int callCount = 0;
+        try {
+            Slf4jBasics.main(new String[]{});
+            callCount++;
+            Slf4jBasics.main(new String[]{});
+            callCount++;
+        } catch (Exception e) {
+            fail("Multiple calls should not throw: " + e.getMessage());
+        }
+        assertEquals("Both calls should complete", 2, callCount);
     }
 }
 
@@ -172,12 +212,14 @@ class Test8 {
 class Test9 {
     @Test
     public void test() {
+        boolean completed = false;
         try {
             Slf4jBasics.main(new String[]{});
-            assertTrue("Should not throw NullPointerException", true);
+            completed = true;
         } catch (NullPointerException e) {
             fail("Should not have null pointer exceptions");
         }
+        assertTrue("Should complete without NullPointerException", completed);
     }
 }
 

@@ -213,14 +213,17 @@ class Test1 {
     @Test
     void testCreditCardPayment() {
         ByteArrayOutputStream outContent = new ByteArrayOutputStream();
+        PrintStream originalOut = System.out;
         System.setOut(new PrintStream(outContent));
-
-        PaymentStrategy payment = new CreditCardPayment("1234567812345678");
-        payment.pay(100.0);
-
-        String output = outContent.toString();
-        assertTrue(output.contains("Credit Card"));
-        assertTrue(output.contains("5678"));
+        try {
+            PaymentStrategy payment = new CreditCardPayment("1234567812345678");
+            payment.pay(100.0);
+            String output = outContent.toString();
+            assertTrue(output.contains("Credit Card"));
+            assertTrue(output.contains("5678"));
+        } finally {
+            System.setOut(originalOut);
+        }
     }
 }
 
@@ -229,14 +232,17 @@ class Test2 {
     @Test
     void testPayPalPayment() {
         ByteArrayOutputStream outContent = new ByteArrayOutputStream();
+        PrintStream originalOut = System.out;
         System.setOut(new PrintStream(outContent));
-
-        PaymentStrategy payment = new PayPalPayment("user@example.com");
-        payment.pay(100.0);
-
-        String output = outContent.toString();
-        assertTrue(output.contains("PayPal"));
-        assertTrue(output.contains("user@example.com"));
+        try {
+            PaymentStrategy payment = new PayPalPayment("user@example.com");
+            payment.pay(100.0);
+            String output = outContent.toString();
+            assertTrue(output.contains("PayPal"));
+            assertTrue(output.contains("user@example.com"));
+        } finally {
+            System.setOut(originalOut);
+        }
     }
 }
 
@@ -245,14 +251,17 @@ class Test3 {
     @Test
     void testBitcoinPayment() {
         ByteArrayOutputStream outContent = new ByteArrayOutputStream();
+        PrintStream originalOut = System.out;
         System.setOut(new PrintStream(outContent));
-
-        PaymentStrategy payment = new BitcoinPayment("1A2B3C");
-        payment.pay(100.0);
-
-        String output = outContent.toString();
-        assertTrue(output.contains("Bitcoin"));
-        assertTrue(output.contains("1A2B3C"));
+        try {
+            PaymentStrategy payment = new BitcoinPayment("1A2B3C");
+            payment.pay(100.0);
+            String output = outContent.toString();
+            assertTrue(output.contains("Bitcoin"));
+            assertTrue(output.contains("1A2B3C"));
+        } finally {
+            System.setOut(originalOut);
+        }
     }
 }
 
@@ -270,13 +279,16 @@ class Test5 {
     @Test
     void testShoppingCartCheckoutWithoutStrategy() {
         ByteArrayOutputStream outContent = new ByteArrayOutputStream();
+        PrintStream originalOut = System.out;
         System.setOut(new PrintStream(outContent));
-
-        ShoppingCart cart = new ShoppingCart(100.0);
-        cart.checkout();
-
-        String output = outContent.toString();
-        assertTrue(output.contains("select") || output.contains("Please"));
+        try {
+            ShoppingCart cart = new ShoppingCart(100.0);
+            cart.checkout();
+            String output = outContent.toString();
+            assertTrue(output.contains("select") || output.contains("Please"));
+        } finally {
+            System.setOut(originalOut);
+        }
     }
 }
 
@@ -285,14 +297,17 @@ class Test6 {
     @Test
     void testShoppingCartUsesStrategy() {
         ByteArrayOutputStream outContent = new ByteArrayOutputStream();
+        PrintStream originalOut = System.out;
         System.setOut(new PrintStream(outContent));
-
-        ShoppingCart cart = new ShoppingCart(100.0);
-        cart.setPaymentStrategy(new CreditCardPayment("1234567812345678"));
-        cart.checkout();
-
-        String output = outContent.toString();
-        assertTrue(output.contains("Credit Card"));
+        try {
+            ShoppingCart cart = new ShoppingCart(100.0);
+            cart.setPaymentStrategy(new CreditCardPayment("1234567812345678"));
+            cart.checkout();
+            String output = outContent.toString();
+            assertTrue(output.contains("Credit Card"));
+        } finally {
+            System.setOut(originalOut);
+        }
     }
 }
 
@@ -301,15 +316,18 @@ class Test7 {
     @Test
     void testStrategyCanBeChanged() {
         ByteArrayOutputStream outContent = new ByteArrayOutputStream();
+        PrintStream originalOut = System.out;
         System.setOut(new PrintStream(outContent));
-
-        ShoppingCart cart = new ShoppingCart(100.0);
-        cart.setPaymentStrategy(new CreditCardPayment("1234567812345678"));
-        cart.setPaymentStrategy(new PayPalPayment("test@test.com"));
-        cart.checkout();
-
-        String output = outContent.toString();
-        assertTrue(output.contains("PayPal"));
+        try {
+            ShoppingCart cart = new ShoppingCart(100.0);
+            cart.setPaymentStrategy(new CreditCardPayment("1234567812345678"));
+            cart.setPaymentStrategy(new PayPalPayment("test@test.com"));
+            cart.checkout();
+            String output = outContent.toString();
+            assertTrue(output.contains("PayPal"));
+        } finally {
+            System.setOut(originalOut);
+        }
     }
 }
 
@@ -318,15 +336,18 @@ class Test8 {
     @Test
     void testLambdaStrategy() {
         ByteArrayOutputStream outContent = new ByteArrayOutputStream();
+        PrintStream originalOut = System.out;
         System.setOut(new PrintStream(outContent));
-
-        PaymentStrategy lambda = (amount) -> System.out.println("Lambda paid: " + amount);
-        ShoppingCart cart = new ShoppingCart(50.0);
-        cart.setPaymentStrategy(lambda);
-        cart.checkout();
-
-        String output = outContent.toString();
-        assertTrue(output.contains("Lambda paid"));
+        try {
+            PaymentStrategy lambda = (amount) -> System.out.println("Lambda paid: " + amount);
+            ShoppingCart cart = new ShoppingCart(50.0);
+            cart.setPaymentStrategy(lambda);
+            cart.checkout();
+            String output = outContent.toString();
+            assertTrue(output.contains("Lambda paid"));
+        } finally {
+            System.setOut(originalOut);
+        }
     }
 }
 
@@ -344,20 +365,21 @@ class Test10 {
     @Test
     void testMultipleCartsWithDifferentStrategies() {
         ByteArrayOutputStream outContent = new ByteArrayOutputStream();
+        PrintStream originalOut = System.out;
         System.setOut(new PrintStream(outContent));
-
-        ShoppingCart cart1 = new ShoppingCart(100.0);
-        ShoppingCart cart2 = new ShoppingCart(200.0);
-
-        cart1.setPaymentStrategy(new CreditCardPayment("1111222233334444"));
-        cart2.setPaymentStrategy(new PayPalPayment("user@test.com"));
-
-        cart1.checkout();
-        cart2.checkout();
-
-        String output = outContent.toString();
-        assertTrue(output.contains("Credit Card"));
-        assertTrue(output.contains("PayPal"));
+        try {
+            ShoppingCart cart1 = new ShoppingCart(100.0);
+            ShoppingCart cart2 = new ShoppingCart(200.0);
+            cart1.setPaymentStrategy(new CreditCardPayment("1111222233334444"));
+            cart2.setPaymentStrategy(new PayPalPayment("user@test.com"));
+            cart1.checkout();
+            cart2.checkout();
+            String output = outContent.toString();
+            assertTrue(output.contains("Credit Card"));
+            assertTrue(output.contains("PayPal"));
+        } finally {
+            System.setOut(originalOut);
+        }
     }
 }`,
     translations: {

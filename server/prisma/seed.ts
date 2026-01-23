@@ -12,6 +12,7 @@ import { PrismaClient } from '@prisma/client';
 import { ALL_COURSES } from './seeds/courses';
 import { Course, Module, Topic, Task } from './seeds/types';
 import { seedBadges } from './seeds/badges';
+import { seedDemoUsers, seedDemoProgress, seedAlexProgress, seedDemoSubscriptions, seedE2ETestUsers } from './seeds/demo-users';
 import * as bcrypt from 'bcrypt';
 import Redis from 'ioredis';
 
@@ -209,13 +210,14 @@ async function seedTestUsers(): Promise<void> {
 	// Hash the password
 	const hashedPassword = await bcrypt.hash('12345', 10);
 
-	// Create test user
+	// Create test user with ADMIN role
 	const testUser = await prisma.user.create({
 		data: {
 			email: 'alex@example.com',
 			password: hashedPassword,
 			name: 'Alex',
 			isPremium: true,
+			role: 'ADMIN',
 			preferences: {
 				editorFontSize: 14,
 				editorMinimap: false,
@@ -268,9 +270,33 @@ async function assignTestUserSubscription(): Promise<void> {
 }
 
 /**
- * Seed a single task into the database
+ * Determine if a task should be premium based on module and task position
+ * First 3 tasks in first 3 modules are free, everything else is premium
+ * @param moduleIndex - 0-based index of the module in the course
+ * @param taskIndexInModule - 0-based index of the task within the module
+ * @returns true if the task should be premium
  */
-async function seedTask(task: Task, topicId: string): Promise<void> {
+function shouldBePremium(moduleIndex: number, taskIndexInModule: number): boolean {
+	// First 3 modules (index 0, 1, 2) have first 3 tasks free
+	if (moduleIndex < 3 && taskIndexInModule < 3) {
+		return false;
+	}
+	return true;
+}
+
+/**
+ * Seed a single task into the database
+ * @param task - Task data to seed
+ * @param topicId - ID of the parent topic
+ * @param moduleIndex - 0-based index of the parent module in the course
+ * @param taskIndexInModule - 0-based index of this task within the module
+ */
+async function seedTask(
+	task: Task,
+	topicId: string,
+	moduleIndex: number,
+	taskIndexInModule: number
+): Promise<void> {
 	// Skip invalid tasks
 	if (!task || !task.slug) {
 		console.warn(`   ⚠️  Skipping invalid task (no slug)`);
@@ -316,6 +342,9 @@ async function seedTask(task: Task, topicId: string): Promise<void> {
 	const extractedHint1 = hint1 || (Array.isArray(taskAny.hints?.en) ? taskAny.hints.en[0] || '' : '');
 	const extractedHint2 = hint2 || (Array.isArray(taskAny.hints?.en) ? taskAny.hints.en[1] || '' : '');
 
+	// Determine premium status based on position
+	const isPremium = shouldBePremium(moduleIndex, taskIndexInModule);
+
 	await prisma.task.create({
 		data: {
 			slug: task.slug,
@@ -323,7 +352,7 @@ async function seedTask(task: Task, topicId: string): Promise<void> {
 			difficulty: task.difficulty || 'medium',
 			tags: task.tags || [],
 			estimatedTime: task.estimatedTime || '15m',
-			isPremium: task.isPremium || false,
+			isPremium,
 			youtubeUrl: task.youtubeUrl || '',
 			description,
 			initialCode: initialCode || (task as any).template || '',
@@ -336,6 +365,10 @@ async function seedTask(task: Task, topicId: string): Promise<void> {
 			topicId,
 			// ML visualization support
 			visualizationType: (task as any).visualizationType || null,
+			// Task type: CODE or PROMPT
+			taskType: task.taskType || 'CODE',
+			// Prompt Engineering configuration (only for taskType: PROMPT)
+			promptConfig: task.promptConfig || null,
 			// Translations stored as JSON
 			translations,
 		},
@@ -344,12 +377,22 @@ async function seedTask(task: Task, topicId: string): Promise<void> {
 
 /**
  * Seed a single topic with all its tasks
+ * @param topic - Topic data to seed
+ * @param moduleId - ID of the parent module
+ * @param moduleIndex - 0-based index of the parent module in the course
+ * @param startingTaskIndex - Starting task index for this topic within the module
+ * @returns Object with task count and next task index
  */
-async function seedTopic(topic: Topic, moduleId: string): Promise<number> {
+async function seedTopic(
+	topic: Topic,
+	moduleId: string,
+	moduleIndex: number,
+	startingTaskIndex: number
+): Promise<{ taskCount: number; nextTaskIndex: number }> {
 	// Skip invalid topics
 	if (!topic || !topic.title) {
 		console.warn(`   ⚠️  Skipping invalid topic (no title)`);
-		return 0;
+		return { taskCount: 0, nextTaskIndex: startingTaskIndex };
 	}
 
 	// Extract string values (handles both plain strings and { en, ru, uz } objects)
@@ -374,17 +417,27 @@ async function seedTopic(topic: Topic, moduleId: string): Promise<number> {
 
 	// Seed all tasks for this topic
 	const tasks = topic.tasks || [];
+	let taskIndex = startingTaskIndex;
 	for (const task of tasks) {
-		await seedTask(task, createdTopic.id);
+		if (task && task.slug) {
+			await seedTask(task, createdTopic.id, moduleIndex, taskIndex);
+			taskIndex++;
+		}
 	}
 
-	return tasks.filter(t => t && t.slug).length;
+	return {
+		taskCount: tasks.filter(t => t && t.slug).length,
+		nextTaskIndex: taskIndex,
+	};
 }
 
 /**
  * Seed a single module with all its topics
+ * @param module - Module data to seed
+ * @param courseId - ID of the parent course
+ * @param moduleIndex - 0-based index of this module in the course (for premium calculation)
  */
-async function seedModule(module: Module, courseId: string): Promise<number> {
+async function seedModule(module: Module, courseId: string, moduleIndex: number): Promise<number> {
 	// Skip invalid modules
 	if (!module || !module.title) {
 		console.warn(`   ⚠️  Skipping invalid module (no title)`);
@@ -423,12 +476,14 @@ async function seedModule(module: Module, courseId: string): Promise<number> {
 		},
 	});
 
-	// Seed all topics for this module
+	// Seed all topics for this module, tracking task index for premium calculation
 	let taskCount = 0;
+	let taskIndexInModule = 0; // Track task position within module for premium logic
 	const topics = module.topics || [];
 	for (const topic of topics) {
-		const count = await seedTopic(topic, createdModule.id);
-		taskCount += count;
+		const result = await seedTopic(topic, createdModule.id, moduleIndex, taskIndexInModule);
+		taskCount += result.taskCount;
+		taskIndexInModule = result.nextTaskIndex;
 	}
 
 	return taskCount;
@@ -467,11 +522,13 @@ async function seedCourse(course: Course): Promise<{ moduleCount: number; taskCo
 		},
 	});
 
-	// Seed all modules for this course
+	// Seed all modules for this course, tracking module index for premium calculation
 	let totalTasks = 0;
+	let moduleIndex = 0;
 	for (const module of course.modules) {
-		const taskCount = await seedModule(module, createdCourse.id);
+		const taskCount = await seedModule(module, createdCourse.id, moduleIndex);
 		totalTasks += taskCount;
+		moduleIndex++;
 	}
 
 	return {
@@ -547,6 +604,24 @@ async function seedSubscriptionPlans(): Promise<void> {
 }
 
 /**
+ * Update alex@example.com with stats for leaderboard
+ * Level 10 requires 7500 XP, so we set 8500 XP (within Level 10 range)
+ */
+async function updateAlexStats(): Promise<void> {
+	await prisma.user.update({
+		where: { email: 'alex@example.com' },
+		data: {
+			xp: 8500, // Level 10: 7500-9999 XP
+			level: 10,
+			currentStreak: 25,
+			maxStreak: 30,
+			lastActivityAt: new Date(),
+		},
+	});
+	console.log('   ✅ Updated alex@example.com stats for leaderboard\n');
+}
+
+/**
  * Main seeding function
  */
 async function main() {
@@ -579,6 +654,14 @@ async function main() {
 		// Still seed subscription plans for existing courses
 		await seedSubscriptionPlans();
 		await assignTestUserSubscription();
+		// Seed demo data for leaderboard and analytics
+		await seedDemoUsers(prisma);
+		await updateAlexStats();
+		await seedAlexProgress(prisma);
+		await seedDemoProgress(prisma);
+		await seedDemoSubscriptions(prisma);
+		// Seed E2E test users for Playwright tests
+		await seedE2ETestUsers(prisma);
 		// Invalidate cache in case content was updated
 		await invalidateCoursesCache();
 		console.log('💡 Tip: Use `make db-refresh` to reset and reseed the database.');
@@ -604,6 +687,16 @@ async function main() {
 	// Seed subscription plans (after courses are seeded)
 	await seedSubscriptionPlans();
 	await assignTestUserSubscription();
+
+	// Seed demo data for leaderboard and analytics
+	await seedDemoUsers(prisma);
+	await updateAlexStats();
+	await seedAlexProgress(prisma);
+	await seedDemoProgress(prisma);
+	await seedDemoSubscriptions(prisma);
+
+	// Seed E2E test users for Playwright tests
+	await seedE2ETestUsers(prisma);
 
 	// Invalidate cache after seeding
 	await invalidateCoursesCache();

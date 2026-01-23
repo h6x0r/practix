@@ -273,7 +273,9 @@ class Test5 {
             BankAccount account = new BankAccount(null, 1000);
             fail("Should throw InvalidAccountException for null ID");
         } catch (InvalidAccountException e) {
-            assertTrue("Should catch InvalidAccountException", true);
+            assertNotNull("Exception message should not be null", e.getMessage());
+            assertTrue("Exception should have error code",
+                e.getErrorCode() != null && e.getErrorCode().startsWith("INV_ACC"));
         } catch (Exception e) {
             fail("Unexpected exception: " + e.getMessage());
         }
@@ -289,7 +291,9 @@ class Test6 {
             account.deposit(-100);
             fail("Should throw InvalidAccountException for negative deposit");
         } catch (InvalidAccountException e) {
-            assertTrue("Should catch InvalidAccountException", true);
+            assertNotNull("Exception message should not be null", e.getMessage());
+            assertTrue("Exception should have error code",
+                e.getErrorCode() != null && e.getErrorCode().startsWith("INV_AMT"));
         } catch (Exception e) {
             fail("Unexpected exception: " + e.getMessage());
         }
@@ -314,17 +318,20 @@ class Test7 {
     }
 }
 
-// Test8: Verify main method execution
+// Test8: main method shows transaction failure message
 class Test8 {
     @Test
     public void test() {
-        try {
-            BankAccount.main(new String[]{});
-            assertTrue("Main method should execute", true);
-        } catch (Exception e) {
-            // Expected to catch InsufficientFundsException
-            assertTrue("Expected exception handling in main", true);
-        }
+        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+        java.io.PrintStream oldOut = System.out;
+        System.setOut(new java.io.PrintStream(out));
+        BankAccount.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Main should show transaction failure or error code",
+            output.contains("Transaction failed") || output.contains("Error code") ||
+            output.contains("INS_FUNDS") || output.contains("Withdrawn") ||
+            output.contains("Транзакция не выполнена") || output.contains("Tranzaksiya muvaffaqiyatsiz"));
     }
 }
 

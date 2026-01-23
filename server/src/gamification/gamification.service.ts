@@ -4,11 +4,10 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CacheService } from '../cache/cache.service';
 
 // XP rewards by difficulty
-const XP_REWARDS = {
-  easy: 10,
-  medium: 25,
-  hard: 50,
-  expert: 100,
+const XP_REWARDS: Record<string, number> = {
+  easy: 25,
+  medium: 50,
+  hard: 100,
 };
 
 // Level thresholds (XP required for each level)
@@ -48,16 +47,26 @@ export class GamificationService {
 
   /**
    * Calculate level from XP
+   * Beyond level 20: +10,000 XP per level
    */
   calculateLevel(xp: number): number {
-    for (let i = LEVEL_THRESHOLDS.length - 1; i >= 0; i--) {
+    const maxDefinedLevel = LEVEL_THRESHOLDS.length; // 20
+    const maxThreshold = LEVEL_THRESHOLDS[maxDefinedLevel - 1]; // 60000
+
+    // Beyond level 20: each additional level requires 10,000 XP
+    if (xp >= maxThreshold) {
+      const beyondMax = xp - maxThreshold;
+      return maxDefinedLevel + Math.floor(beyondMax / 10000);
+    }
+
+    // Find level within defined thresholds
+    for (let i = maxDefinedLevel - 1; i >= 0; i--) {
       if (xp >= LEVEL_THRESHOLDS[i]) {
         return i + 1;
       }
     }
-    // Beyond max threshold
-    const beyondMax = xp - LEVEL_THRESHOLDS[LEVEL_THRESHOLDS.length - 1];
-    return LEVEL_THRESHOLDS.length + Math.floor(beyondMax / 10000);
+
+    return 1; // Default to level 1
   }
 
   /**

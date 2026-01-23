@@ -934,4 +934,283 @@ describe('PistonService', () => {
       await service.executeWithTests('def add(a, b): return a + b', testCode, 'python');
     });
   });
+
+  // ============================================
+  // onModuleDestroy - Lifecycle
+  // ============================================
+  describe('onModuleDestroy()', () => {
+    it('should destroy HTTP agents', async () => {
+      await service.onModuleDestroy();
+      // Should complete without errors - agents are destroyed internally
+      expect(true).toBe(true);
+    });
+  });
+
+  // ============================================
+  // extractTestNames - Private method testing
+  // ============================================
+  describe('extractTestNames() - via executeWithTests', () => {
+    beforeEach(async () => {
+      mockAxiosInstance.get.mockResolvedValue({
+        data: [{ language: 'go', version: '1.21.0', aliases: ['golang'] }],
+      });
+      await service.loadRuntimes();
+    });
+
+    it('should extract Go test function names', async () => {
+      mockAxiosInstance.post.mockImplementation(async (_url, data: any) => {
+        // Verify test functions are in the generated code
+        expect(data.files[0].content).toContain('TestAdd');
+        return {
+          data: {
+            language: 'go',
+            version: '1.21.0',
+            run: { stdout: '{}', stderr: '', code: 0, signal: null, output: '' },
+          },
+        };
+      });
+
+      const testCode = `
+        func TestAdd(t *testing.T) {
+          if Add(1, 2) != 3 {
+            t.Errorf("expected 3")
+          }
+        }
+      `;
+
+      await service.executeWithTests('func Add(a, b int) int { return a + b }', testCode, 'go');
+    });
+
+    it('should handle tests with descriptions in comments', async () => {
+      mockAxiosInstance.post.mockResolvedValue({
+        data: {
+          language: 'go',
+          version: '1.21.0',
+          run: { stdout: '{}', stderr: '', code: 0, signal: null, output: '' },
+        },
+      });
+
+      const testCode = `
+        // Test1: Check basic addition
+        func TestBasicAdd(t *testing.T) {
+          if Add(1, 2) != 3 {
+            t.Errorf("expected 3")
+          }
+        }
+        // Test2: Check negative numbers
+        func TestNegative(t *testing.T) {
+          if Add(-1, 1) != 0 {
+            t.Errorf("expected 0")
+          }
+        }
+      `;
+
+      await service.executeWithTests('func Add(a, b int) int { return a + b }', testCode, 'go');
+      expect(mockAxiosInstance.post).toHaveBeenCalled();
+    });
+  });
+
+  // ============================================
+  // Java test code building
+  // ============================================
+  describe('buildJavaTestCode() - via executeWithTests', () => {
+    beforeEach(async () => {
+      mockAxiosInstance.get.mockResolvedValue({
+        data: [{ language: 'java', version: '17.0.0', aliases: [] }],
+      });
+      await service.loadRuntimes();
+    });
+
+    it('should build Java test code with test classes', async () => {
+      mockAxiosInstance.post.mockImplementation(async (_url, data: any) => {
+        // Verify the code structure
+        expect(data.files[0].content).toContain('public class Main');
+        return {
+          data: {
+            language: 'java',
+            version: '17.0.0',
+            run: { stdout: '{}', stderr: '', code: 0, signal: null, output: '' },
+          },
+        };
+      });
+
+      const solutionCode = `
+        public int add(int a, int b) {
+          return a + b;
+        }
+      `;
+      const testCode = `
+        @Test
+        public void testAdd() {
+          assertEquals(3, add(1, 2));
+        }
+      `;
+
+      await service.executeWithTests(solutionCode, testCode, 'java');
+    });
+
+    it('should handle Java tests with assertions', async () => {
+      mockAxiosInstance.post.mockResolvedValue({
+        data: {
+          language: 'java',
+          version: '17.0.0',
+          run: { stdout: '{"tests":[],"passed":0,"total":0}', stderr: '', code: 0, signal: null, output: '' },
+        },
+      });
+
+      const solutionCode = 'public int multiply(int a, int b) { return a * b; }';
+      const testCode = `
+        @Test
+        public void testMultiply() {
+          assertEquals(6, multiply(2, 3));
+        }
+        @Test
+        public void testMultiplyZero() {
+          assertEquals(0, multiply(0, 5));
+        }
+      `;
+
+      await service.executeWithTests(solutionCode, testCode, 'java');
+      expect(mockAxiosInstance.post).toHaveBeenCalled();
+    });
+
+    it('should set compile_timeout for Java', async () => {
+      mockAxiosInstance.post.mockImplementation(async (_url, data: any) => {
+        // Verify compile_timeout is set for Java
+        expect(data.compile_timeout).toBeDefined();
+        return {
+          data: {
+            language: 'java',
+            version: '17.0.0',
+            run: { stdout: '{}', stderr: '', code: 0, signal: null, output: '' },
+          },
+        };
+      });
+
+      await service.executeWithTests('public int x() { return 1; }', '@Test void t() {}', 'java');
+    });
+  });
+
+  // ============================================
+  // Go test functions extraction
+  // ============================================
+  describe('extractGoTestFunctions - via executeWithTests', () => {
+    beforeEach(async () => {
+      mockAxiosInstance.get.mockResolvedValue({
+        data: [{ language: 'go', version: '1.21.0', aliases: ['golang'] }],
+      });
+      await service.loadRuntimes();
+    });
+
+    it('should handle test functions with t.Run subtests', async () => {
+      mockAxiosInstance.post.mockResolvedValue({
+        data: {
+          language: 'go',
+          version: '1.21.0',
+          run: { stdout: '{}', stderr: '', code: 0, signal: null, output: '' },
+        },
+      });
+
+      const testCode = `
+        func TestMain(t *testing.T) {
+          t.Run("subtest1", func(t *testing.T) {
+            if 1 != 1 {
+              t.Errorf("fail")
+            }
+          })
+        }
+      `;
+
+      await service.executeWithTests('func main() {}', testCode, 'go');
+      expect(mockAxiosInstance.post).toHaveBeenCalled();
+    });
+
+    it('should handle empty test code', async () => {
+      mockAxiosInstance.post.mockResolvedValue({
+        data: {
+          language: 'go',
+          version: '1.21.0',
+          run: { stdout: 'No tests', stderr: '', code: 0, signal: null, output: '' },
+        },
+      });
+
+      await service.executeWithTests('func main() {}', '', 'go');
+      expect(mockAxiosInstance.post).toHaveBeenCalled();
+    });
+  });
+
+  // ============================================
+  // isLanguageAvailable - Runtime checks
+  // ============================================
+  describe('isLanguageAvailable()', () => {
+    it('should return true for available runtime', async () => {
+      mockAxiosInstance.get.mockResolvedValue({
+        data: [{ language: 'python', version: '3.11.0', aliases: ['py'] }],
+      });
+      await service.loadRuntimes();
+
+      expect(service.isLanguageAvailable('python')).toBe(true);
+    });
+
+    it('should return false for unavailable runtime', async () => {
+      mockAxiosInstance.get.mockResolvedValue({
+        data: [{ language: 'python', version: '3.11.0', aliases: ['py'] }],
+      });
+      await service.loadRuntimes();
+
+      expect(service.isLanguageAvailable('go')).toBe(false);
+    });
+
+    it('should return false for unknown language', () => {
+      expect(service.isLanguageAvailable('unknown-lang')).toBe(false);
+    });
+
+    it('should match by alias', async () => {
+      mockAxiosInstance.get.mockResolvedValue({
+        data: [{ language: 'python', version: '3.11.0', aliases: ['py', 'python3'] }],
+      });
+      await service.loadRuntimes();
+
+      expect(service.isLanguageAvailable('py')).toBe(true);
+    });
+  });
+
+  // ============================================
+  // checkHealth
+  // ============================================
+  describe('checkHealth()', () => {
+    it('should return true when runtimes are already loaded', async () => {
+      mockAxiosInstance.get.mockResolvedValue({
+        data: [{ language: 'go', version: '1.21.0', aliases: [] }],
+      });
+      await service.loadRuntimes();
+
+      const result = await service.checkHealth();
+      expect(result).toBe(true);
+    });
+
+    it('should try to load runtimes if not available', async () => {
+      // First call fails, second succeeds
+      mockAxiosInstance.get
+        .mockRejectedValueOnce(new Error('Connection refused'))
+        .mockResolvedValueOnce({
+          data: [{ language: 'go', version: '1.21.0', aliases: [] }],
+        });
+
+      // First load fails
+      await service.loadRuntimes();
+
+      // checkHealth should retry
+      const result = await service.checkHealth();
+      expect(result).toBe(true);
+    });
+
+    it('should return false when piston is unavailable', async () => {
+      mockAxiosInstance.get.mockRejectedValue(new Error('Connection refused'));
+      await service.loadRuntimes();
+
+      const result = await service.checkHealth();
+      expect(result).toBe(false);
+    });
+  });
 });

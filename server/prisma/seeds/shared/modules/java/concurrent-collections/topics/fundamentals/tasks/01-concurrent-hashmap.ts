@@ -76,13 +76,15 @@ public class ConcurrentHashMapDemo {
         System.out.println("Mouse removed (count was 50): " + removed);
 
         // Print all entries using forEach()
-        System.out.println("\nCurrent inventory:");
+        System.out.println("");
+        System.out.println("Current inventory:");
         inventory.forEach((product, count) ->
             System.out.println("  " + product + ": " + count)
         );
 
         // Demonstrate thread-safety with multiple threads
-        System.out.println("\nTesting concurrent updates...");
+        System.out.println("");
+        System.out.println("Testing concurrent updates...");
         Thread t1 = new Thread(() -> {
             for (int i = 0; i < 100; i++) {
                 inventory.compute("laptop", (k, v) -> v + 1);
@@ -315,13 +317,15 @@ public class ConcurrentHashMapDemo {
         System.out.println("Mouse удален (количество было 50): " + removed);
 
         // Выводим все записи используя forEach()
-        System.out.println("\nТекущий инвентарь:");
+        System.out.println("");
+        System.out.println("Текущий инвентарь:");
         inventory.forEach((product, count) ->
             System.out.println("  " + product + ": " + count)
         );
 
         // Демонстрируем потокобезопасность с несколькими потоками
-        System.out.println("\nТестирование конкурентных обновлений...");
+        System.out.println("");
+        System.out.println("Тестирование конкурентных обновлений...");
         Thread t1 = new Thread(() -> {
             for (int i = 0; i < 100; i++) {
                 inventory.compute("laptop", (k, v) -> v + 1);
@@ -422,13 +426,15 @@ public class ConcurrentHashMapDemo {
         System.out.println("Mouse o'chirildi (soni 50 edi): " + removed);
 
         // forEach() yordamida barcha yozuvlarni chiqaramiz
-        System.out.println("\nJoriy inventar:");
+        System.out.println("");
+        System.out.println("Joriy inventar:");
         inventory.forEach((product, count) ->
             System.out.println("  " + product + ": " + count)
         );
 
         // Bir nechta oqim bilan thread-safety ni ko'rsatamiz
-        System.out.println("\nKonkurrent yangilanishlarni sinash...");
+        System.out.println("");
+        System.out.println("Konkurrent yangilanishlarni sinash...");
         Thread t1 = new Thread(() -> {
             for (int i = 0; i < 100; i++) {
                 inventory.compute("laptop", (k, v) -> v + 1);

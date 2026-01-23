@@ -240,115 +240,152 @@ Optional<Email> validEmail = parseEmail(input)
 - Composable transformations create readable pipelines
 - Type-safe navigation through object graphs`,
     order: 3,
-    testCode: `import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.*;
-import java.util.Optional;
+    testCode: `import static org.junit.Assert.*;
+import org.junit.Test;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 
-// Test 1: map transforms value
+// Test1: main method should produce output
 class Test1 {
     @Test
-    void testMapTransformsValue() {
-        Optional<String> opt = Optional.of("java");
-        Optional<String> result = opt.map(String::toUpperCase);
-        assertEquals("JAVA", result.get());
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        OptionalTransformation.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show Optional transformation demo",
+            output.contains("Optional") || output.contains("map") ||
+            output.contains("Transformation") || output.contains("Преобразование"));
     }
 }
 
-// Test 2: map on empty returns empty
+// Test2: should demonstrate map transformation
 class Test2 {
     @Test
-    void testMapOnEmptyReturnsEmpty() {
-        Optional<String> opt = Optional.empty();
-        Optional<String> result = opt.map(String::toUpperCase);
-        assertTrue(result.isEmpty());
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        OptionalTransformation.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show map transformation", output.contains("Uppercase") || output.contains("JAVA"));
     }
 }
 
-// Test 3: map can change type
+// Test3: should show length transformation
 class Test3 {
     @Test
-    void testMapChangesType() {
-        Optional<String> opt = Optional.of("Java");
-        Optional<Integer> result = opt.map(String::length);
-        assertEquals(4, result.get());
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        OptionalTransformation.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show length transformation", output.contains("Length") || output.contains("4"));
     }
 }
 
-// Test 4: flatMap flattens nested Optional
+// Test4: should demonstrate flatMap
 class Test4 {
     @Test
-    void testFlatMapFlattens() {
-        Optional<String> opt = Optional.of("java");
-        Optional<String> result = opt.flatMap(s -> Optional.of(s.toUpperCase()));
-        assertEquals("JAVA", result.get());
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        OptionalTransformation.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show flatMap", output.contains("flatMap") || output.contains("Flatten"));
     }
 }
 
-// Test 5: flatMap on empty returns empty
+// Test5: should show nested Optional problem
 class Test5 {
     @Test
-    void testFlatMapOnEmptyReturnsEmpty() {
-        Optional<String> opt = Optional.empty();
-        Optional<String> result = opt.flatMap(s -> Optional.of(s.toUpperCase()));
-        assertTrue(result.isEmpty());
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        OptionalTransformation.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show nested Optional", output.contains("Nested") || output.contains("Optional[Optional"));
     }
 }
 
-// Test 6: filter keeps value when predicate true
+// Test6: should demonstrate filter operations
 class Test6 {
     @Test
-    void testFilterKeepsValue() {
-        Optional<String> opt = Optional.of("Python");
-        Optional<String> result = opt.filter(s -> s.length() > 5);
-        assertTrue(result.isPresent());
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        OptionalTransformation.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show filter", output.contains("Filter") || output.contains("Long name") || output.contains("chars"));
     }
 }
 
-// Test 7: filter removes value when predicate false
+// Test7: should show filter with empty result
 class Test7 {
     @Test
-    void testFilterRemovesValue() {
-        Optional<String> opt = Optional.of("Java");
-        Optional<String> result = opt.filter(s -> s.length() > 5);
-        assertTrue(result.isEmpty());
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        OptionalTransformation.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show empty filter result", output.contains("Optional.empty") || output.contains("Short name"));
     }
 }
 
-// Test 8: chaining map and filter works
+// Test8: should demonstrate chaining
 class Test8 {
     @Test
-    void testChainingMapAndFilter() {
-        Optional<String> opt = Optional.of("  java  ");
-        Optional<String> result = opt
-            .map(String::trim)
-            .filter(s -> !s.isEmpty())
-            .map(String::toUpperCase);
-        assertEquals("JAVA", result.get());
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        OptionalTransformation.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show chaining", output.contains("Chaining") || output.contains("Steps") || output.contains("trim"));
     }
 }
 
-// Test 9: filter on empty returns empty
+// Test9: should show practical examples
 class Test9 {
     @Test
-    void testFilterOnEmptyReturnsEmpty() {
-        Optional<String> opt = Optional.empty();
-        Optional<String> result = opt.filter(s -> true);
-        assertTrue(result.isEmpty());
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        OptionalTransformation.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show practical examples", output.contains("Practical") || output.contains("Person") || output.contains("City"));
     }
 }
 
-// Test 10: multiple map chaining works
+// Test10: should have section headers
 class Test10 {
     @Test
-    void testMultipleMapChaining() {
-        Optional<String> opt = Optional.of("hello");
-        String result = opt
-            .map(String::toUpperCase)
-            .map(s -> s + "!")
-            .map(s -> s.length())
-            .map(Object::toString)
-            .orElse("0");
-        assertEquals("6", result);
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        OptionalTransformation.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        boolean hasHeaders = output.contains("===") ||
+                             output.contains("Map") || output.contains("Трансформаци") || output.contains("transformatsiya");
+        assertTrue("Should have section headers", hasHeaders);
     }
 }`,
     translations: {

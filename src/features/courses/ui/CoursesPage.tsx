@@ -16,7 +16,7 @@ type CourseFilter =
   // Languages
   | 'go' | 'java' | 'python'
   // CS Fundamentals
-  | 'algo_ds' | 'patterns_se'
+  | 'algo_ds' | 'patterns_se' | 'math_ds'
   // Applied
   | 'ml_ai';
 
@@ -29,6 +29,7 @@ const CoursesPage = () => {
   const [loading, setLoading] = useState(true);
   const [startedCourseSlugs, setStartedCourseSlugs] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState<CourseFilter>('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Apply translations to courses and their sample topics
   const courses = useMemo(() => rawCourses.map(c => ({
@@ -98,11 +99,14 @@ const CoursesPage = () => {
         // Java language courses (excluding ML/NLP/design patterns)
         return id.startsWith('java-') && !id.includes('design-patterns');
       case 'python':
-        // Python courses
-        return id.startsWith('python-');
+        // Python courses + Algorithms course (uses Python)
+        return id.startsWith('python-') || id.startsWith('algo-');
       case 'algo_ds':
         // Algorithms & Data Structures
         return id.startsWith('algo-');
+      case 'math_ds':
+        // Math for Data Science
+        return id === 'math-for-ds';
       case 'patterns_se':
         // Design Patterns & Software Engineering
         return id.includes('design-patterns') || id === 'software-engineering';
@@ -115,7 +119,21 @@ const CoursesPage = () => {
     }
   };
 
-  const filteredCourses = courses.filter(c => filterCourse(c, activeTab));
+  const filteredCourses = useMemo(() => {
+    let result = courses.filter(c => filterCourse(c, activeTab));
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      result = result.filter(c =>
+        c.title.toLowerCase().includes(query) ||
+        c.description.toLowerCase().includes(query) ||
+        c.sampleTopics?.some(topic => topic.title.toLowerCase().includes(query))
+      );
+    }
+
+    return result;
+  }, [courses, activeTab, searchQuery]);
 
   // Get course badge based on ID (kebab-case slugs)
   const getCourseBadge = (courseId: string): { label: string; colorClass: string } => {
@@ -150,6 +168,14 @@ const CoursesPage = () => {
       return {
         label: tUI('courses.algoDs'),
         colorClass: 'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-900/10 dark:text-emerald-400 dark:border-emerald-900/30'
+      };
+    }
+
+    // Math for Data Science
+    if (id === 'math-for-ds') {
+      return {
+        label: tUI('courses.mathDs'),
+        colorClass: 'bg-blue-50 text-blue-600 border-blue-100 dark:bg-blue-900/10 dark:text-blue-400 dark:border-blue-900/30'
       };
     }
 
@@ -197,6 +223,7 @@ const CoursesPage = () => {
       label: tUI('courses.groupCsFundamentals'),
       filters: [
         { id: 'algo_ds', label: tUI('courses.filterAlgoDS'), icon: '🧮' },
+        { id: 'math_ds', label: tUI('courses.filterMathDS'), icon: '📐' },
         { id: 'patterns_se', label: tUI('courses.filterPatternsSE'), icon: '🏗' },
       ]
     },
@@ -231,8 +258,46 @@ const CoursesPage = () => {
         <div className="absolute top-0 right-0 w-96 h-96 bg-brand-500/5 rounded-full blur-3xl transform translate-x-1/3 -translate-y-1/3 pointer-events-none"></div>
       </div>
 
-      {/* Filter Groups */}
+      {/* Search & Filter Bar */}
       <div className="bg-white dark:bg-dark-surface rounded-2xl border border-gray-100 dark:border-dark-border p-4 relative z-20">
+        {/* Search Input */}
+        <div className="mb-4">
+          <div className="relative">
+            <svg
+              className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
+            </svg>
+            <input
+              type="text"
+              placeholder={tUI('courses.searchPlaceholder')}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              data-testid="course-search"
+              className="w-full pl-12 pr-4 py-3 bg-gray-50 dark:bg-dark-bg border border-gray-200 dark:border-dark-border rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Filter Groups */}
         <div className="flex flex-wrap items-start gap-6">
           {/* All Courses Button */}
           <button
@@ -261,6 +326,7 @@ const CoursesPage = () => {
                     key={filter.id}
                     onClick={() => !filter.disabled && setActiveTab(filter.id)}
                     disabled={filter.disabled}
+                    data-testid={`category-filter-${filter.id}`}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
                       filter.disabled
                         ? 'bg-gray-50 dark:bg-dark-bg text-gray-300 dark:text-gray-600 cursor-not-allowed'
@@ -285,8 +351,9 @@ const CoursesPage = () => {
           const isStarted = startedCourseSlugs.includes(course.slug);
           const theme = getCourseTheme(course.slug);
           return (
-            <div 
-              key={course.id} 
+            <div
+              key={course.id}
+              data-testid="course-card"
               className="group relative flex flex-col bg-white dark:bg-dark-surface rounded-3xl p-1 border border-gray-100 dark:border-dark-border hover:border-brand-200 dark:hover:border-gray-700 transition-all duration-300 hover:shadow-xl hover:shadow-brand-900/5"
             >
               {/* Card Content Wrapper */}

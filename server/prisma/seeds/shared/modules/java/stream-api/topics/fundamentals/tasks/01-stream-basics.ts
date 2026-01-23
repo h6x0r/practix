@@ -139,118 +139,150 @@ public class StreamBasics {
 }`,
     testCode: `import static org.junit.Assert.*;
 import org.junit.Test;
-import java.util.*;
-import java.util.stream.*;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 
-// Test1: Verify stream creation from List
+// Test1: main method should show Stream basics header
 class Test1 {
     @Test
     public void test() {
-        List<Integer> numbers = Arrays.asList(1, 2, 3, 4, 5);
-        Stream<Integer> stream = numbers.stream();
-        long count = stream.count();
-        assertEquals(5, count);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        StreamBasics.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show Stream basics header",
+            output.contains("Stream") || output.contains("Creating") ||
+            output.contains("Создание") || output.contains("Yaratish"));
     }
 }
 
-// Test2: Verify stream creation from Array
+// Test2: should show stream from List
 class Test2 {
     @Test
     public void test() {
-        String[] fruits = {"Apple", "Banana", "Cherry"};
-        Stream<String> stream = Arrays.stream(fruits);
-        assertEquals(3, stream.count());
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        StreamBasics.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show stream from List", output.contains("List") || output.contains("ro'yxat") || output.contains("[1, 2, 3"));
     }
 }
 
-// Test3: Verify Stream.of() creation
+// Test3: should show stream from Array
 class Test3 {
     @Test
     public void test() {
-        Stream<Integer> stream = Stream.of(10, 20, 30);
-        List<Integer> list = stream.collect(Collectors.toList());
-        assertEquals(3, list.size());
-        assertEquals(Integer.valueOf(10), list.get(0));
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        StreamBasics.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show stream from Array", output.contains("Array") || output.contains("massiv") || output.contains("Apple"));
     }
 }
 
-// Test4: Verify Stream.generate() with limit
+// Test4: should show Stream.of() usage
 class Test4 {
     @Test
     public void test() {
-        Stream<Integer> stream = Stream.generate(() -> 1).limit(5);
-        assertEquals(5, stream.count());
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        StreamBasics.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show Stream.of()", output.contains("Stream.of") || output.contains("10") || output.contains("20"));
     }
 }
 
-// Test5: Verify Stream.iterate() pattern
+// Test5: should demonstrate generate or iterate
 class Test5 {
     @Test
     public void test() {
-        Stream<Integer> stream = Stream.iterate(0, n -> n + 2).limit(5);
-        List<Integer> list = stream.collect(Collectors.toList());
-        assertEquals(Integer.valueOf(0), list.get(0));
-        assertEquals(Integer.valueOf(8), list.get(4));
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        StreamBasics.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show generate or iterate", output.contains("generate") || output.contains("iterate") || output.contains("elements"));
     }
 }
 
-// Test6: Verify stream pipeline with filter and map
+// Test6: should show stream pipeline
 class Test6 {
     @Test
     public void test() {
-        List<Integer> data = Arrays.asList(1, 2, 3, 4, 5);
-        List<Integer> result = data.stream()
-            .filter(n -> n % 2 == 0)
-            .map(n -> n * 2)
-            .collect(Collectors.toList());
-        assertEquals(2, result.size());
-        assertTrue(result.contains(4));
-        assertTrue(result.contains(8));
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        StreamBasics.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show stream pipeline", output.contains("Pipeline") || output.contains("konveyer") || output.contains("Конвейер") || output.contains("doubled"));
     }
 }
 
-// Test7: Verify stream can be consumed only once
+// Test7: should demonstrate filter and map
 class Test7 {
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void test() {
-        Stream<Integer> stream = Stream.of(1, 2, 3);
-        stream.count();
-        stream.count(); // Should throw IllegalStateException
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        StreamBasics.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show filter/map result", output.contains("Even") || output.contains("juft") || output.contains("[4") || output.contains("8"));
     }
 }
 
-// Test8: Verify lazy evaluation
+// Test8: should show stream properties
 class Test8 {
     @Test
     public void test() {
-        List<Integer> data = Arrays.asList(1, 2, 3, 4, 5);
-        Stream<Integer> stream = data.stream()
-            .filter(n -> n % 2 == 0)
-            .map(n -> n * 2);
-        // No terminal operation yet, stream not executed
-        List<Integer> result = stream.collect(Collectors.toList());
-        assertEquals(2, result.size());
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        StreamBasics.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show stream properties", output.contains("Properties") || output.contains("xususiyat") || output.contains("Свойств") || output.contains("consumed"));
     }
 }
 
-// Test9: Verify intermediate operations don't modify source
+// Test9: should demonstrate lazy evaluation
 class Test9 {
     @Test
     public void test() {
-        List<Integer> data = Arrays.asList(1, 2, 3);
-        data.stream().map(n -> n * 2).collect(Collectors.toList());
-        assertEquals(Integer.valueOf(1), data.get(0));
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        StreamBasics.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show lazy evaluation", output.contains("lazy") || output.contains("Filtering") || output.contains("Mapping") || output.contains("Lazy"));
     }
 }
 
-// Test10: Verify collecting to different collection types
+// Test10: should have section headers
 class Test10 {
     @Test
     public void test() {
-        List<Integer> data = Arrays.asList(1, 2, 3, 2, 1);
-        Set<Integer> set = data.stream().collect(Collectors.toSet());
-        assertEquals(3, set.size());
-        assertTrue(set.contains(1));
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        StreamBasics.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        boolean hasHeaders = output.contains("===") ||
+                             output.contains("Creating") || output.contains("Создание") || output.contains("yaratish");
+        assertTrue("Should have section headers", hasHeaders);
     }
 }
 `,

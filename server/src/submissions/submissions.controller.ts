@@ -18,7 +18,7 @@ import { OptionalJwtAuthGuard } from '../auth/guards/optional-jwt.guard';
 import { SubmissionsService } from './submissions.service';
 import { CodeExecutionService } from '../queue/code-execution.service';
 import { PlaygroundThrottlerGuard } from '../common/guards/playground-throttler.guard';
-import { CreateSubmissionDto, RunCodeDto, RunTestsDto } from './dto/submissions.dto';
+import { CreateSubmissionDto, RunCodeDto, RunTestsDto, SubmitPromptDto } from './dto/submissions.dto';
 
 @Controller('submissions')
 @UseGuards(ThrottlerGuard)
@@ -62,16 +62,34 @@ export class SubmissionsController {
   }
 
   /**
+   * POST /submissions/prompt
+   * Submit a prompt for a prompt engineering task (requires auth, saves to DB)
+   * Uses AI-as-Judge for evaluation
+   * Rate limit: 5 submissions per minute (AI calls are expensive)
+   */
+  @UseGuards(JwtAuthGuard)
+  @Post('prompt')
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 prompt submissions per minute
+  async submitPrompt(@Request() req, @Body() body: SubmitPromptDto) {
+    return this.submissionsService.submitPrompt(
+      req.user.userId,
+      body.taskId,
+      body.prompt
+    );
+  }
+
+  /**
    * POST /submissions/run
    * Run code without saving (playground mode)
+   * Requires authentication - only logged-in users can execute code
    * Custom rate limit based on subscription:
-   * - Free/Unauthenticated: 10 seconds between runs
    * - Authenticated: 10 seconds between runs
    * - Premium: 5 seconds between runs
    */
   @Post('run')
   @HttpCode(HttpStatus.OK)
-  @UseGuards(OptionalJwtAuthGuard)
+  @UseGuards(JwtAuthGuard)
   @SkipThrottle() // Using custom throttler instead
   async runCode(@Request() req, @Body() body: RunCodeDto) {
     // Apply custom rate limiting
@@ -83,7 +101,7 @@ export class SubmissionsController {
     } as any);
 
     const ip = this.getClientIp(req);
-    const userId = req.user?.userId;
+    const userId = req.user.userId;
     return this.submissionsService.runCode(body.code, body.language, body.stdin, ip, userId);
   }
 
@@ -91,11 +109,12 @@ export class SubmissionsController {
    * POST /submissions/run-tests
    * Run quick tests (5 tests) without saving to database
    * Used for "Run Code" button - fast feedback without full submission
+   * Requires authentication - only logged-in users can execute code
    * Custom rate limit based on subscription (same as /run)
    */
   @Post('run-tests')
   @HttpCode(HttpStatus.OK)
-  @UseGuards(OptionalJwtAuthGuard)
+  @UseGuards(JwtAuthGuard)
   @SkipThrottle() // Using custom throttler instead
   async runTests(@Request() req, @Body() body: RunTestsDto) {
     // Apply custom rate limiting
@@ -107,7 +126,7 @@ export class SubmissionsController {
     } as any);
 
     const ip = this.getClientIp(req);
-    const userId = req.user?.userId;
+    const userId = req.user.userId;
     return this.submissionsService.runQuickTests(
       body.taskId,
       body.code,
@@ -154,23 +173,6 @@ export class SubmissionsController {
   }
 
   /**
-   * GET /submissions/:id
-   * Get submission by ID (requires auth, owner only)
-   */
-  @UseGuards(JwtAuthGuard)
-  @Get(':id')
-  async findOne(@Request() req, @Param('id') id: string) {
-    const submission = await this.submissionsService.findOne(id);
-
-    // Check ownership - users can only access their own submissions
-    if (submission.userId !== req.user.userId) {
-      throw new ForbiddenException('You can only access your own submissions');
-    }
-
-    return submission;
-  }
-
-  /**
    * GET /submissions/user/recent
    * Get user's recent submissions (requires auth)
    */
@@ -189,5 +191,37 @@ export class SubmissionsController {
   @Get('task/:taskId')
   async getByTask(@Request() req, @Param('taskId') taskId: string) {
     return this.submissionsService.findByUserAndTask(req.user.userId, taskId);
+  }
+
+  /**
+   * GET /submissions/run-result/:taskId
+   * Get the latest run result for a specific task (requires auth)
+   * Returns the last "Run Code" result to restore state after page reload
+   * Returns { data: null } if no run result exists (NestJS returns empty body for raw null)
+   */
+  @UseGuards(JwtAuthGuard)
+  @Get('run-result/:taskId')
+  async getRunResult(@Request() req, @Param('taskId') taskId: string) {
+    const result = await this.submissionsService.getRunResult(req.user.userId, taskId);
+    // Wrap in object to avoid NestJS empty body issue with null
+    return { data: result };
+  }
+
+  /**
+   * GET /submissions/:id
+   * Get submission by ID (requires auth, owner only)
+   * NOTE: Must be LAST - catches all paths not matched above
+   */
+  @UseGuards(JwtAuthGuard)
+  @Get(':id')
+  async findOne(@Request() req, @Param('id') id: string) {
+    const submission = await this.submissionsService.findOne(id);
+
+    // Check ownership - users can only access their own submissions
+    if (submission.userId !== req.user.userId) {
+      throw new ForbiddenException('You can only access your own submissions');
+    }
+
+    return submission;
   }
 }

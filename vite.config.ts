@@ -19,6 +19,28 @@ export default defineConfig(({ mode }) => {
         alias: {
           '@': path.resolve(__dirname, './src'),
         }
-      }
+      },
+      build: {
+        rollupOptions: {
+          output: {
+            manualChunks: (id) => {
+              // Monaco Editor - largest chunk (~600KB)
+              if (id.includes('monaco-editor') || id.includes('@monaco-editor')) {
+                return 'monaco-editor';
+              }
+              // Recharts - charts library (~200KB)
+              if (id.includes('recharts') || id.includes('d3-')) {
+                return 'recharts';
+              }
+              // React core vendor
+              if (id.includes('node_modules/react/') ||
+                  id.includes('node_modules/react-dom/') ||
+                  id.includes('node_modules/react-router')) {
+                return 'react-vendor';
+              }
+            },
+          },
+        },
+      },
     };
 });

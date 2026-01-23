@@ -85,23 +85,27 @@ public class ListSorting {
                 return Integer.compare(p1.age, p2.age);
             }
         });
-        System.out.println("\nSorted by age (Collections.sort):");
+        System.out.println("");
+        System.out.println("Sorted by age (Collections.sort):");
         people.forEach(System.out::println);
 
         // Sort by name using List.sort() with Comparator.comparing()
         people.sort(Comparator.comparing(p -> p.name));
-        System.out.println("\nSorted by name (List.sort with lambda):");
+        System.out.println("");
+        System.out.println("Sorted by name (List.sort with lambda):");
         people.forEach(System.out::println);
 
         // Sort by city, then by name using thenComparing()
         people.sort(Comparator.comparing((Person p) -> p.city)
                               .thenComparing(p -> p.name));
-        System.out.println("\nSorted by city, then name:");
+        System.out.println("");
+        System.out.println("Sorted by city, then name:");
         people.forEach(System.out::println);
 
         // Sort in reverse order by age
         people.sort(Comparator.comparing((Person p) -> p.age).reversed());
-        System.out.println("\nSorted by age (descending):");
+        System.out.println("");
+        System.out.println("Sorted by age (descending):");
         people.forEach(System.out::println);
 
         // Handle null values safely
@@ -114,7 +118,8 @@ public class ListSorting {
                                                  Comparator.nullsLast(String::compareTo))
                                       .thenComparing(p -> p.city,
                                                     Comparator.nullsLast(String::compareTo)));
-        System.out.println("\nWith null handling (nulls last):");
+        System.out.println("");
+        System.out.println("With null handling (nulls last):");
         peopleWithNull.forEach(System.out::println);
     }
 }`,
@@ -141,149 +146,160 @@ products.sort(Comparator.comparing(Product::getPrice,
 - Safe null handling without NullPointerException
 - Readable code without anonymous classes thanks to lambdas`,
     order: 3,
-    testCode: `import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
-import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.*;
+    testCode: `import static org.junit.Assert.*;
+import org.junit.Test;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 
-class Person {
-    String name;
-    int age;
-    String city;
-    Person(String name, int age, String city) {
-        this.name = name;
-        this.age = age;
-        this.city = city;
-    }
-}
-
-// Test1: Collections.sort() with Comparator sorts by age
+// Test1: main method should show List sorting demo
 class Test1 {
     @Test
-    void testSortByAge() {
-        List<Person> people = new ArrayList<>();
-        people.add(new Person("Alice", 30, "NYC"));
-        people.add(new Person("Bob", 25, "LA"));
-        Collections.sort(people, (p1, p2) -> Integer.compare(p1.age, p2.age));
-        assertEquals(25, people.get(0).age);
-        assertEquals(30, people.get(1).age);
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        ListSorting.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show List sorting demo",
+            output.contains("Sort") || output.contains("Comparator") ||
+            output.contains("age") || output.contains("name"));
     }
 }
 
-// Test2: List.sort() with Comparator.comparing sorts by name
+// Test2: Output should show sorting by age
 class Test2 {
     @Test
-    void testSortByName() {
-        List<Person> people = new ArrayList<>();
-        people.add(new Person("Charlie", 30, "NYC"));
-        people.add(new Person("Alice", 25, "LA"));
-        people.sort(Comparator.comparing(p -> p.name));
-        assertEquals("Alice", people.get(0).name);
-        assertEquals("Charlie", people.get(1).name);
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        ListSorting.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString().toLowerCase();
+        assertTrue("Should mention sorting by age",
+            output.contains("age") || output.contains("возраст") || output.contains("yosh"));
     }
 }
 
-// Test3: thenComparing() for multi-level sorting
+// Test3: Output should show sorting by name
 class Test3 {
     @Test
-    void testMultiLevelSort() {
-        List<Person> people = new ArrayList<>();
-        people.add(new Person("Bob", 30, "NYC"));
-        people.add(new Person("Alice", 30, "NYC"));
-        people.sort(Comparator.comparing((Person p) -> p.city).thenComparing(p -> p.name));
-        assertEquals("Alice", people.get(0).name);
-        assertEquals("Bob", people.get(1).name);
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        ListSorting.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString().toLowerCase();
+        assertTrue("Should mention sorting by name",
+            output.contains("name") || output.contains("имя") || output.contains("ism"));
     }
 }
 
-// Test4: reversed() sorts in descending order
+// Test4: Output should show multi-level sorting
 class Test4 {
     @Test
-    void testReversedSort() {
-        List<Person> people = new ArrayList<>();
-        people.add(new Person("Alice", 25, "NYC"));
-        people.add(new Person("Bob", 35, "LA"));
-        people.sort(Comparator.comparing((Person p) -> p.age).reversed());
-        assertEquals(35, people.get(0).age);
-        assertEquals(25, people.get(1).age);
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        ListSorting.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString().toLowerCase();
+        assertTrue("Should mention city or multi-level",
+            output.contains("city") || output.contains("then") || output.contains("город") || output.contains("shahar"));
     }
 }
 
-// Test5: Comparator.nullsLast handles null values
+// Test5: Output should show reverse order sorting
 class Test5 {
     @Test
-    void testNullsLast() {
-        List<String> names = new ArrayList<>();
-        names.add(null);
-        names.add("Alice");
-        names.add("Bob");
-        names.sort(Comparator.nullsLast(String::compareTo));
-        assertEquals("Alice", names.get(0));
-        assertNull(names.get(2));
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        ListSorting.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString().toLowerCase();
+        assertTrue("Should mention reverse or descending",
+            output.contains("reverse") || output.contains("descend") ||
+            output.contains("обратн") || output.contains("teskari"));
     }
 }
 
-// Test6: Comparator.nullsFirst puts nulls at beginning
+// Test6: Output should show null handling
 class Test6 {
     @Test
-    void testNullsFirst() {
-        List<String> names = new ArrayList<>();
-        names.add("Alice");
-        names.add(null);
-        names.add("Bob");
-        names.sort(Comparator.nullsFirst(String::compareTo));
-        assertNull(names.get(0));
-        assertEquals("Alice", names.get(1));
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        ListSorting.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString().toLowerCase();
+        assertTrue("Should mention null handling",
+            output.contains("null") || output.contains("nulls"));
     }
 }
 
-// Test7: Integer.compare for numeric comparison
+// Test7: Output should contain Person names
 class Test7 {
     @Test
-    void testIntegerCompare() {
-        List<Integer> nums = new ArrayList<>(List.of(3, 1, 4, 1, 5));
-        Collections.sort(nums, Integer::compare);
-        assertEquals(1, nums.get(0));
-        assertEquals(5, nums.get(4));
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        ListSorting.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should contain person names",
+            output.contains("Alice") || output.contains("Bob") || output.contains("Charlie"));
     }
 }
 
-// Test8: Empty list sort doesn't throw
+// Test8: Output should show sort usage
 class Test8 {
     @Test
-    void testEmptyListSort() {
-        List<Person> people = new ArrayList<>();
-        assertDoesNotThrow(() -> people.sort(Comparator.comparing(p -> p.name)));
-        assertTrue(people.isEmpty());
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        ListSorting.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString().toLowerCase();
+        assertTrue("Should mention sort",
+            output.contains("sort") || output.contains("сортир") || output.contains("saralash"));
     }
 }
 
-// Test9: Single element list stays unchanged
+// Test9: Output should show Comparator usage
 class Test9 {
     @Test
-    void testSingleElementSort() {
-        List<Person> people = new ArrayList<>();
-        people.add(new Person("Alice", 30, "NYC"));
-        people.sort(Comparator.comparing(p -> p.name));
-        assertEquals("Alice", people.get(0).name);
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        ListSorting.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should mention Comparator or comparing",
+            output.contains("Comparator") || output.contains("comparing"));
     }
 }
 
-// Test10: Complex sort with multiple criteria
+// Test10: Output should show results of sorting
 class Test10 {
     @Test
-    void testComplexSort() {
-        List<Person> people = new ArrayList<>();
-        people.add(new Person("Alice", 30, "NYC"));
-        people.add(new Person("Bob", 25, "LA"));
-        people.add(new Person("Charlie", 30, "LA"));
-        people.sort(Comparator.comparing((Person p) -> p.age)
-                              .thenComparing(p -> p.city)
-                              .thenComparing(p -> p.name));
-        assertEquals("Bob", people.get(0).name);
-        assertEquals(25, people.get(0).age);
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        ListSorting.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show ages or sorted results",
+            output.contains("25") || output.contains("30") || output.contains("35"));
     }
 }
 `,
@@ -331,23 +347,27 @@ public class ListSorting {
                 return Integer.compare(p1.age, p2.age);
             }
         });
-        System.out.println("\nОтсортировано по возрасту (Collections.sort):");
+        System.out.println("");
+        System.out.println("Отсортировано по возрасту (Collections.sort):");
         people.forEach(System.out::println);
 
         // Сортируем по имени используя List.sort() с Comparator.comparing()
         people.sort(Comparator.comparing(p -> p.name));
-        System.out.println("\nОтсортировано по имени (List.sort с лямбдой):");
+        System.out.println("");
+        System.out.println("Отсортировано по имени (List.sort с лямбдой):");
         people.forEach(System.out::println);
 
         // Сортируем по городу, затем по имени используя thenComparing()
         people.sort(Comparator.comparing((Person p) -> p.city)
                               .thenComparing(p -> p.name));
-        System.out.println("\nОтсортировано по городу, затем по имени:");
+        System.out.println("");
+        System.out.println("Отсортировано по городу, затем по имени:");
         people.forEach(System.out::println);
 
         // Сортируем в обратном порядке по возрасту
         people.sort(Comparator.comparing((Person p) -> p.age).reversed());
-        System.out.println("\nОтсортировано по возрасту (по убыванию):");
+        System.out.println("");
+        System.out.println("Отсортировано по возрасту (по убыванию):");
         people.forEach(System.out::println);
 
         // Безопасно обрабатываем null значения
@@ -360,7 +380,8 @@ public class ListSorting {
                                                  Comparator.nullsLast(String::compareTo))
                                       .thenComparing(p -> p.city,
                                                     Comparator.nullsLast(String::compareTo)));
-        System.out.println("\nС обработкой null (null в конце):");
+        System.out.println("");
+        System.out.println("С обработкой null (null в конце):");
         peopleWithNull.forEach(System.out::println);
     }
 }`,
@@ -442,23 +463,27 @@ public class ListSorting {
                 return Integer.compare(p1.age, p2.age);
             }
         });
-        System.out.println("\nYosh bo'yicha saralangan (Collections.sort):");
+        System.out.println("");
+        System.out.println("Yosh bo'yicha saralangan (Collections.sort):");
         people.forEach(System.out::println);
 
         // Ism bo'yicha List.sort() va Comparator.comparing() bilan saralaymiz
         people.sort(Comparator.comparing(p -> p.name));
-        System.out.println("\nIsm bo'yicha saralangan (List.sort lambda bilan):");
+        System.out.println("");
+        System.out.println("Ism bo'yicha saralangan (List.sort lambda bilan):");
         people.forEach(System.out::println);
 
         // Shahar, keyin ism bo'yicha thenComparing() bilan saralaymiz
         people.sort(Comparator.comparing((Person p) -> p.city)
                               .thenComparing(p -> p.name));
-        System.out.println("\nShahar, keyin ism bo'yicha saralangan:");
+        System.out.println("");
+        System.out.println("Shahar, keyin ism bo'yicha saralangan:");
         people.forEach(System.out::println);
 
         // Yosh bo'yicha teskari tartibda saralaymiz
         people.sort(Comparator.comparing((Person p) -> p.age).reversed());
-        System.out.println("\nYosh bo'yicha saralangan (kamayish tartibida):");
+        System.out.println("");
+        System.out.println("Yosh bo'yicha saralangan (kamayish tartibida):");
         people.forEach(System.out::println);
 
         // null qiymatlarni xavfsiz qayta ishlaymiz
@@ -471,7 +496,8 @@ public class ListSorting {
                                                  Comparator.nullsLast(String::compareTo))
                                       .thenComparing(p -> p.city,
                                                     Comparator.nullsLast(String::compareTo)));
-        System.out.println("\nnull bilan ishlash (null oxirida):");
+        System.out.println("");
+        System.out.println("null bilan ishlash (null oxirida):");
         peopleWithNull.forEach(System.out::println);
     }
 }`,

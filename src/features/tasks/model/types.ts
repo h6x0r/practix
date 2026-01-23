@@ -4,6 +4,9 @@ export interface Translations {
   uz?: Record<string, string>;
 }
 
+// Task types for different submission flows
+export type TaskType = 'CODE' | 'PROMPT';
+
 // Visualization types for ML tasks
 export type VisualizationType =
   | 'none'
@@ -13,6 +16,30 @@ export type VisualizationType =
   | 'heatmap'
   | 'confusion_matrix'
   | 'multi';
+
+// Prompt test scenario for prompt engineering tasks
+export interface PromptTestScenario {
+  input: string;
+  expectedCriteria: string[];
+  rubric?: string;
+}
+
+// Configuration for prompt engineering tasks
+export interface PromptConfig {
+  testScenarios: PromptTestScenario[];
+  judgePrompt: string;
+  passingScore: number;
+}
+
+// Result of a single prompt test scenario
+export interface PromptScenarioResult {
+  scenarioIndex: number;
+  input: string;
+  output: string;
+  score: number;
+  feedback: string;
+  passed: boolean;
+}
 
 // Chart data structure returned by ML tasks
 export interface ChartData {
@@ -47,6 +74,27 @@ export interface Task {
   translations?: Translations; // Multi-language support
   // ML visualization support
   visualizationType?: VisualizationType; // Chart type for ML tasks
+  // Task type: CODE (default) or PROMPT (for prompt engineering)
+  taskType?: TaskType;
+  // Prompt Engineering configuration (only for taskType: PROMPT)
+  promptConfig?: PromptConfig;
+}
+
+// Prompt submission result (returned from backend)
+export interface PromptSubmission {
+  id: string;
+  status: 'pending' | 'running' | 'passed' | 'failed' | 'error';
+  score: number;
+  message: string;
+  createdAt: string;
+  scenarioResults: PromptScenarioResult[];
+  summary: string;
+  // Gamification
+  xpEarned?: number;
+  totalXp?: number;
+  level?: number;
+  leveledUp?: boolean;
+  newBadges?: Array<{ slug: string; name: string; icon: string }>;
 }
 
 export interface TestCaseResult {

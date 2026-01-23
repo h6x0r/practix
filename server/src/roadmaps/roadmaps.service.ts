@@ -1,44 +1,18 @@
 import { Injectable, ForbiddenException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
+import { CacheService } from '../cache/cache.service';
 import { UserRoadmap } from '@prisma/client';
 import { GenerateRoadmapDto, GenerateRoadmapVariantsDto, SelectRoadmapVariantDto } from './dto/roadmaps.dto';
 import { GoogleGenAI } from "@google/genai";
-
-// ============================================================================
-// Salary Ranges Config (hardcoded)
-// ============================================================================
-const SALARY_RANGES = {
-  // By target role / difficulty
-  'junior': { min: 800, max: 1500 },
-  'junior-plus': { min: 1200, max: 2500 },
-  'middle': { min: 2000, max: 4000 },
-  'middle-plus': { min: 3000, max: 5000 },
-  'senior': { min: 3500, max: 6000 },
-  'senior-plus': { min: 5000, max: 8000 },
-};
-
-// Course icons for UI
-const COURSE_ICONS: Record<string, string> = {
-  'c_go_basics': '🐹',
-  'c_go_concurrency': '🐹',
-  'c_go_web_apis': '🐹',
-  'c_go_production': '🐹',
-  'c_go_design_patterns': '🐹',
-  'c_java_core': '☕',
-  'c_java_modern': '☕',
-  'c_java_advanced': '☕',
-  'c_java_design_patterns': '☕',
-  'c_python_ml_fundamentals': '🐍',
-  'c_python_deep_learning': '🐍',
-  'c_python_llm': '🐍',
-  'c_java_ml': '☕',
-  'c_java_nlp': '☕',
-  'c_go_ml_inference': '🐹',
-  'software-engineering': '🏗️',
-  'algo-fundamentals': '🧮',
-  'algo-advanced': '🧮',
-};
+import {
+  VARIANTS_CACHE_TTL,
+  SALARY_RANGES,
+  COURSE_ICONS,
+  PHASE_PALETTES,
+  CATEGORY_PATTERNS,
+  DEFAULT_AI_MODEL,
+} from './roadmap.config';
 
 export interface RoadmapPhase {
   id: string;
@@ -61,28 +35,7 @@ export interface RoadmapStep {
   status: 'available' | 'completed' | 'locked';
 }
 
-// Phase color palettes
-const PHASE_PALETTES = [
-  'from-cyan-400 to-blue-500',
-  'from-emerald-400 to-green-500',
-  'from-orange-400 to-red-500',
-  'from-purple-400 to-indigo-500',
-  'from-pink-400 to-rose-500',
-  'from-amber-400 to-yellow-500',
-  'from-teal-400 to-cyan-500',
-  'from-fuchsia-400 to-purple-600',
-];
-
-// Category to course pattern mapping
-const CATEGORY_PATTERNS: Record<string, RegExp[]> = {
-  'backend-go': [/^c_go/],
-  'backend-java': [/^c_java/],
-  'python-data': [/^c_python/, /^algo/],
-  'ai-ml': [/ml|deep|llm|nlp/i],
-  'software-design': [/software-engineering/, /design-patterns/],
-  'algorithms': [/^algo/],
-  'fullstack': [/.*/], // All courses
-};
+// PHASE_PALETTES and CATEGORY_PATTERNS are imported from roadmap.config.ts
 
 interface TaskInfo {
   id: string;
@@ -165,12 +118,20 @@ export class RoadmapsService {
 
   constructor(
     private prisma: PrismaService,
-    private configService: ConfigService
+    private configService: ConfigService,
+    private cacheService: CacheService
   ) {
     const apiKey = this.configService.get<string>('GEMINI_API_KEY') || this.configService.get<string>('API_KEY');
     if (apiKey) {
       this.genAI = new GoogleGenAI({ apiKey });
     }
+  }
+
+  /**
+   * Get cache key for user's roadmap variants
+   */
+  private getVariantsCacheKey(userId: string): string {
+    return `roadmap:variants:${userId}`;
   }
 
   /**
@@ -247,6 +208,7 @@ export class RoadmapsService {
   }
 
   /**
+   * @deprecated Use generateRoadmapVariants() instead. This v1 method is no longer exposed via API.
    * Generate a new roadmap based on preferences using AI
    */
   async generateRoadmap(userId: string, dto: GenerateRoadmapDto) {
@@ -342,6 +304,9 @@ export class RoadmapsService {
         where: { id: roadmap.id },
       });
     }
+
+    // Clear cached variants when roadmap is deleted
+    await this.clearUserVariants(userId);
 
     return { success: true };
   }
@@ -443,8 +408,13 @@ export class RoadmapsService {
       variants = this.generateVariantsFallback(dto, availableTasks);
     }
 
-    // Store variants temporarily for selection (in memory or cache)
-    // For now, we'll return them directly and re-generate on selection
+    // Store variants in Redis cache (24h TTL) for retrieval
+    await this.cacheService.set(
+      this.getVariantsCacheKey(userId),
+      variants,
+      VARIANTS_CACHE_TTL
+    );
+    this.logger.log(`Cached ${variants.length} variants for user ${userId}`);
 
     return {
       variants,
@@ -501,6 +471,9 @@ export class RoadmapsService {
       },
     });
 
+    // Clear cached variants after selection
+    await this.clearUserVariants(userId);
+
     const hydratedRoadmap = await this.hydrateRoadmap(roadmap, userId);
     const newStatus = await this.canGenerateRoadmap(userId);
 
@@ -513,20 +486,31 @@ export class RoadmapsService {
   }
 
   /**
-   * Get user's saved variants (placeholder - variants are currently generated on-demand)
-   * In future, could store variants in cache/db for retrieval
+   * Get user's saved variants from Redis cache
+   * Variants are stored for 24 hours after generation
    */
   async getUserVariants(userId: string) {
-    // For now, variants are not stored - return empty
-    // This endpoint exists for future expansion
     const canGenStatus = await this.canGenerateRoadmap(userId);
 
+    // Try to get cached variants
+    const cachedVariants = await this.cacheService.get<RoadmapVariantData[]>(
+      this.getVariantsCacheKey(userId)
+    );
+
     return {
-      variants: [],
+      variants: cachedVariants || [],
       canRegenerate: canGenStatus.canGenerate,
       isPremium: canGenStatus.isPremium,
       generationCount: canGenStatus.generationCount,
     };
+  }
+
+  /**
+   * Clear user's cached variants (called after variant selection or roadmap deletion)
+   */
+  async clearUserVariants(userId: string): Promise<void> {
+    await this.cacheService.delete(this.getVariantsCacheKey(userId));
+    this.logger.log(`Cleared cached variants for user ${userId}`);
   }
 
   /**
@@ -585,8 +569,9 @@ export class RoadmapsService {
   ): Promise<RoadmapVariantData[]> {
     const prompt = this.buildVariantsPrompt(dto, tasks);
 
+    const aiModel = this.configService.get<string>('AI_MODEL_NAME') || DEFAULT_AI_MODEL;
     const response = await this.genAI!.models.generateContent({
-      model: 'gemini-2.0-flash',
+      model: aiModel,
       contents: prompt,
     });
 

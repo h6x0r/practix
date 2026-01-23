@@ -23,6 +23,7 @@ export interface CourseAnalyticsItem {
   completed: number;
   completionRate: number;
   averageProgress: number;
+  translations?: Record<string, { title?: string; description?: string }> | null;
 }
 
 export interface CourseAnalyticsResponse {
@@ -64,13 +65,24 @@ export interface SubmissionStatsResponse {
   dailySubmissions: Record<string, number>;
 }
 
-// Subscription Stats
-export interface SubscriptionStats {
-  totalPremium: number;
-  totalFree: number;
+// Plan stat from backend
+export interface PlanStat {
+  planId: string;
+  planName: string;
+  planSlug: string;
+  planType: string;
+  count: number;
   monthlyRevenue: number;
-  conversionRate: number;
-  churnRate: number;
+}
+
+// Subscription Stats (matches backend response)
+export interface SubscriptionStats {
+  activeSubscriptions: number;
+  newSubscriptionsThisMonth: number;
+  byPlan: PlanStat[];
+  totalMonthlyRevenue: number;
+  completedPayments: number;
+  totalRevenue: number;
 }
 
 // AI Usage Stats

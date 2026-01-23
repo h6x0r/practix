@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { Session } from '@prisma/client';
+import { Session, DeviceType } from '@prisma/client';
 import * as crypto from 'crypto';
 
 @Injectable()
@@ -19,6 +19,7 @@ export class SessionsService {
    * Create a new session for a user
    * @param userId - User ID
    * @param token - JWT token (will be hashed before storage)
+   * @param deviceType - Device type (MOBILE, DESKTOP, UNKNOWN)
    * @param deviceInfo - Optional device information (browser, OS)
    * @param ipAddress - Optional IP address
    * @returns Created session
@@ -26,6 +27,7 @@ export class SessionsService {
   async createSession(
     userId: string,
     token: string,
+    deviceType: DeviceType = DeviceType.UNKNOWN,
     deviceInfo?: string,
     ipAddress?: string,
   ): Promise<Session> {
@@ -40,6 +42,7 @@ export class SessionsService {
       data: {
         userId,
         token: tokenHash, // Store hash, not plaintext
+        deviceType,
         deviceInfo,
         ipAddress,
         expiresAt,
@@ -76,7 +79,7 @@ export class SessionsService {
   }
 
   /**
-   * Invalidate all sessions for a user
+   * Invalidate all sessions for a user (legacy - use invalidateUserSessionsByDevice)
    * Sets isActive to false for all user sessions
    * @param userId - User ID
    * @returns Number of sessions invalidated
@@ -93,6 +96,51 @@ export class SessionsService {
     });
 
     return result.count;
+  }
+
+  /**
+   * Invalidate sessions for a user by device type
+   * Allows 1 mobile + 1 desktop session simultaneously
+   * @param userId - User ID
+   * @param deviceType - Device type to invalidate
+   * @returns Number of sessions invalidated
+   */
+  async invalidateUserSessionsByDevice(
+    userId: string,
+    deviceType: DeviceType,
+  ): Promise<number> {
+    const result = await this.prisma.session.updateMany({
+      where: {
+        userId,
+        deviceType,
+        isActive: true,
+      },
+      data: {
+        isActive: false,
+      },
+    });
+
+    return result.count;
+  }
+
+  /**
+   * Get active session count by device type for a user
+   * @param userId - User ID
+   * @param deviceType - Device type to count
+   * @returns Count of active sessions for that device type
+   */
+  async getActiveSessionCountByDevice(
+    userId: string,
+    deviceType: DeviceType,
+  ): Promise<number> {
+    return this.prisma.session.count({
+      where: {
+        userId,
+        deviceType,
+        isActive: true,
+        expiresAt: { gte: new Date() },
+      },
+    });
   }
 
   /**

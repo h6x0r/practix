@@ -51,5 +51,13 @@ export const userCoursesService = {
   hasStartedCourse: async (courseSlug: string): Promise<boolean> => {
     const courses = await userCoursesService.getStartedCourses();
     return courses.some(c => c.slug === courseSlug);
+  },
+
+  /**
+   * Update last accessed time for a course
+   * Moves the course to the top of My Tasks list
+   */
+  updateLastAccessed: async (courseSlug: string): Promise<void> => {
+    await api.patch(`/users/me/courses/${courseSlug}/access`, {});
   }
 };

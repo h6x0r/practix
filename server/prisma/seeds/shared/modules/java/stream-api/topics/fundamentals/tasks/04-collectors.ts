@@ -179,111 +179,150 @@ public class CollectorsDemo {
 }`,
     testCode: `import static org.junit.Assert.*;
 import org.junit.Test;
-import java.util.*;
-import java.util.stream.*;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 
-// Test1: Verify toList() collector
+// Test1: main method should show collectors demo header
 class Test1 {
     @Test
     public void test() {
-        List<String> names = Arrays.asList("Alice", "Bob", "Charlie");
-        List<String> list = names.stream().collect(Collectors.toList());
-        assertEquals(3, list.size());
-        assertTrue(list.contains("Alice"));
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        CollectorsDemo.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show collectors demo header",
+            output.contains("Collectors") || output.contains("Basic") ||
+            output.contains("Коллекторы") || output.contains("Kollektorlar"));
     }
 }
 
-// Test2: Verify toSet() removes duplicates
+// Test2: should demonstrate basic collectors
 class Test2 {
     @Test
     public void test() {
-        List<Integer> numbers = Arrays.asList(1, 2, 2, 3, 3, 3);
-        Set<Integer> set = numbers.stream().collect(Collectors.toSet());
-        assertEquals(3, set.size());
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        CollectorsDemo.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show basic collectors", output.contains("Basic") || output.contains("Asosiy") || output.contains("To List"));
     }
 }
 
-// Test3: Verify toMap() creates map from stream
+// Test3: should show toList and toSet
 class Test3 {
     @Test
     public void test() {
-        List<String> words = Arrays.asList("a", "bb", "ccc");
-        Map<String, Integer> map = words.stream()
-            .collect(Collectors.toMap(s -> s, String::length));
-        assertEquals(Integer.valueOf(3), map.get("ccc"));
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        CollectorsDemo.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show toList and toSet", output.contains("List") || output.contains("Set") || output.contains("[Alice"));
     }
 }
 
-// Test4: Verify groupingBy() groups elements
+// Test4: should demonstrate groupingBy
 class Test4 {
     @Test
     public void test() {
-        List<String> words = Arrays.asList("a", "bb", "c", "dd");
-        Map<Integer, List<String>> grouped = words.stream()
-            .collect(Collectors.groupingBy(String::length));
-        assertEquals(2, grouped.get(2).size());
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        CollectorsDemo.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show groupingBy", output.contains("groupingBy") || output.contains("Group") || output.contains("guruh"));
     }
 }
 
-// Test5: Verify partitioningBy() creates boolean map
+// Test5: should show grouping results
 class Test5 {
     @Test
     public void test() {
-        List<Integer> numbers = Arrays.asList(1, 2, 3, 4, 5);
-        Map<Boolean, List<Integer>> partitioned = numbers.stream()
-            .collect(Collectors.partitioningBy(n -> n % 2 == 0));
-        assertEquals(2, partitioned.get(true).size());
-        assertEquals(3, partitioned.get(false).size());
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        CollectorsDemo.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show grouping results", output.contains("length") || output.contains("uzunlik") || output.contains("{3=") || output.contains("{5="));
     }
 }
 
-// Test6: Verify joining() concatenates strings
+// Test6: should demonstrate partitioningBy
 class Test6 {
     @Test
     public void test() {
-        List<String> words = Arrays.asList("Hello", "World");
-        String joined = words.stream().collect(Collectors.joining(" "));
-        assertEquals("Hello World", joined);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        CollectorsDemo.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show partitioningBy", output.contains("partitioning") || output.contains("Partition") || output.contains("bo'lish"));
     }
 }
 
-// Test7: Verify joining() with delimiter and affixes
+// Test7: should demonstrate string collectors
 class Test7 {
     @Test
     public void test() {
-        List<String> items = Arrays.asList("a", "b", "c");
-        String result = items.stream().collect(Collectors.joining(", ", "[", "]"));
-        assertEquals("[a, b, c]", result);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        CollectorsDemo.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show string collectors", output.contains("String") || output.contains("Satr") || output.contains("Joining") || output.contains("Alice, Bob"));
     }
 }
 
-// Test8: Verify counting() collector
+// Test8: should show statistical collectors
 class Test8 {
     @Test
     public void test() {
-        List<Integer> numbers = Arrays.asList(1, 2, 3, 4, 5);
-        Long count = numbers.stream().collect(Collectors.counting());
-        assertEquals(Long.valueOf(5), count);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        CollectorsDemo.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show statistical collectors", output.contains("Statistical") || output.contains("Statistik") || output.contains("Count") || output.contains("Sum"));
     }
 }
 
-// Test9: Verify summingInt() collector
+// Test9: should show average or statistics
 class Test9 {
     @Test
     public void test() {
-        List<Integer> numbers = Arrays.asList(1, 2, 3, 4, 5);
-        Integer sum = numbers.stream().collect(Collectors.summingInt(Integer::intValue));
-        assertEquals(Integer.valueOf(15), sum);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        CollectorsDemo.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show average or statistics", output.contains("Average") || output.contains("Statistics") || output.contains("30.0") || output.contains("150"));
     }
 }
 
-// Test10: Verify averagingInt() collector
+// Test10: should have section headers
 class Test10 {
     @Test
     public void test() {
-        List<Integer> numbers = Arrays.asList(2, 4, 6);
-        Double avg = numbers.stream().collect(Collectors.averagingInt(Integer::intValue));
-        assertEquals(4.0, avg, 0.001);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        CollectorsDemo.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        boolean hasHeaders = output.contains("===") ||
+                             output.contains("Basic") || output.contains("groupingBy") || output.contains("Asosiy");
+        assertTrue("Should have section headers", hasHeaders);
     }
 }
 `,

@@ -184,104 +184,152 @@ findUser(userId).ifPresent(user -> {
 - orElseThrow provides clear business exception context
 - ifPresent eliminates explicit null checks in code`,
     order: 2,
-    testCode: `import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.*;
-import java.util.Optional;
-import java.util.NoSuchElementException;
+    testCode: `import static org.junit.Assert.*;
+import org.junit.Test;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 
-// Test 1: isPresent returns true for value
+// Test1: main method should show Optional methods demo
 class Test1 {
     @Test
-    void testIsPresentWithValue() {
-        Optional<String> opt = Optional.of("Java");
-        assertTrue(opt.isPresent());
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        OptionalMethods.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show Optional methods demo",
+            output.contains("Optional") || output.contains("isPresent") ||
+            output.contains("Value") || output.contains("Значение"));
     }
 }
 
-// Test 2: isEmpty returns true for empty
+// Test2: should check isPresent
 class Test2 {
     @Test
-    void testIsEmptyWithEmpty() {
-        Optional<String> opt = Optional.empty();
-        assertTrue(opt.isEmpty());
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        OptionalMethods.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show isPresent result", output.contains("Has value: true") || output.contains("isPresent"));
     }
 }
 
-// Test 3: orElse returns value when present
+// Test3: should check isEmpty
 class Test3 {
     @Test
-    void testOrElseWithValue() {
-        Optional<String> opt = Optional.of("Java");
-        assertEquals("Java", opt.orElse("Default"));
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        OptionalMethods.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show isEmpty result", output.contains("Is empty:") || output.contains("isEmpty"));
     }
 }
 
-// Test 4: orElse returns default when empty
+// Test4: should use ifPresent
 class Test4 {
     @Test
-    void testOrElseWithEmpty() {
-        Optional<String> opt = Optional.empty();
-        assertEquals("Default", opt.orElse("Default"));
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        OptionalMethods.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show ifPresent usage", output.contains("JAVA") || output.contains("exists"));
     }
 }
 
-// Test 5: orElseGet returns computed default when empty
+// Test5: should show orElse usage
 class Test5 {
     @Test
-    void testOrElseGetWithEmpty() {
-        Optional<String> opt = Optional.empty();
-        assertEquals("Computed", opt.orElseGet(() -> "Computed"));
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        OptionalMethods.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show orElse usage", output.contains("orElse") || output.contains("Default"));
     }
 }
 
-// Test 6: orElseThrow throws when empty
+// Test6: should show orElseGet usage
 class Test6 {
     @Test
-    void testOrElseThrowWithEmpty() {
-        Optional<String> opt = Optional.empty();
-        assertThrows(NoSuchElementException.class, () -> opt.orElseThrow());
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        OptionalMethods.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show orElseGet usage", output.contains("orElseGet") || output.contains("Computed"));
     }
 }
 
-// Test 7: orElseThrow returns value when present
+// Test7: should demonstrate exception throwing
 class Test7 {
     @Test
-    void testOrElseThrowWithValue() {
-        Optional<String> opt = Optional.of("Java");
-        assertEquals("Java", opt.orElseThrow());
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        OptionalMethods.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show exception handling", output.contains("throws") || output.contains("Exception") || output.contains("NoSuchElement"));
     }
 }
 
-// Test 8: ifPresent executes when value present
+// Test8: should compare orElse vs orElseGet
 class Test8 {
     @Test
-    void testIfPresentExecutes() {
-        Optional<String> opt = Optional.of("Java");
-        StringBuilder result = new StringBuilder();
-        opt.ifPresent(v -> result.append(v.toUpperCase()));
-        assertEquals("JAVA", result.toString());
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        OptionalMethods.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should compare orElse vs orElseGet", output.contains("orElse vs orElseGet") || output.contains("Expensive"));
     }
 }
 
-// Test 9: ifPresent does nothing when empty
+// Test9: should show safe retrieval pattern
 class Test9 {
     @Test
-    void testIfPresentDoesNothing() {
-        Optional<String> opt = Optional.empty();
-        StringBuilder result = new StringBuilder("unchanged");
-        opt.ifPresent(v -> result.setLength(0));
-        assertEquals("unchanged", result.toString());
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        OptionalMethods.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show safe retrieval", output.contains("Safe") || output.contains("retrieval"));
     }
 }
 
-// Test 10: orElseThrow with custom exception
+// Test10: should have section headers
 class Test10 {
     @Test
-    void testOrElseThrowCustomException() {
-        Optional<String> opt = Optional.empty();
-        assertThrows(IllegalStateException.class, () ->
-            opt.orElseThrow(() -> new IllegalStateException("Missing"))
-        );
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        OptionalMethods.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        boolean hasHeaders = output.contains("===") ||
+                             output.contains("Checking") || output.contains("Проверка") || output.contains("tekshirish");
+        assertTrue("Should have section headers", hasHeaders);
     }
 }`,
     translations: {

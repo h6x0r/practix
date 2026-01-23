@@ -4,6 +4,29 @@ import { UsersService } from '../users/users.service';
 import { ConfigService } from '@nestjs/config';
 import { GoogleGenAI } from "@google/genai";
 import { AccessControlService } from '../subscriptions/access-control.service';
+import { DEFAULT_AI_MODEL, AI_DAILY_LIMITS } from './ai.config';
+
+/**
+ * Prompt test scenario result
+ */
+export interface PromptTestResult {
+  scenarioIndex: number;
+  input: string;
+  output: string;
+  score: number;
+  feedback: string;
+  passed: boolean;
+}
+
+/**
+ * Overall prompt evaluation result
+ */
+export interface PromptEvaluationResult {
+  passed: boolean;
+  score: number;
+  scenarioResults: PromptTestResult[];
+  summary: string;
+}
 
 @Injectable()
 export class AiService {
@@ -161,5 +184,134 @@ Languages: en=English, ru=Russian, uz=Uzbek`;
 
         throw new ServiceUnavailableException("AI is currently overloaded. Please try again.");
     }
+  }
+
+  /**
+   * Evaluate a prompt engineering submission
+   * Runs the student's prompt against test scenarios and uses AI-as-Judge
+   */
+  async evaluatePrompt(
+    userId: string,
+    studentPrompt: string,
+    promptConfig: {
+      testScenarios: Array<{
+        input: string;
+        expectedCriteria: string[];
+        rubric?: string;
+      }>;
+      judgePrompt: string;
+      passingScore: number;
+    },
+  ): Promise<PromptEvaluationResult> {
+    if (!this.genAI) {
+      throw new ServiceUnavailableException('AI Service is not configured (Missing API Key).');
+    }
+
+    const scenarioResults: PromptTestResult[] = [];
+    let totalScore = 0;
+
+    // Process each test scenario
+    for (let i = 0; i < promptConfig.testScenarios.length; i++) {
+      const scenario = promptConfig.testScenarios[i];
+
+      try {
+        // Step 1: Execute student's prompt with scenario input
+        const populatedPrompt = studentPrompt.replace(/\{\{INPUT\}\}/gi, scenario.input);
+
+        const aiModel = this.configService.get<string>('AI_MODEL_NAME') || DEFAULT_AI_MODEL;
+        const executionResponse = await this.genAI.models.generateContent({
+          model: aiModel,
+          contents: populatedPrompt,
+        });
+
+        const output = executionResponse.text || '';
+
+        // Step 2: Use AI Judge to evaluate the output
+        const judgePromptPopulated = promptConfig.judgePrompt
+          .replace(/\{\{OUTPUT\}\}/gi, output)
+          .replace(/\{\{CRITERIA\}\}/gi, scenario.expectedCriteria.join('\n- '))
+          .replace(/\{\{RUBRIC\}\}/gi, scenario.rubric || 'Score based on criteria match');
+
+        const judgeSystemPrompt = `You are an AI Judge evaluating prompt engineering outputs.
+Evaluate the following output against the given criteria.
+Respond ONLY with valid JSON in this exact format:
+{"score": <number 1-10>, "feedback": "<brief explanation>"}
+
+Do not include any other text, markdown, or formatting.`;
+
+        const judgeResponse = await this.genAI.models.generateContent({
+          model: aiModel,
+          contents: `${judgeSystemPrompt}\n\n${judgePromptPopulated}`,
+        });
+
+        const judgeText = judgeResponse.text || '{"score": 0, "feedback": "Failed to evaluate"}';
+
+        // Parse judge response
+        let score = 0;
+        let feedback = 'Failed to parse evaluation';
+
+        try {
+          // Extract JSON from response (handle potential markdown wrapping)
+          const jsonMatch = judgeText.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0]);
+            score = Math.min(10, Math.max(0, Number(parsed.score) || 0));
+            feedback = parsed.feedback || 'No feedback provided';
+          }
+        } catch (parseError) {
+          this.logger.warn(`Failed to parse judge response: ${judgeText}`);
+          feedback = 'Evaluation parsing failed';
+        }
+
+        scenarioResults.push({
+          scenarioIndex: i,
+          input: scenario.input.substring(0, 200) + (scenario.input.length > 200 ? '...' : ''),
+          output: output.substring(0, 500) + (output.length > 500 ? '...' : ''),
+          score,
+          feedback,
+          passed: score >= promptConfig.passingScore,
+        });
+
+        totalScore += score;
+
+      } catch (error) {
+        this.logger.error(`Scenario ${i} failed: ${error instanceof Error ? error.message : String(error)}`);
+        scenarioResults.push({
+          scenarioIndex: i,
+          input: scenario.input.substring(0, 200),
+          output: '',
+          score: 0,
+          feedback: 'Execution failed: ' + (error instanceof Error ? error.message : 'Unknown error'),
+          passed: false,
+        });
+      }
+    }
+
+    // Calculate average score
+    const averageScore = promptConfig.testScenarios.length > 0
+      ? totalScore / promptConfig.testScenarios.length
+      : 0;
+
+    const passedScenarios = scenarioResults.filter(r => r.passed).length;
+    const totalScenarios = scenarioResults.length;
+    const overallPassed = averageScore >= promptConfig.passingScore;
+
+    return {
+      passed: overallPassed,
+      score: Math.round(averageScore * 10) / 10, // Round to 1 decimal
+      scenarioResults,
+      summary: overallPassed
+        ? `Passed! ${passedScenarios}/${totalScenarios} scenarios met criteria. Average score: ${averageScore.toFixed(1)}/10`
+        : `Not passed. ${passedScenarios}/${totalScenarios} scenarios met criteria. Average score: ${averageScore.toFixed(1)}/10. Need ${promptConfig.passingScore}/10 to pass.`,
+    };
+  }
+
+  /**
+   * Count AI calls needed for prompt evaluation
+   * Used for rate limiting checks
+   */
+  getPromptEvaluationCost(scenarioCount: number): number {
+    // 2 calls per scenario: 1 for execution, 1 for judging
+    return scenarioCount * 2;
   }
 }

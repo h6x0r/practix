@@ -608,6 +608,416 @@ describe('AiService', () => {
 
         expect(result.answer).toBeDefined();
       });
+
+      it('should use course subscription limit when no global access', async () => {
+        mockAccessControlService.hasGlobalAccess.mockResolvedValue(false);
+        mockPrismaService.$transaction.mockResolvedValue({ exceeded: false, count: 5, limit: 30 });
+
+        const result = await service.askTutor(
+          defaultParams.userId,
+          defaultParams.taskId,
+          defaultParams.taskTitle,
+          defaultParams.userCode,
+          defaultParams.question,
+          defaultParams.language,
+          defaultParams.uiLanguage
+        );
+
+        expect(result.remaining).toBe(25); // 30 - 5 = 25 (course subscription limit)
+        expect(result.isGlobalPremium).toBe(false);
+      });
+    });
+  });
+
+  // ============================================
+  // evaluatePrompt() - Prompt Engineering Evaluation
+  // ============================================
+  describe('evaluatePrompt()', () => {
+    const mockPromptConfig = {
+      testScenarios: [
+        {
+          input: 'What is machine learning?',
+          expectedCriteria: ['Explains supervised learning', 'Mentions examples'],
+          rubric: 'Score based on clarity and completeness',
+        },
+        {
+          input: 'Explain neural networks',
+          expectedCriteria: ['Explains layers', 'Mentions weights'],
+        },
+      ],
+      judgePrompt: 'Evaluate this output: {{OUTPUT}}\n\nCriteria:\n- {{CRITERIA}}\n\nRubric: {{RUBRIC}}',
+      passingScore: 7,
+    };
+
+    beforeEach(async () => {
+      // Reset GoogleGenAI mock for evaluatePrompt tests
+      const { GoogleGenAI } = require('@google/genai');
+      GoogleGenAI.mockImplementation(() => ({
+        models: {
+          generateContent: jest.fn()
+            .mockResolvedValueOnce({ text: 'ML is about learning patterns...' }) // First scenario execution
+            .mockResolvedValueOnce({ text: '{"score": 8, "feedback": "Good explanation"}' }) // First judge
+            .mockResolvedValueOnce({ text: 'Neural networks have layers...' }) // Second scenario execution
+            .mockResolvedValueOnce({ text: '{"score": 7, "feedback": "Covers basics"}' }), // Second judge
+        },
+      }));
+
+      // Recreate service with fresh mock
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [
+          AiService,
+          { provide: PrismaService, useValue: mockPrismaService },
+          { provide: UsersService, useValue: mockUsersService },
+          { provide: ConfigService, useValue: mockConfigService },
+          { provide: AccessControlService, useValue: mockAccessControlService },
+        ],
+      }).compile();
+
+      service = module.get<AiService>(AiService);
+    });
+
+    it('should throw ServiceUnavailableException when API key is missing', async () => {
+      const moduleWithoutKey: TestingModule = await Test.createTestingModule({
+        providers: [
+          AiService,
+          { provide: PrismaService, useValue: mockPrismaService },
+          { provide: UsersService, useValue: mockUsersService },
+          { provide: ConfigService, useValue: { get: jest.fn().mockReturnValue(null) } },
+          { provide: AccessControlService, useValue: mockAccessControlService },
+        ],
+      }).compile();
+
+      const serviceWithoutKey = moduleWithoutKey.get<AiService>(AiService);
+
+      await expect(
+        serviceWithoutKey.evaluatePrompt('user-123', 'test prompt', mockPromptConfig)
+      ).rejects.toThrow(ServiceUnavailableException);
+    });
+
+    it('should evaluate all test scenarios', async () => {
+      const result = await service.evaluatePrompt(
+        'user-123',
+        'You are an AI that explains {{INPUT}}. Be concise.',
+        mockPromptConfig
+      );
+
+      expect(result.scenarioResults).toHaveLength(2);
+      expect(result.scenarioResults[0].scenarioIndex).toBe(0);
+      expect(result.scenarioResults[1].scenarioIndex).toBe(1);
+    });
+
+    it('should return passed=true when average score meets passing threshold', async () => {
+      const result = await service.evaluatePrompt(
+        'user-123',
+        'Explain {{INPUT}}',
+        mockPromptConfig
+      );
+
+      expect(result.score).toBeGreaterThanOrEqual(7);
+      expect(result.passed).toBe(true);
+    });
+
+    it('should return passed=false when average score below threshold', async () => {
+      // Mock low scores
+      const { GoogleGenAI } = require('@google/genai');
+      GoogleGenAI.mockImplementation(() => ({
+        models: {
+          generateContent: jest.fn()
+            .mockResolvedValueOnce({ text: 'Short answer' })
+            .mockResolvedValueOnce({ text: '{"score": 3, "feedback": "Too brief"}' })
+            .mockResolvedValueOnce({ text: 'Another short answer' })
+            .mockResolvedValueOnce({ text: '{"score": 4, "feedback": "Missing details"}' }),
+        },
+      }));
+
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [
+          AiService,
+          { provide: PrismaService, useValue: mockPrismaService },
+          { provide: UsersService, useValue: mockUsersService },
+          { provide: ConfigService, useValue: mockConfigService },
+          { provide: AccessControlService, useValue: mockAccessControlService },
+        ],
+      }).compile();
+
+      const failingService = module.get<AiService>(AiService);
+
+      const result = await failingService.evaluatePrompt(
+        'user-123',
+        'Explain {{INPUT}}',
+        mockPromptConfig
+      );
+
+      expect(result.score).toBeLessThan(7);
+      expect(result.passed).toBe(false);
+      expect(result.summary).toContain('Not passed');
+    });
+
+    it('should handle JSON parsing errors from judge', async () => {
+      // Mock invalid JSON response from judge
+      const { GoogleGenAI } = require('@google/genai');
+      GoogleGenAI.mockImplementation(() => ({
+        models: {
+          generateContent: jest.fn()
+            .mockResolvedValueOnce({ text: 'Valid output' })
+            .mockResolvedValueOnce({ text: 'This is not valid JSON' }),
+        },
+      }));
+
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [
+          AiService,
+          { provide: PrismaService, useValue: mockPrismaService },
+          { provide: UsersService, useValue: mockUsersService },
+          { provide: ConfigService, useValue: mockConfigService },
+          { provide: AccessControlService, useValue: mockAccessControlService },
+        ],
+      }).compile();
+
+      const serviceWithBadJson = module.get<AiService>(AiService);
+
+      const result = await serviceWithBadJson.evaluatePrompt(
+        'user-123',
+        'Test prompt {{INPUT}}',
+        { ...mockPromptConfig, testScenarios: [mockPromptConfig.testScenarios[0]] }
+      );
+
+      expect(result.scenarioResults[0].score).toBe(0);
+      expect(result.scenarioResults[0].feedback).toBe('Failed to parse evaluation');
+    });
+
+    it('should handle API errors during scenario execution', async () => {
+      // Mock API error
+      const { GoogleGenAI } = require('@google/genai');
+      GoogleGenAI.mockImplementation(() => ({
+        models: {
+          generateContent: jest.fn().mockRejectedValue(new Error('API timeout')),
+        },
+      }));
+
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [
+          AiService,
+          { provide: PrismaService, useValue: mockPrismaService },
+          { provide: UsersService, useValue: mockUsersService },
+          { provide: ConfigService, useValue: mockConfigService },
+          { provide: AccessControlService, useValue: mockAccessControlService },
+        ],
+      }).compile();
+
+      const serviceWithError = module.get<AiService>(AiService);
+
+      const result = await serviceWithError.evaluatePrompt(
+        'user-123',
+        'Test prompt {{INPUT}}',
+        { ...mockPromptConfig, testScenarios: [mockPromptConfig.testScenarios[0]] }
+      );
+
+      expect(result.scenarioResults[0].passed).toBe(false);
+      expect(result.scenarioResults[0].score).toBe(0);
+      expect(result.scenarioResults[0].feedback).toContain('Execution failed');
+    });
+
+    it('should handle empty judge response', async () => {
+      const { GoogleGenAI } = require('@google/genai');
+      GoogleGenAI.mockImplementation(() => ({
+        models: {
+          generateContent: jest.fn()
+            .mockResolvedValueOnce({ text: 'Valid output' })
+            .mockResolvedValueOnce({ text: '' }), // Empty response
+        },
+      }));
+
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [
+          AiService,
+          { provide: PrismaService, useValue: mockPrismaService },
+          { provide: UsersService, useValue: mockUsersService },
+          { provide: ConfigService, useValue: mockConfigService },
+          { provide: AccessControlService, useValue: mockAccessControlService },
+        ],
+      }).compile();
+
+      const serviceWithEmptyResponse = module.get<AiService>(AiService);
+
+      const result = await serviceWithEmptyResponse.evaluatePrompt(
+        'user-123',
+        'Test prompt {{INPUT}}',
+        { ...mockPromptConfig, testScenarios: [mockPromptConfig.testScenarios[0]] }
+      );
+
+      // Should use default fallback
+      expect(result.scenarioResults[0].score).toBe(0);
+    });
+
+    it('should truncate long input/output in results', async () => {
+      const longInput = 'X'.repeat(300);
+      const { GoogleGenAI } = require('@google/genai');
+      GoogleGenAI.mockImplementation(() => ({
+        models: {
+          generateContent: jest.fn()
+            .mockResolvedValueOnce({ text: 'Y'.repeat(600) }) // Long output
+            .mockResolvedValueOnce({ text: '{"score": 8, "feedback": "Good"}' }),
+        },
+      }));
+
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [
+          AiService,
+          { provide: PrismaService, useValue: mockPrismaService },
+          { provide: UsersService, useValue: mockUsersService },
+          { provide: ConfigService, useValue: mockConfigService },
+          { provide: AccessControlService, useValue: mockAccessControlService },
+        ],
+      }).compile();
+
+      const serviceWithLongContent = module.get<AiService>(AiService);
+
+      const result = await serviceWithLongContent.evaluatePrompt(
+        'user-123',
+        'Test {{INPUT}}',
+        {
+          ...mockPromptConfig,
+          testScenarios: [{
+            input: longInput,
+            expectedCriteria: ['Test'],
+          }],
+        }
+      );
+
+      expect(result.scenarioResults[0].input.length).toBeLessThanOrEqual(203); // 200 + '...'
+      expect(result.scenarioResults[0].output.length).toBeLessThanOrEqual(503); // 500 + '...'
+    });
+
+    it('should handle empty test scenarios array', async () => {
+      const result = await service.evaluatePrompt(
+        'user-123',
+        'Test prompt',
+        { ...mockPromptConfig, testScenarios: [] }
+      );
+
+      expect(result.scenarioResults).toHaveLength(0);
+      expect(result.score).toBe(0);
+      expect(result.passed).toBe(false);
+    });
+
+    it('should replace {{INPUT}} placeholder in prompt', async () => {
+      const { GoogleGenAI } = require('@google/genai');
+      const mockGenerateContent = jest.fn()
+        .mockResolvedValueOnce({ text: 'Response about ML' })
+        .mockResolvedValueOnce({ text: '{"score": 8, "feedback": "Good"}' });
+
+      GoogleGenAI.mockImplementation(() => ({
+        models: { generateContent: mockGenerateContent },
+      }));
+
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [
+          AiService,
+          { provide: PrismaService, useValue: mockPrismaService },
+          { provide: UsersService, useValue: mockUsersService },
+          { provide: ConfigService, useValue: mockConfigService },
+          { provide: AccessControlService, useValue: mockAccessControlService },
+        ],
+      }).compile();
+
+      await module.get<AiService>(AiService).evaluatePrompt(
+        'user-123',
+        'Explain this: {{INPUT}}',
+        {
+          ...mockPromptConfig,
+          testScenarios: [{
+            input: 'Machine Learning',
+            expectedCriteria: ['Explains ML'],
+          }],
+        }
+      );
+
+      // The first call should have the input substituted
+      expect(mockGenerateContent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          contents: 'Explain this: Machine Learning',
+        })
+      );
+    });
+
+    it('should extract JSON from markdown-wrapped response', async () => {
+      const { GoogleGenAI } = require('@google/genai');
+      GoogleGenAI.mockImplementation(() => ({
+        models: {
+          generateContent: jest.fn()
+            .mockResolvedValueOnce({ text: 'Valid output' })
+            .mockResolvedValueOnce({ text: '```json\n{"score": 9, "feedback": "Excellent"}\n```' }),
+        },
+      }));
+
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [
+          AiService,
+          { provide: PrismaService, useValue: mockPrismaService },
+          { provide: UsersService, useValue: mockUsersService },
+          { provide: ConfigService, useValue: mockConfigService },
+          { provide: AccessControlService, useValue: mockAccessControlService },
+        ],
+      }).compile();
+
+      const result = await module.get<AiService>(AiService).evaluatePrompt(
+        'user-123',
+        'Test {{INPUT}}',
+        { ...mockPromptConfig, testScenarios: [mockPromptConfig.testScenarios[0]] }
+      );
+
+      expect(result.scenarioResults[0].score).toBe(9);
+      expect(result.scenarioResults[0].feedback).toBe('Excellent');
+    });
+
+    it('should clamp score to 0-10 range', async () => {
+      const { GoogleGenAI } = require('@google/genai');
+      GoogleGenAI.mockImplementation(() => ({
+        models: {
+          generateContent: jest.fn()
+            .mockResolvedValueOnce({ text: 'Output' })
+            .mockResolvedValueOnce({ text: '{"score": 15, "feedback": "Over max"}' }),
+        },
+      }));
+
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [
+          AiService,
+          { provide: PrismaService, useValue: mockPrismaService },
+          { provide: UsersService, useValue: mockUsersService },
+          { provide: ConfigService, useValue: mockConfigService },
+          { provide: AccessControlService, useValue: mockAccessControlService },
+        ],
+      }).compile();
+
+      const result = await module.get<AiService>(AiService).evaluatePrompt(
+        'user-123',
+        'Test {{INPUT}}',
+        { ...mockPromptConfig, testScenarios: [mockPromptConfig.testScenarios[0]] }
+      );
+
+      expect(result.scenarioResults[0].score).toBe(10);
+    });
+  });
+
+  // ============================================
+  // getPromptEvaluationCost()
+  // ============================================
+  describe('getPromptEvaluationCost()', () => {
+    it('should return 2 calls per scenario', () => {
+      const cost = service.getPromptEvaluationCost(3);
+      expect(cost).toBe(6); // 3 scenarios * 2 calls each
+    });
+
+    it('should return 0 for 0 scenarios', () => {
+      const cost = service.getPromptEvaluationCost(0);
+      expect(cost).toBe(0);
+    });
+
+    it('should calculate correctly for single scenario', () => {
+      const cost = service.getPromptEvaluationCost(1);
+      expect(cost).toBe(2);
     });
   });
 });

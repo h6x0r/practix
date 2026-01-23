@@ -6,35 +6,50 @@ import { IpBanService } from '../ip-ban.service';
 /**
  * Security Middleware
  * Detects and logs suspicious requests (SQL injection, XSS, path traversal)
+ *
+ * Note: Prisma ORM already protects against SQL injection via parameterized queries.
+ * These patterns serve as defense-in-depth and for detecting/logging attack attempts.
+ * Patterns are intentionally less aggressive to reduce false positives.
  */
 @Injectable()
 export class SecurityMiddleware implements NestMiddleware {
   private readonly logger = new Logger(SecurityMiddleware.name);
 
-  // Patterns for detecting attacks
+  // SQL Injection patterns - only explicit attack signatures
+  // Removed: single quotes, #, --, ; (too many false positives in normal text/code)
   private readonly SQL_INJECTION_PATTERNS = [
-    /(\%27)|(\')|(\-\-)|(\%23)|(#)/i,
-    /((\%3D)|(=))[^\n]*((\%27)|(\')|(\-\-)|(\%3B)|(;))/i,
-    /\w*((\%27)|(\'))((\%6F)|o|(\%4F))((\%72)|r|(\%52))/i,
-    /union\s+select/i,
-    /exec(\s|\+)+(s|x)p\w+/i,
-    /insert\s+into/i,
-    /drop\s+table/i,
-    /update\s+.*\s+set/i,
-    /delete\s+from/i,
+    /union\s+(all\s+)?select/i,           // UNION SELECT attack
+    /exec(\s|\+)+(s|x)p\w+/i,             // SQL Server stored procedure execution
+    /drop\s+(table|database|index)/i,     // DROP statements
+    /truncate\s+table/i,                  // TRUNCATE TABLE
+    /alter\s+table/i,                     // ALTER TABLE
+    /create\s+(table|database|index)/i,   // CREATE statements
+    /;\s*(drop|delete|truncate|alter)/i,  // Statement chaining with dangerous commands
+    /'\s*or\s+'?\d*'?\s*=\s*'?\d*'?/i,    // Classic ' OR '1'='1' pattern
+    /'\s*or\s+true/i,                     // ' OR true
+    /'\s*and\s+'?\d*'?\s*=\s*'?\d*'?/i,   // ' AND '1'='1' pattern
+    /benchmark\s*\(/i,                    // MySQL benchmark attack
+    /sleep\s*\(\s*\d+\s*\)/i,             // Time-based injection (SLEEP)
+    /waitfor\s+delay/i,                   // SQL Server time-based injection
+    /load_file\s*\(/i,                    // MySQL file read
+    /into\s+(out|dump)file/i,             // MySQL file write
   ];
 
+  // XSS patterns - focus on actual script execution vectors
   private readonly XSS_PATTERNS = [
-    /<script[^>]*>[\s\S]*?<\/script>/gi,
-    /javascript:/gi,
-    /on\w+\s*=/gi,
-    /<iframe[^>]*>/gi,
-    /<object[^>]*>/gi,
-    /<embed[^>]*>/gi,
-    /<svg[^>]*onload/gi,
-    /expression\s*\(/gi,
+    /<script[^>]*>[\s\S]*?<\/script>/gi,  // Script tags
+    /javascript\s*:/gi,                    // javascript: protocol
+    /on(load|error|click|mouse|focus|blur|change|submit|key)\s*=/gi, // Event handlers (specific ones)
+    /<iframe[^>]*src\s*=/gi,               // iframes with src
+    /<object[^>]*data\s*=/gi,              // object tags with data
+    /<embed[^>]*src\s*=/gi,                // embed tags with src
+    /<svg[^>]*on\w+\s*=/gi,                // SVG with event handlers
+    /expression\s*\([^)]*\)/gi,            // CSS expression (IE)
+    /vbscript\s*:/gi,                      // vbscript: protocol
+    /data\s*:\s*text\/html/gi,             // data: URI with HTML
   ];
 
+  // Path traversal patterns - unchanged, these are always malicious
   private readonly PATH_TRAVERSAL_PATTERNS = [
     /\.\.\//g,
     /\.\.%2f/gi,
@@ -161,9 +176,9 @@ export class SecurityMiddleware implements NestMiddleware {
       JSON.stringify(req.params || {}),
     ];
 
-    // Only include body for non-code-submission endpoints
-    // (code submissions intentionally contain code that might trigger patterns)
-    if (req.body && !req.path.includes('/submissions/run')) {
+    // Include body in security checks
+    // New patterns are less aggressive and won't false-positive on normal code
+    if (req.body) {
       parts.push(JSON.stringify(req.body));
     }
 

@@ -78,24 +78,20 @@ def export_to_onnx(model: nn.Module, example_input: torch.Tensor,
 def validate_onnx(pytorch_model: nn.Module, onnx_path: str,
                   example_input: torch.Tensor, rtol: float = 1e-5) -> bool:
     """Validate ONNX model produces same outputs as PyTorch."""
-    try:
-        import onnxruntime as ort
+    import onnxruntime as ort
 
-        # Get PyTorch output
-        pytorch_model.eval()
-        with torch.no_grad():
-            pytorch_output = pytorch_model(example_input).numpy()
+    # Get PyTorch output
+    pytorch_model.eval()
+    with torch.no_grad():
+        pytorch_output = pytorch_model(example_input).numpy()
 
-        # Get ONNX output
-        session = ort.InferenceSession(onnx_path)
-        input_name = session.get_inputs()[0].name
-        onnx_output = session.run(None, {input_name: example_input.numpy()})[0]
+    # Get ONNX output
+    session = ort.InferenceSession(onnx_path)
+    input_name = session.get_inputs()[0].name
+    onnx_output = session.run(None, {input_name: example_input.numpy()})[0]
 
-        # Compare
-        return np.allclose(pytorch_output, onnx_output, rtol=rtol)
-    except ImportError:
-        # onnxruntime not installed, skip validation
-        return True
+    # Compare
+    return np.allclose(pytorch_output, onnx_output, rtol=rtol)
 `,
 
 	testCode: `import torch

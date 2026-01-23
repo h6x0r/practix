@@ -190,11 +190,13 @@ class Test3 {
     @Test
     void testPlayMethod() {
         ByteArrayOutputStream outContent = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
         System.setOut(new PrintStream(outContent));
 
         StreamingVideo video = new StreamingVideo("Java Tutorial", 250);
         video.play();
 
+        System.setOut(oldOut);
         String output = outContent.toString();
         assertTrue(output.contains("Play") || output.contains("Java Tutorial"));
     }
@@ -205,11 +207,13 @@ class Test4 {
     @Test
     void testPauseMethod() {
         ByteArrayOutputStream outContent = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
         System.setOut(new PrintStream(outContent));
 
         StreamingVideo video = new StreamingVideo("Test Video", 100);
         video.pause();
 
+        System.setOut(oldOut);
         String output = outContent.toString();
         assertTrue(output.toLowerCase().contains("pause"));
     }
@@ -220,11 +224,13 @@ class Test5 {
     @Test
     void testStopMethod() {
         ByteArrayOutputStream outContent = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
         System.setOut(new PrintStream(outContent));
 
         StreamingVideo video = new StreamingVideo("Test Video", 100);
         video.stop();
 
+        System.setOut(oldOut);
         String output = outContent.toString();
         assertTrue(output.toLowerCase().contains("stop"));
     }
@@ -235,11 +241,13 @@ class Test6 {
     @Test
     void testDownloadMethod() {
         ByteArrayOutputStream outContent = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
         System.setOut(new PrintStream(outContent));
 
         StreamingVideo video = new StreamingVideo("Java Tutorial", 250);
         video.download();
 
+        System.setOut(oldOut);
         String output = outContent.toString();
         assertTrue(output.contains("Download") || output.contains("250"));
     }

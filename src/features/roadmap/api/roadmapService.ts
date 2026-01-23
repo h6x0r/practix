@@ -1,14 +1,6 @@
 
 import { api } from '@/lib/api';
-import { RoadmapUI, RoadmapVariant, RoadmapVariantsResponse, RoadmapGenerationInput } from '../model/types';
-
-export interface GenerateRoadmapParams {
-  role: string;
-  level: string;
-  goal?: string;
-  preferredTopics?: string[];
-  hoursPerWeek?: number;
-}
+import { RoadmapUI, RoadmapVariantsResponse, RoadmapGenerationInput } from '../model/types';
 
 export interface RoadmapTemplate {
   id: string;
@@ -42,7 +34,9 @@ export interface SelectVariantParams {
  * Endpoints:
  * - GET /roadmaps/templates - Available roadmap templates
  * - GET /roadmaps/me - User's current roadmap
- * - POST /roadmaps/generate - Generate new roadmap
+ * - POST /roadmaps/generate-variants - Generate roadmap variants (v2)
+ * - POST /roadmaps/select-variant - Select and create roadmap from variant
+ * - GET /roadmaps/can-generate - Check generation limits
  * - DELETE /roadmaps/me - Delete/reset roadmap
  */
 export const roadmapService = {
@@ -66,25 +60,6 @@ export const roadmapService = {
       }
       throw err;
     }
-  },
-
-  /**
-   * Generate a new personalized roadmap
-   * Creates or replaces existing roadmap
-   */
-  generateUserRoadmap: async (
-    role: string,
-    level: string,
-    userId?: string,
-    options?: Partial<GenerateRoadmapParams>
-  ): Promise<RoadmapUI> => {
-    return api.post<RoadmapUI>('/roadmaps/generate', {
-      role,
-      level,
-      goal: options?.goal,
-      preferredTopics: options?.preferredTopics,
-      hoursPerWeek: options?.hoursPerWeek,
-    });
   },
 
   /**

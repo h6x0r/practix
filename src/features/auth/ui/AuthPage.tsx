@@ -22,10 +22,12 @@ const AuthPage = () => {
     password: '',
     name: ''
   });
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setErrorMessage(null);
 
     try {
       if (mode === 'forgot') {
@@ -47,11 +49,11 @@ const AuthPage = () => {
       // Navigate back to the page they were trying to access, or home
       navigate(from, { replace: true });
     } catch (err: unknown) {
-        if (err instanceof ApiError) {
-            showToast(err.message, 'error');
-        } else {
-            showToast('Connection failed. Please check your internet.', 'error');
-        }
+        const message = err instanceof ApiError
+            ? err.message
+            : 'Connection failed. Please check your internet.';
+        setErrorMessage(message);
+        showToast(message, 'error');
     } finally {
       setIsLoading(false);
     }
@@ -103,10 +105,11 @@ const AuthPage = () => {
             {mode === 'register' && (
               <div className="animate-fade-in-up">
                 <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Full Name</label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   required
                   placeholder="Alex Developer"
+                  data-testid="name-input"
                   className="w-full bg-gray-50 dark:bg-dark-bg border border-gray-200 dark:border-dark-border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-brand-500 outline-none dark:text-white transition-all"
                   value={formData.name}
                   onChange={e => setFormData({...formData, name: e.target.value})}
@@ -116,10 +119,11 @@ const AuthPage = () => {
 
             <div>
               <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Email Address</label>
-              <input 
-                type="email" 
+              <input
+                type="email"
                 required
                 placeholder="alex@example.com"
+                data-testid="email-input"
                 className="w-full bg-gray-50 dark:bg-dark-bg border border-gray-200 dark:border-dark-border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-brand-500 outline-none dark:text-white transition-all"
                 value={formData.email}
                 onChange={e => setFormData({...formData, email: e.target.value})}
@@ -131,8 +135,8 @@ const AuthPage = () => {
                 <div className="flex justify-between mb-2">
                   <label className="block text-xs font-bold text-gray-500 uppercase">Password</label>
                   {mode === 'login' && (
-                    <button 
-                        type="button" 
+                    <button
+                        type="button"
                         onClick={() => setMode('forgot')}
                         className="text-xs font-bold text-brand-600 hover:text-brand-500 transition-colors"
                     >
@@ -140,10 +144,11 @@ const AuthPage = () => {
                     </button>
                   )}
                 </div>
-                <input 
-                  type="password" 
+                <input
+                  type="password"
                   required
                   placeholder="••••••••"
+                  data-testid="password-input"
                   className="w-full bg-gray-50 dark:bg-dark-bg border border-gray-200 dark:border-dark-border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-brand-500 outline-none dark:text-white transition-all"
                   value={formData.password}
                   onChange={e => setFormData({...formData, password: e.target.value})}
@@ -151,9 +156,19 @@ const AuthPage = () => {
               </div>
             )}
 
+            {errorMessage && (
+              <div
+                data-testid="error-message"
+                className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-600 dark:text-red-400"
+              >
+                {errorMessage}
+              </div>
+            )}
+
             <button
               type="submit"
               disabled={isLoading}
+              data-testid={mode === 'login' ? 'login-button' : mode === 'register' ? 'register-button' : 'reset-button'}
               className="w-full py-3.5 bg-gradient-to-r from-brand-600 to-purple-600 hover:from-brand-500 hover:to-purple-500 text-white font-bold rounded-xl shadow-lg shadow-brand-500/25 transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2"
             >
               {isLoading ? (
@@ -192,13 +207,13 @@ const AuthPage = () => {
           {mode === 'login' && (
               <>
                 Don't have an account yet?{' '}
-                <button onClick={() => setMode('register')} className="font-bold text-brand-600 hover:text-brand-500 transition-colors">Sign up</button>
+                <button onClick={() => setMode('register')} data-testid="register-link" className="font-bold text-brand-600 hover:text-brand-500 transition-colors">Sign up</button>
               </>
           )}
           {mode === 'register' && (
               <>
                 Already have an account?{' '}
-                <button onClick={() => setMode('login')} className="font-bold text-brand-600 hover:text-brand-500 transition-colors">Log in</button>
+                <button onClick={() => setMode('login')} data-testid="login-link" className="font-bold text-brand-600 hover:text-brand-500 transition-colors">Log in</button>
               </>
           )}
           {mode === 'forgot' && (

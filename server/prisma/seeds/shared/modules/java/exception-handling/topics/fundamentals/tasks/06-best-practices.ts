@@ -213,7 +213,8 @@ public class OrderService {
         }
 
         // Example 2: No exceptions for control flow
-        System.out.println("\n2. Calculating discount without exceptions:");
+        System.out.println("");
+        System.out.println("2. Calculating discount without exceptions:");
         try {
             double discount1 = calculateDiscount(15);
             System.out.println("Discount for 15 items: " + (discount1 * 100) + "%");
@@ -230,7 +231,8 @@ public class OrderService {
         }
 
         // Example 3: Specific custom exceptions with context
-        System.out.println("\n3. Validating orders with custom exceptions:");
+        System.out.println("");
+        System.out.println("3. Validating orders with custom exceptions:");
         try {
             validateOrder("ORD-123", "Valid order data here");
             System.out.println("Validation successful");
@@ -244,7 +246,8 @@ public class OrderService {
             System.out.println("Validation failed: " + e.getValidationError());
         }
 
-        System.out.println("\n=== Demo Complete ===");
+        System.out.println("");
+        System.out.println("=== Demo Complete ===");
     }
 
     public static void main(String[] args) {
@@ -308,12 +311,14 @@ class Test2 {
     @Test
     public void test() {
         OrderProcessor processor = new OrderProcessor();
+        boolean validationPassed = false;
         try {
             processor.validateOrder("ORD-001", "Valid order data with enough length");
-            assertTrue("Valid order should pass", true);
+            validationPassed = true;
         } catch (OrderValidationException e) {
             fail("Valid order should not throw exception: " + e.getMessage());
         }
+        assertTrue("Valid order should pass validation", validationPassed);
     }
 }
 
@@ -326,8 +331,10 @@ class Test3 {
             processor.validateOrder(null, "Some data");
             fail("Should throw OrderValidationException for null ID");
         } catch (OrderValidationException e) {
-            assertTrue("Exception should be thrown", true);
-            assertTrue("Should contain validation error", e.getValidationError() != null);
+            assertNotNull("Exception should have message", e.getMessage());
+            assertNotNull("Should contain validation error", e.getValidationError());
+            assertTrue("Validation error should describe the issue",
+                e.getValidationError().length() > 0);
         }
     }
 }
@@ -347,30 +354,37 @@ class Test4 {
     }
 }
 
-// Test5: Verify demonstrateBestPractices method
+// Test5: demonstrateBestPractices shows demo output
 class Test5 {
     @Test
     public void test() {
+        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+        java.io.PrintStream oldOut = System.out;
+        System.setOut(new java.io.PrintStream(out));
         OrderProcessor processor = new OrderProcessor();
-        try {
-            processor.demonstrateBestPractices();
-            assertTrue("Best practices demo should complete", true);
-        } catch (Exception e) {
-            fail("Best practices demo should not throw: " + e.getMessage());
-        }
+        processor.demonstrateBestPractices();
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show best practices demo",
+            output.contains("Best Practices Demo") || output.contains("Demo Complete") ||
+            output.contains("Processing order") || output.contains("Calculating discount") ||
+            output.contains("Лучшие практики") || output.contains("Eng yaxshi amaliyotlar"));
     }
 }
 
-// Test6: Verify main method execution
+// Test6: main produces expected output
 class Test6 {
     @Test
     public void test() {
-        try {
-            OrderProcessor.main(new String[]{});
-            assertTrue("Main method should execute", true);
-        } catch (Exception e) {
-            fail("Main should not throw: " + e.getMessage());
-        }
+        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+        java.io.PrintStream oldOut = System.out;
+        System.setOut(new java.io.PrintStream(out));
+        OrderProcessor.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Main should produce output with demo sections",
+            output.contains("1.") || output.contains("2.") || output.contains("3.") ||
+            output.contains("===") || output.contains("discount") || output.contains("Validation"));
     }
 }
 
@@ -409,13 +423,16 @@ class Test9 {
     @Test
     public void test() {
         OrderProcessor processor = new OrderProcessor();
+        int validationCount = 0;
         try {
             processor.validateOrder("ORD-009", "Valid data here");
+            validationCount++;
             processor.validateOrder("ORD-010", "Another valid order data");
-            assertTrue("Multiple validations should work", true);
+            validationCount++;
         } catch (OrderValidationException e) {
             fail("Valid orders should not fail: " + e.getMessage());
         }
+        assertEquals("Both validations should complete", 2, validationCount);
     }
 }
 
@@ -585,7 +602,8 @@ public class OrderService {
         }
 
         // Пример 2: Никаких исключений для управления потоком
-        System.out.println("\n2. Расчет скидки без исключений:");
+        System.out.println("");
+        System.out.println("2. Расчет скидки без исключений:");
         try {
             double discount1 = calculateDiscount(15);
             System.out.println("Скидка на 15 товаров: " + (discount1 * 100) + "%");
@@ -602,7 +620,8 @@ public class OrderService {
         }
 
         // Пример 3: Конкретные пользовательские исключения с контекстом
-        System.out.println("\n3. Валидация заказов с пользовательскими исключениями:");
+        System.out.println("");
+        System.out.println("3. Валидация заказов с пользовательскими исключениями:");
         try {
             validateOrder("ORD-123", "Валидные данные заказа здесь");
             System.out.println("Валидация успешна");
@@ -616,7 +635,8 @@ public class OrderService {
             System.out.println("Валидация не прошла: " + e.getValidationError());
         }
 
-        System.out.println("\n=== Демонстрация Завершена ===");
+        System.out.println("");
+        System.out.println("=== Демонстрация Завершена ===");
     }
 
     public static void main(String[] args) {
@@ -823,7 +843,8 @@ public class OrderService {
         }
 
         // Misol 2: Boshqaruv oqimi uchun istisnolar yo'q
-        System.out.println("\n2. Istisnolarsiz chegirmani hisoblash:");
+        System.out.println("");
+        System.out.println("2. Istisnolarsiz chegirmani hisoblash:");
         try {
             double discount1 = calculateDiscount(15);
             System.out.println("15 mahsulot uchun chegirma: " + (discount1 * 100) + "%");
@@ -840,7 +861,8 @@ public class OrderService {
         }
 
         // Misol 3: Kontekst bilan aniq maxsus istisnolar
-        System.out.println("\n3. Maxsus istisnolar bilan buyurtmalarni tekshirish:");
+        System.out.println("");
+        System.out.println("3. Maxsus istisnolar bilan buyurtmalarni tekshirish:");
         try {
             validateOrder("ORD-123", "Bu yerda to'g'ri buyurtma ma'lumotlari");
             System.out.println("Tekshirish muvaffaqiyatli");
@@ -854,7 +876,8 @@ public class OrderService {
             System.out.println("Tekshirish muvaffaqiyatsiz: " + e.getValidationError());
         }
 
-        System.out.println("\n=== Namoyish Tugadi ===");
+        System.out.println("");
+        System.out.println("=== Namoyish Tugadi ===");
     }
 
     public static void main(String[] args) {

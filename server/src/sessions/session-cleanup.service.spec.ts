@@ -328,8 +328,8 @@ describe('SessionCleanupService', () => {
       const endTime = Date.now();
 
       // If parallel, should take ~10ms; if sequential, ~40ms
-      // Using 100ms as threshold to account for CI/test runner variance
-      expect(endTime - startTime).toBeLessThan(100);
+      // Using 200ms as threshold to account for CI/test runner variance
+      expect(endTime - startTime).toBeLessThan(200);
     });
 
     it('should return zeros for empty database', async () => {

@@ -78,7 +78,8 @@ Int: 2147483647 (range: -2147483648 to 2147483647)
         System.out.println("Char: " + charVar);
 
         // Show min/max values for numeric types
-        System.out.println("\n=== Type Ranges ===");
+        System.out.println("");
+        System.out.println("=== Type Ranges ===");
         System.out.println("Byte range: " + Byte.MIN_VALUE + " to " + Byte.MAX_VALUE);
         System.out.println("Short range: " + Short.MIN_VALUE + " to " + Short.MAX_VALUE);
         System.out.println("Int range: " + Integer.MIN_VALUE + " to " + Integer.MAX_VALUE);
@@ -87,7 +88,8 @@ Int: 2147483647 (range: -2147483648 to 2147483647)
         System.out.println("Double range: " + Double.MIN_VALUE + " to " + Double.MAX_VALUE);
 
         // Demonstrate type casting
-        System.out.println("\n=== Type Casting Examples ===");
+        System.out.println("");
+        System.out.println("=== Type Casting Examples ===");
         // Widening casting (automatic)
         int myInt = 100;
         double myDouble = myInt;
@@ -130,109 +132,151 @@ public class ProductInventory {
     order: 0,
     testCode: `import static org.junit.Assert.*;
 import org.junit.Test;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 
-// Test1: Verify all primitive types are declared
+// Test1: Verify method runs and shows primitive types demo
 class Test1 {
     @Test
     public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
         PrimitiveTypesDemo.demonstratePrimitiveTypes();
-        assertTrue("Method should execute without errors", true);
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Method should show primitive types demo",
+            output.contains("Primitive") || output.contains("Types") ||
+            output.contains("Примитивные") || output.contains("Primitiv"));
     }
 }
 
-// Test2: Test byte range values
+// Test2: Output should contain byte value
 class Test2 {
     @Test
     public void test() {
-        byte minByte = Byte.MIN_VALUE;
-        byte maxByte = Byte.MAX_VALUE;
-        assertEquals(-128, minByte);
-        assertEquals(127, maxByte);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        PrimitiveTypesDemo.demonstratePrimitiveTypes();
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Output should contain 'Byte'", output.contains("Byte"));
     }
 }
 
-// Test3: Test short range values
+// Test3: Output should contain short value
 class Test3 {
     @Test
     public void test() {
-        short minShort = Short.MIN_VALUE;
-        short maxShort = Short.MAX_VALUE;
-        assertEquals(-32768, minShort);
-        assertEquals(32767, maxShort);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        PrimitiveTypesDemo.demonstratePrimitiveTypes();
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Output should contain 'Short'", output.contains("Short"));
     }
 }
 
-// Test4: Test int range values
+// Test4: Output should contain int value
 class Test4 {
     @Test
     public void test() {
-        int minInt = Integer.MIN_VALUE;
-        int maxInt = Integer.MAX_VALUE;
-        assertEquals(-2147483648, minInt);
-        assertEquals(2147483647, maxInt);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        PrimitiveTypesDemo.demonstratePrimitiveTypes();
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Output should contain 'Int'", output.contains("Int"));
     }
 }
 
-// Test5: Test long range values
+// Test5: Output should contain long value
 class Test5 {
     @Test
     public void test() {
-        long minLong = Long.MIN_VALUE;
-        long maxLong = Long.MAX_VALUE;
-        assertEquals(-9223372036854775808L, minLong);
-        assertEquals(9223372036854775807L, maxLong);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        PrimitiveTypesDemo.demonstratePrimitiveTypes();
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Output should contain 'Long'", output.contains("Long"));
     }
 }
 
-// Test6: Test widening casting
+// Test6: Output should show byte range
 class Test6 {
     @Test
     public void test() {
-        int myInt = 100;
-        double myDouble = myInt;
-        assertEquals(100.0, myDouble, 0.001);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        PrimitiveTypesDemo.demonstratePrimitiveTypes();
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Output should contain byte range '-128'", output.contains("-128"));
+        assertTrue("Output should contain byte range '127'", output.contains("127"));
     }
 }
 
-// Test7: Test narrowing casting
+// Test7: Output should show widening casting example
 class Test7 {
     @Test
     public void test() {
-        double myDouble = 99.99;
-        int myInt = (int) myDouble;
-        assertEquals(99, myInt);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        PrimitiveTypesDemo.demonstratePrimitiveTypes();
+        System.setOut(oldOut);
+        String output = out.toString().toLowerCase();
+        assertTrue("Output should demonstrate widening casting",
+            output.contains("widening") || output.contains("расширен") || output.contains("kengaytirish"));
     }
 }
 
-// Test8: Test char to int conversion
+// Test8: Output should show narrowing casting example
 class Test8 {
     @Test
     public void test() {
-        char letter = 'A';
-        int asciiValue = letter;
-        assertEquals(65, asciiValue);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        PrimitiveTypesDemo.demonstratePrimitiveTypes();
+        System.setOut(oldOut);
+        String output = out.toString().toLowerCase();
+        assertTrue("Output should demonstrate narrowing casting",
+            output.contains("narrowing") || output.contains("сужен") || output.contains("toraytirish"));
     }
 }
 
-// Test9: Test boolean values
+// Test9: Output should contain boolean value
 class Test9 {
     @Test
     public void test() {
-        boolean trueVal = true;
-        boolean falseVal = false;
-        assertTrue(trueVal);
-        assertFalse(falseVal);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        PrimitiveTypesDemo.demonstratePrimitiveTypes();
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Output should contain 'Boolean'", output.contains("Boolean"));
     }
 }
 
-// Test10: Test float and double precision
+// Test10: Output should contain char value
 class Test10 {
     @Test
     public void test() {
-        float floatVal = 3.14159f;
-        double doubleVal = 3.141592653589793;
-        assertEquals(3.14159, floatVal, 0.00001);
-        assertEquals(3.141592653589793, doubleVal, 0.0000000000001);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        PrimitiveTypesDemo.demonstratePrimitiveTypes();
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Output should contain 'Char'", output.contains("Char"));
     }
 }
 `,
@@ -264,7 +308,8 @@ class Test10 {
         System.out.println("Char: " + charVar);
 
         // Показываем диапазоны значений для числовых типов
-        System.out.println("\n=== Диапазоны типов ===");
+        System.out.println("");
+        System.out.println("=== Диапазоны типов ===");
         System.out.println("Диапазон Byte: " + Byte.MIN_VALUE + " до " + Byte.MAX_VALUE);
         System.out.println("Диапазон Short: " + Short.MIN_VALUE + " до " + Short.MAX_VALUE);
         System.out.println("Диапазон Int: " + Integer.MIN_VALUE + " до " + Integer.MAX_VALUE);
@@ -273,7 +318,8 @@ class Test10 {
         System.out.println("Диапазон Double: " + Double.MIN_VALUE + " до " + Double.MAX_VALUE);
 
         // Демонстрируем приведение типов
-        System.out.println("\n=== Примеры приведения типов ===");
+        System.out.println("");
+        System.out.println("=== Примеры приведения типов ===");
         // Расширяющее приведение (автоматическое)
         int myInt = 100;
         double myDouble = myInt;
@@ -365,7 +411,8 @@ public class ProductInventory {
         System.out.println("Char: " + charVar);
 
         // Raqamli turlar uchun min/max qiymatlarni ko'rsatamiz
-        System.out.println("\n=== Turlarning diapazoni ===");
+        System.out.println("");
+        System.out.println("=== Turlarning diapazoni ===");
         System.out.println("Byte diapazoni: " + Byte.MIN_VALUE + " dan " + Byte.MAX_VALUE + " gacha");
         System.out.println("Short diapazoni: " + Short.MIN_VALUE + " dan " + Short.MAX_VALUE + " gacha");
         System.out.println("Int diapazoni: " + Integer.MIN_VALUE + " dan " + Integer.MAX_VALUE + " gacha");
@@ -374,7 +421,8 @@ public class ProductInventory {
         System.out.println("Double diapazoni: " + Double.MIN_VALUE + " dan " + Double.MAX_VALUE + " gacha");
 
         // Turlarni o'zgartirish namunalarini ko'rsatamiz
-        System.out.println("\n=== Turlarni o'zgartirish misollari ===");
+        System.out.println("");
+        System.out.println("=== Turlarni o'zgartirish misollari ===");
         // Kengaytirish (avtomatik)
         int myInt = 100;
         double myDouble = myInt;

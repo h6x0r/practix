@@ -130,8 +130,10 @@ public class OrderService {
     order: 1,
     testCode: `import static org.junit.Assert.*;
 import org.junit.Test;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 
-// Test1: Verify LogLevels class instantiation
+// Test1: class can be instantiated
 class Test1 {
     @Test
     public void test() {
@@ -140,98 +142,148 @@ class Test1 {
     }
 }
 
-// Test2: Verify main method executes without errors
+// Test2: main runs without exceptions
 class Test2 {
     @Test
     public void test() {
+        boolean completed = false;
         try {
             LogLevels.main(new String[]{});
-            assertTrue("Main method should execute successfully", true);
+            completed = true;
         } catch (Exception e) {
-            fail("Main method should not throw exceptions: " + e.getMessage());
+            fail("Main should not throw: " + e.getMessage());
+        }
+        assertTrue("Main should complete without exceptions", completed);
+    }
+}
+
+// Test3: class has static logger field
+class Test3 {
+    @Test
+    public void test() {
+        try {
+            java.lang.reflect.Field loggerField = LogLevels.class.getDeclaredField("logger");
+            assertTrue("Logger should be static",
+                java.lang.reflect.Modifier.isStatic(loggerField.getModifiers()));
+        } catch (NoSuchFieldException e) {
+            fail("Should have a 'logger' field");
         }
     }
 }
 
-// Test3: Verify TRACE level logging works
-class Test3 {
-    @Test
-    public void test() {
-        LogLevels.main(new String[]{});
-        assertTrue("TRACE logging should work", true);
-    }
-}
-
-// Test4: Verify DEBUG level logging works
+// Test4: logger field is final
 class Test4 {
     @Test
     public void test() {
-        LogLevels.main(new String[]{});
-        assertTrue("DEBUG logging should work", true);
+        try {
+            java.lang.reflect.Field loggerField = LogLevels.class.getDeclaredField("logger");
+            assertTrue("Logger should be final",
+                java.lang.reflect.Modifier.isFinal(loggerField.getModifiers()));
+        } catch (NoSuchFieldException e) {
+            fail("Should have a 'logger' field");
+        }
     }
 }
 
-// Test5: Verify INFO level logging works
+// Test5: output contains log level hierarchy info
 class Test5 {
     @Test
     public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
         LogLevels.main(new String[]{});
-        assertTrue("INFO logging should work", true);
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should print hierarchy info",
+            output.contains("Hierarchy") || output.contains("hierarchy") ||
+            output.contains("Иерархия") || output.contains("иерархия") ||
+            output.contains("Ierarxiya") || output.contains("ierarxiya") ||
+            output.contains("TRACE") || output.contains("ERROR"));
     }
 }
 
-// Test6: Verify WARN level logging works
+// Test6: output shows level ordering
 class Test6 {
     @Test
     public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
         LogLevels.main(new String[]{});
-        assertTrue("WARN logging should work", true);
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show level ordering",
+            output.contains("TRACE < DEBUG") ||
+            output.contains("DEBUG < INFO") ||
+            output.contains("WARN < ERROR") ||
+            output.contains("<"));
     }
 }
 
-// Test7: Verify ERROR level logging works
+// Test7: produces some log output (stdout or stderr)
 class Test7 {
     @Test
     public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        ByteArrayOutputStream err = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        PrintStream oldErr = System.err;
+        System.setOut(new PrintStream(out));
+        System.setErr(new PrintStream(err));
         LogLevels.main(new String[]{});
-        assertTrue("ERROR logging should work", true);
+        System.setOut(oldOut);
+        System.setErr(oldErr);
+        String allOutput = out.toString() + err.toString();
+        assertTrue("Should produce some output", allOutput.length() > 0);
     }
 }
 
-// Test8: Verify all log levels can work together
+// Test8: logger is private
 class Test8 {
     @Test
     public void test() {
         try {
-            LogLevels.main(new String[]{});
-            assertTrue("All log levels should work together", true);
-        } catch (Exception e) {
-            fail("All log levels should work together without errors");
+            java.lang.reflect.Field loggerField = LogLevels.class.getDeclaredField("logger");
+            assertTrue("Logger should be private",
+                java.lang.reflect.Modifier.isPrivate(loggerField.getModifiers()));
+        } catch (NoSuchFieldException e) {
+            fail("Should have a 'logger' field");
         }
     }
 }
 
-// Test9: Verify logger hierarchy is respected
+// Test9: multiple calls work without issues
 class Test9 {
     @Test
     public void test() {
-        LogLevels.main(new String[]{});
-        assertTrue("Logger hierarchy should be respected", true);
+        int callCount = 0;
+        try {
+            LogLevels.main(new String[]{});
+            callCount++;
+            LogLevels.main(new String[]{});
+            callCount++;
+            LogLevels.main(new String[]{});
+            callCount++;
+        } catch (Exception e) {
+            fail("Multiple calls should not throw: " + e.getMessage());
+        }
+        assertEquals("All three calls should complete", 3, callCount);
     }
 }
 
-// Test10: Verify no exceptions during logging
+// Test10: no NullPointerException
 class Test10 {
     @Test
     public void test() {
+        boolean completed = false;
         try {
             LogLevels.main(new String[]{});
-            assertTrue("No exceptions should occur", true);
+            completed = true;
         } catch (NullPointerException e) {
             fail("Should not have null pointer exceptions");
-        } catch (Exception e) {
-            fail("Should not have any exceptions");
         }
+        assertTrue("Should complete without NullPointerException", completed);
     }
 }
 `,

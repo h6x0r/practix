@@ -170,7 +170,8 @@ public class SealedHierarchies {
         // Type safety: all cases must be handled
         Result<String> result = fetchUser(1);
         if (result.isSuccess() && result instanceof Success<String> success) {
-            System.out.println("\nUser data: " + success.value());
+            System.out.println("");
+            System.out.println("User data: " + success.value());
         }
     }
 }`,
@@ -459,7 +460,8 @@ public class SealedHierarchies {
         // Безопасность типов: все случаи должны быть обработаны
         Result<String> result = fetchUser(1);
         if (result.isSuccess() && result instanceof Success<String> success) {
-            System.out.println("\nДанные пользователя: " + success.value());
+            System.out.println("");
+            System.out.println("Данные пользователя: " + success.value());
         }
     }
 }`,
@@ -632,7 +634,8 @@ public class SealedHierarchies {
         // Tur xavfsizligi: barcha holatlar qayta ishlanishi kerak
         Result<String> result = fetchUser(1);
         if (result.isSuccess() && result instanceof Success<String> success) {
-            System.out.println("\nFoydalanuvchi ma'lumotlari: " + success.value());
+            System.out.println("");
+            System.out.println("Foydalanuvchi ma'lumotlari: " + success.value());
         }
     }
 }`,

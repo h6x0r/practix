@@ -15,7 +15,7 @@ export interface RoadmapGenerationInput {
   interests: string[];
 
   // Step 3: Goal
-  goal: 'find-job' | 'senior' | 'startup' | 'master-skill';
+  goal: 'first-job' | 'senior' | 'startup' | 'master-skill';
 
   // Step 4: Time commitment
   hoursPerWeek: number;

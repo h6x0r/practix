@@ -1,6 +1,9 @@
 import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
+// Grace period: 3 days after subscription expires, user still has access
+const GRACE_PERIOD_DAYS = 3;
+
 @Injectable()
 export class UserCoursesService {
   private readonly logger = new Logger(UserCoursesService.name);
@@ -8,11 +11,74 @@ export class UserCoursesService {
   constructor(private prisma: PrismaService) {}
 
   /**
-   * Get all courses started by a user
-   * Returns courses with their progress and last accessed time
+   * Get the grace period cutoff date
+   */
+  private getGracePeriodCutoff(): Date {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - GRACE_PERIOD_DAYS);
+    return cutoff;
+  }
+
+  /**
+   * Check if user has global premium access
+   */
+  private async hasGlobalAccess(userId: string): Promise<boolean> {
+    const gracePeriodCutoff = this.getGracePeriodCutoff();
+    const subscription = await this.prisma.subscription.findFirst({
+      where: {
+        userId,
+        status: 'active',
+        endDate: { gte: gracePeriodCutoff },
+        plan: { type: 'global' },
+      },
+    });
+    return !!subscription;
+  }
+
+  /**
+   * Get course IDs that user has active subscriptions for
+   */
+  private async getAccessibleCourseIds(userId: string): Promise<Set<string>> {
+    const gracePeriodCutoff = this.getGracePeriodCutoff();
+
+    // Get all course-specific subscriptions
+    const subscriptions = await this.prisma.subscription.findMany({
+      where: {
+        userId,
+        status: 'active',
+        endDate: { gte: gracePeriodCutoff },
+        plan: { type: 'course' },
+      },
+      include: {
+        plan: { select: { courseId: true } },
+      },
+    });
+
+    const courseIds = new Set<string>();
+    subscriptions.forEach((sub) => {
+      if (sub.plan.courseId) {
+        courseIds.add(sub.plan.courseId);
+      }
+    });
+
+    return courseIds;
+  }
+
+  /**
+   * Get all courses started by a user with active subscriptions
+   * Only returns courses where user has global premium OR course-specific subscription
+   * Progress is preserved in UserCourse even when subscription expires
    */
   async getUserCourses(userId: string) {
     try {
+      // Check if user has global premium access
+      const hasGlobal = await this.hasGlobalAccess(userId);
+
+      // Get course IDs with active course-specific subscriptions
+      const accessibleCourseIds = hasGlobal
+        ? null // Global access means all courses
+        : await this.getAccessibleCourseIds(userId);
+
       // Get user courses first
       const userCourses = await this.prisma.userCourse.findMany({
         where: { userId },
@@ -24,7 +90,7 @@ export class UserCoursesService {
         return [];
       }
 
-      // Optimized: Single query for all courses using WHERE IN instead of N+1
+      // Get all courses with task counts
       const courseSlugs = userCourses.map((uc) => uc.courseSlug);
       const courses = await this.prisma.course.findMany({
         where: { slug: { in: courseSlugs } },
@@ -37,19 +103,94 @@ export class UserCoursesService {
           icon: true,
           estimatedTime: true,
           translations: true,
+          modules: {
+            select: {
+              topics: {
+                select: {
+                  _count: { select: { tasks: true } },
+                },
+              },
+            },
+          },
         },
       });
 
-      // Create a map for O(1) lookup
-      const courseMap = new Map(courses.map((c) => [c.slug, c]));
+      // Calculate total tasks per course
+      const courseMap = new Map(
+        courses.map((c) => {
+          let totalTasks = 0;
+          c.modules.forEach((m) =>
+            m.topics.forEach((t) => (totalTasks += t._count.tasks))
+          );
+          return [c.slug, { ...c, totalTasks }];
+        })
+      );
+
+      // Get user's passed submissions for these courses
+      const passedSubmissions = await this.prisma.submission.findMany({
+        where: {
+          userId,
+          status: 'passed',
+          task: {
+            topic: {
+              module: {
+                course: { slug: { in: courseSlugs } },
+              },
+            },
+          },
+        },
+        select: {
+          taskId: true,
+          task: {
+            select: {
+              topic: {
+                select: {
+                  module: {
+                    select: {
+                      course: { select: { slug: true } },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        distinct: ['taskId'],
+      });
+
+      // Group completed tasks by course
+      const completedByCourse = new Map<string, Set<string>>();
+      passedSubmissions.forEach((sub) => {
+        const courseSlug = sub.task.topic.module.course.slug;
+        if (!completedByCourse.has(courseSlug)) {
+          completedByCourse.set(courseSlug, new Set());
+        }
+        completedByCourse.get(courseSlug)!.add(sub.taskId);
+      });
 
       this.logger.log(`Retrieved ${userCourses.length} courses for user ${userId}`);
 
-      // Map to flattened structure
+      // Map to flattened structure with calculated progress
+      // Filter by: 1) course exists, 2) user has access (global or course-specific subscription)
       const coursesWithDetails = userCourses
-        .filter((uc) => courseMap.has(uc.courseSlug)) // Filter out orphaned records
+        .filter((uc) => {
+          if (!courseMap.has(uc.courseSlug)) return false;
+
+          // Global access allows all courses
+          if (hasGlobal) return true;
+
+          // Check course-specific subscription
+          const course = courseMap.get(uc.courseSlug)!;
+          return accessibleCourseIds!.has(course.id);
+        })
         .map((userCourse) => {
           const course = courseMap.get(userCourse.courseSlug)!;
+          const completedTasks = completedByCourse.get(course.slug)?.size || 0;
+          const calculatedProgress =
+            course.totalTasks === 0
+              ? 0
+              : Math.round((completedTasks / course.totalTasks) * 100);
+
           return {
             id: course.id,
             slug: course.slug,
@@ -59,10 +200,10 @@ export class UserCoursesService {
             icon: course.icon,
             estimatedTime: course.estimatedTime,
             translations: course.translations,
-            progress: userCourse.progress,
+            progress: calculatedProgress, // Calculated from submissions, not stored value
             startedAt: userCourse.startedAt,
             lastAccessedAt: userCourse.lastAccessedAt,
-            completedAt: userCourse.completedAt,
+            completedAt: calculatedProgress === 100 ? userCourse.completedAt : null,
           };
         });
 

@@ -23,7 +23,7 @@ interface WizardState {
   // Step 2: Interests (multi-select)
   interests: string[];
   // Step 3: Goal
-  goal: 'find-job' | 'senior' | 'startup' | 'master-skill' | '';
+  goal: 'first-job' | 'senior' | 'startup' | 'master-skill' | '';
   // Step 4: Time commitment
   hoursPerWeek: number;
   targetMonths: number;
@@ -77,7 +77,7 @@ const INTEREST_OPTIONS = [
 ];
 
 const GOAL_OPTIONS = [
-  { id: 'find-job', label: 'Find a Job', icon: '💼', desc: 'Interview prep, portfolio, market-ready skills', gradient: 'from-blue-400 to-indigo-500' },
+  { id: 'first-job', label: 'Find a Job', icon: '💼', desc: 'Interview prep, portfolio, market-ready skills', gradient: 'from-blue-400 to-indigo-500' },
   { id: 'senior', label: 'Reach Senior Level', icon: '📈', desc: 'Architecture, leadership, best practices', gradient: 'from-emerald-400 to-green-500' },
   { id: 'startup', label: 'Build a Startup', icon: '🚀', desc: 'Full-stack skills, MVP development', gradient: 'from-orange-400 to-red-500' },
   { id: 'master-skill', label: 'Master a Skill', icon: '🎯', desc: 'Deep expertise in specific area', gradient: 'from-purple-400 to-pink-500' },
@@ -98,10 +98,65 @@ const MONTHS_OPTIONS = [
 ];
 
 // ============================================================================
+// LocalStorage Keys for Wizard State Persistence
+// ============================================================================
+const WIZARD_STORAGE_KEY = 'kodla_roadmap_wizard';
+
+interface PersistedWizardState {
+  wizardState: WizardState;
+  wizardStep: number;
+  timestamp: number;
+}
+
+const saveWizardToStorage = (state: WizardState, step: number) => {
+  try {
+    const data: PersistedWizardState = {
+      wizardState: state,
+      wizardStep: step,
+      timestamp: Date.now(),
+    };
+    localStorage.setItem(WIZARD_STORAGE_KEY, JSON.stringify(data));
+  } catch (e) {
+    // localStorage might be full or disabled
+  }
+};
+
+const loadWizardFromStorage = (): PersistedWizardState | null => {
+  try {
+    const saved = localStorage.getItem(WIZARD_STORAGE_KEY);
+    if (!saved) return null;
+
+    const data: PersistedWizardState = JSON.parse(saved);
+    // Expire after 24 hours
+    if (Date.now() - data.timestamp > 24 * 60 * 60 * 1000) {
+      localStorage.removeItem(WIZARD_STORAGE_KEY);
+      return null;
+    }
+    return data;
+  } catch (e) {
+    return null;
+  }
+};
+
+const clearWizardStorage = () => {
+  try {
+    localStorage.removeItem(WIZARD_STORAGE_KEY);
+  } catch (e) {
+    // ignore
+  }
+};
+
+// ============================================================================
 // Intro Section
 // ============================================================================
 
-const RoadmapIntro = ({ onStart }: { onStart: () => void }) => {
+interface RoadmapIntroProps {
+  onStart: () => void;
+  onResume?: () => void;
+  hasProgress?: boolean;
+}
+
+const RoadmapIntro = ({ onStart, onResume, hasProgress }: RoadmapIntroProps) => {
   const { tUI } = useUITranslation();
 
   return (
@@ -142,11 +197,26 @@ const RoadmapIntro = ({ onStart }: { onStart: () => void }) => {
           </div>
         </div>
 
+        {/* Resume banner if there's saved progress */}
+        {hasProgress && onResume && (
+          <div className="mb-6 p-4 bg-brand-50 dark:bg-brand-900/20 border border-brand-200 dark:border-brand-800 rounded-xl">
+            <p className="text-sm text-brand-700 dark:text-brand-300 mb-3">
+              {tUI('roadmap.resumeProgress') || 'You have unfinished progress. Would you like to continue?'}
+            </p>
+            <button
+              onClick={onResume}
+              className="px-6 py-2 bg-brand-600 hover:bg-brand-500 text-white font-bold rounded-lg text-sm transition-colors"
+            >
+              {tUI('roadmap.resumeButton') || 'Resume Wizard'}
+            </button>
+          </div>
+        )}
+
         <button
           onClick={onStart}
           className="px-8 py-3 bg-gradient-to-r from-brand-600 to-purple-600 hover:from-brand-500 hover:to-purple-500 text-white font-bold rounded-xl shadow-lg shadow-brand-500/25 hover:shadow-xl hover:shadow-brand-500/30 transition-all transform hover:-translate-y-0.5"
         >
-          {tUI('roadmap.startButton')}
+          {hasProgress ? (tUI('roadmap.startOver') || 'Start Over') : tUI('roadmap.startButton')}
         </button>
       </div>
     </div>
@@ -162,10 +232,17 @@ const RoadmapPage = () => {
   const { tUI } = useUITranslation();
   const navigate = useNavigate();
 
-  // State
+  // State - load from localStorage if available
   const [step, setStep] = useState<'intro' | 'wizard' | 'generating' | 'variants' | 'loading' | 'result'>('loading');
-  const [wizardStep, setWizardStep] = useState(0);
-  const [wizardState, setWizardState] = useState<WizardState>(initialWizardState);
+  const [wizardStep, setWizardStep] = useState(() => {
+    const saved = loadWizardFromStorage();
+    return saved?.wizardStep ?? 0;
+  });
+  const [wizardState, setWizardState] = useState<WizardState>(() => {
+    const saved = loadWizardFromStorage();
+    return saved?.wizardState ?? initialWizardState;
+  });
+  const [hasRestoredWizard, setHasRestoredWizard] = useState(false);
   const [variants, setVariants] = useState<RoadmapVariant[]>([]);
   const [selectedVariant, setSelectedVariant] = useState<RoadmapVariant | null>(null);
   const [roadmap, setRoadmap] = useState<RoadmapUI | null>(null);
@@ -174,10 +251,22 @@ const RoadmapPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [showRegenerateModal, setShowRegenerateModal] = useState(false);
 
+  // Save wizard state to localStorage when it changes
+  useEffect(() => {
+    if (step === 'wizard') {
+      saveWizardToStorage(wizardState, wizardStep);
+    }
+  }, [wizardState, wizardStep, step]);
+
   // Check for existing roadmap on mount
   useEffect(() => {
     const checkExistingRoadmap = async () => {
       if (!user) {
+        // Check if there's saved wizard progress for non-logged in user
+        const saved = loadWizardFromStorage();
+        if (saved && saved.wizardStep > 0) {
+          setHasRestoredWizard(true);
+        }
         setStep('intro');
         return;
       }
@@ -186,9 +275,17 @@ const RoadmapPage = () => {
         const existing = await roadmapService.getUserRoadmap();
         if (existing) {
           setRoadmap(existing);
+          clearWizardStorage(); // Clear saved wizard if roadmap exists
           setStep('result');
         } else {
-          setStep('intro');
+          // Check if there's saved wizard progress
+          const saved = loadWizardFromStorage();
+          if (saved && saved.wizardStep > 0) {
+            setHasRestoredWizard(true);
+            setStep('wizard'); // Resume wizard
+          } else {
+            setStep('intro');
+          }
         }
       } catch (e) {
         log.error('Failed to load roadmap', e);
@@ -328,6 +425,7 @@ const RoadmapPage = () => {
       const result = await roadmapService.selectVariant(params);
       setRoadmap(result);
       setLoadingProgress(100);
+      clearWizardStorage(); // Clear saved wizard state on success
       setStep('result');
     } catch (e) {
       log.error('Failed to select variant', e);
@@ -362,29 +460,53 @@ const RoadmapPage = () => {
         log.error('Failed to delete roadmap', e);
       }
     }
+    clearWizardStorage(); // Clear saved wizard state
     setStep('intro');
     setWizardStep(0);
     setWizardState(initialWizardState);
     setRoadmap(null);
     setVariants([]);
     setSelectedVariant(null);
+    setHasRestoredWizard(false);
   };
 
   // ============================================================================
   // Render: Intro
   // ============================================================================
 
-  const handleStartWizard = () => {
+  const handleStartWizard = (startFresh = false) => {
     if (!user) {
       // Redirect to login with return URL to roadmap page
       navigate('/login', { state: { from: { pathname: '/roadmap' } } });
       return;
     }
+    if (startFresh) {
+      // Clear any saved progress and start fresh
+      clearWizardStorage();
+      setWizardStep(0);
+      setWizardState(initialWizardState);
+      setHasRestoredWizard(false);
+    }
+    setStep('wizard');
+  };
+
+  const handleResumeWizard = () => {
+    if (!user) {
+      navigate('/login', { state: { from: { pathname: '/roadmap' } } });
+      return;
+    }
+    // Just switch to wizard step - state is already loaded from localStorage
     setStep('wizard');
   };
 
   if (step === 'intro') {
-    return <RoadmapIntro onStart={handleStartWizard} />;
+    return (
+      <RoadmapIntro
+        onStart={() => handleStartWizard(hasRestoredWizard)} // Start fresh if there was progress
+        onResume={handleResumeWizard}
+        hasProgress={hasRestoredWizard}
+      />
+    );
   }
 
   // ============================================================================

@@ -1,4 +1,4 @@
-import { Task, Submission, TestCaseResult } from '@/types';
+import { Task, Submission, TestCaseResult, PromptSubmission, PromptScenarioResult } from '@/types';
 import { api, isAbortError } from '@/lib/api';
 import { storage } from '@/lib/storage';
 import { createLogger } from '@/lib/logger';
@@ -13,6 +13,21 @@ export interface RunTestsResult {
   testCases: TestCaseResult[];
   runtime: string;
   message: string;
+}
+
+// Prompt submission result
+export interface PromptSubmissionResult {
+  id: string;
+  status: string;
+  score: number;
+  message: string;
+  createdAt: string;
+  scenarioResults: PromptScenarioResult[];
+  summary: string;
+  xpEarned?: number;
+  totalXp?: number;
+  level?: number;
+  leveledUp?: boolean;
 }
 
 interface RequestOptions {
@@ -46,6 +61,14 @@ export const taskService = {
   },
 
   /**
+   * Submit a prompt for AI evaluation (prompt engineering tasks)
+   * Used for "Submit" button on PROMPT type tasks
+   */
+  submitPrompt: async (prompt: string, taskId: string, options?: RequestOptions): Promise<PromptSubmissionResult> => {
+    return api.post<PromptSubmissionResult>('/submissions/prompt', { prompt, taskId }, options);
+  },
+
+  /**
    * Get user's submissions for a specific task
    * Requires authentication
    */
@@ -60,6 +83,25 @@ export const taskService = {
       // Return empty array if not authenticated or error
       log.warn('Failed to fetch submissions', error);
       return [];
+    }
+  },
+
+  /**
+   * Get the latest run result for a specific task
+   * Returns null if no run result exists
+   * Requires authentication
+   */
+  getRunResult: async (taskId: string, options?: RequestOptions): Promise<RunTestsResult | null> => {
+    try {
+      // Backend wraps result in { data: ... } to avoid NestJS empty body issue with null
+      const response = await api.get<{ data: RunTestsResult | null }>(`/submissions/run-result/${taskId}`, options);
+      return response.data;
+    } catch (error) {
+      if (isAbortError(error)) {
+        throw error;
+      }
+      log.warn('Failed to fetch run result', error);
+      return null;
     }
   },
 

@@ -8,10 +8,11 @@ import { TasksModule } from '../tasks/tasks.module';
 import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
 import { GamificationModule } from '../gamification/gamification.module';
 import { CacheModule } from '../cache/cache.module';
+import { AiModule } from '../ai/ai.module';
 import { PlaygroundThrottlerGuard } from '../common/guards/playground-throttler.guard';
 
 @Module({
-  imports: [QueueModule, TasksModule, SubscriptionsModule, GamificationModule, CacheModule],
+  imports: [QueueModule, TasksModule, SubscriptionsModule, GamificationModule, CacheModule, AiModule],
   controllers: [SubmissionsController],
   providers: [
     SubmissionsService,

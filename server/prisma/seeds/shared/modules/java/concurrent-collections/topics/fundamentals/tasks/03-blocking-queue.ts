@@ -93,7 +93,8 @@ public class BlockingQueueDemo {
         consumer.join();
 
         // Demonstrate offer() and poll() with timeout
-        System.out.println("\n=== Testing offer() and poll() with timeout ===");
+        System.out.println("");
+        System.out.println("=== Testing offer() and poll() with timeout ===");
 
         // offer() - non-blocking, with timeout
         boolean offered = queue.offer("Timeout-Item-1", 1, TimeUnit.SECONDS);
@@ -114,7 +115,8 @@ public class BlockingQueueDemo {
         System.out.println("poll() result (should be null): " + polled);
 
         // Check queue size and remaining capacity
-        System.out.println("\n=== Queue Status ===");
+        System.out.println("");
+        System.out.println("=== Queue Status ===");
         queue.put("Status-1");
         queue.put("Status-2");
         queue.put("Status-3");
@@ -124,7 +126,8 @@ public class BlockingQueueDemo {
         System.out.println("Total capacity: " + (queue.size() + queue.remainingCapacity()));
 
         // Demonstrate blocking behavior
-        System.out.println("\n=== Demonstrating Blocking Behavior ===");
+        System.out.println("");
+        System.out.println("=== Demonstrating Blocking Behavior ===");
         BlockingQueue<String> smallQueue = new LinkedBlockingQueue<>(2);
 
         // Fill the queue
@@ -141,7 +144,8 @@ public class BlockingQueueDemo {
         offerResult = smallQueue.offer("Full-3", 2, TimeUnit.SECONDS);
         System.out.println("offer() result after timeout: " + offerResult);
 
-        System.out.println("\nBlockingQueue demo completed!");
+        System.out.println("");
+        System.out.println("BlockingQueue demo completed!");
     }
 }`,
     hint1: `put() blocks until space is available, take() blocks until an element is available. Use these for guaranteed delivery.`,
@@ -388,7 +392,8 @@ public class BlockingQueueDemo {
         consumer.join();
 
         // Демонстрируем offer() и poll() с таймаутом
-        System.out.println("\n=== Тестирование offer() и poll() с таймаутом ===");
+        System.out.println("");
+        System.out.println("=== Тестирование offer() и poll() с таймаутом ===");
 
         // offer() - неблокирующий, с таймаутом
         boolean offered = queue.offer("Timeout-Item-1", 1, TimeUnit.SECONDS);
@@ -409,7 +414,8 @@ public class BlockingQueueDemo {
         System.out.println("Результат poll() (должен быть null): " + polled);
 
         // Проверяем размер очереди и оставшуюся вместимость
-        System.out.println("\n=== Статус очереди ===");
+        System.out.println("");
+        System.out.println("=== Статус очереди ===");
         queue.put("Status-1");
         queue.put("Status-2");
         queue.put("Status-3");
@@ -419,7 +425,8 @@ public class BlockingQueueDemo {
         System.out.println("Общая вместимость: " + (queue.size() + queue.remainingCapacity()));
 
         // Демонстрируем блокирующее поведение
-        System.out.println("\n=== Демонстрация блокирующего поведения ===");
+        System.out.println("");
+        System.out.println("=== Демонстрация блокирующего поведения ===");
         BlockingQueue<String> smallQueue = new LinkedBlockingQueue<>(2);
 
         // Заполняем очередь
@@ -436,7 +443,8 @@ public class BlockingQueueDemo {
         offerResult = smallQueue.offer("Full-3", 2, TimeUnit.SECONDS);
         System.out.println("Результат offer() после таймаута: " + offerResult);
 
-        System.out.println("\nДемо BlockingQueue завершено!");
+        System.out.println("");
+        System.out.println("Демо BlockingQueue завершено!");
     }
 }`,
             description: `Изучите BlockingQueue для паттернов производитель-потребитель.
@@ -554,7 +562,8 @@ public class BlockingQueueDemo {
         consumer.join();
 
         // offer() va poll() ni vaqt chegarasi bilan ko'rsatamiz
-        System.out.println("\n=== offer() va poll() ni vaqt chegarasi bilan sinash ===");
+        System.out.println("");
+        System.out.println("=== offer() va poll() ni vaqt chegarasi bilan sinash ===");
 
         // offer() - bloklamaydigan, vaqt chegarasi bilan
         boolean offered = queue.offer("Timeout-Item-1", 1, TimeUnit.SECONDS);
@@ -575,7 +584,8 @@ public class BlockingQueueDemo {
         System.out.println("poll() natijasi (null bo'lishi kerak): " + polled);
 
         // Navbat hajmi va qolgan sig'imni tekshiramiz
-        System.out.println("\n=== Navbat holati ===");
+        System.out.println("");
+        System.out.println("=== Navbat holati ===");
         queue.put("Status-1");
         queue.put("Status-2");
         queue.put("Status-3");
@@ -585,7 +595,8 @@ public class BlockingQueueDemo {
         System.out.println("Umumiy sig'im: " + (queue.size() + queue.remainingCapacity()));
 
         // Bloklash xatti-harakatini ko'rsatamiz
-        System.out.println("\n=== Bloklash xatti-harakatini ko'rsatish ===");
+        System.out.println("");
+        System.out.println("=== Bloklash xatti-harakatini ko'rsatish ===");
         BlockingQueue<String> smallQueue = new LinkedBlockingQueue<>(2);
 
         // Navbatni to'ldiramiz
@@ -602,7 +613,8 @@ public class BlockingQueueDemo {
         offerResult = smallQueue.offer("Full-3", 2, TimeUnit.SECONDS);
         System.out.println("Vaqt tugagandan keyin offer() natijasi: " + offerResult);
 
-        System.out.println("\nBlockingQueue demosi tugadi!");
+        System.out.println("");
+        System.out.println("BlockingQueue demosi tugadi!");
     }
 }`,
             description: `Ishlab chiqaruvchi-iste'molchi naqshlari uchun BlockingQueue ni o'rganing.

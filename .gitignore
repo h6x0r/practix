@@ -17,6 +17,12 @@ dist-ssr
 server/.env
 server/.env.*
 
+# Playwright
+playwright-report/
+playwright-results/
+test-results/
+.playwright-mcp/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

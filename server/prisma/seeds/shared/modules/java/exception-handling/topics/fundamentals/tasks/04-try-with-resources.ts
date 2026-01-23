@@ -158,18 +158,22 @@ public class FileProcessor {
         processor.writeFile("test.txt", "Hello, Java! Try-with-resources is awesome!");
 
         // Test reading
-        System.out.println("\n2. Reading file:");
+        System.out.println("");
+        System.out.println("2. Reading file:");
         processor.readFile("test.txt");
 
         // Test copying
-        System.out.println("\n3. Copying file:");
+        System.out.println("");
+        System.out.println("3. Copying file:");
         processor.copyFile("test.txt", "copy.txt");
 
         // Test custom resource
-        System.out.println("\n4. Custom AutoCloseable:");
+        System.out.println("");
+        System.out.println("4. Custom AutoCloseable:");
         processor.demonstrateCustomResource();
 
-        System.out.println("\n=== Demo Complete ===");
+        System.out.println("");
+        System.out.println("=== Demo Complete ===");
     }
 }`,
     hint1: `Try-with-resources syntax: try (Resource r = new Resource()) { }. Any class implementing AutoCloseable can be used. The close() method is called automatically when exiting the try block.`,
@@ -207,9 +211,63 @@ public class DataProcessor {
     order: 4,
     testCode: `import static org.junit.Assert.*;
 import org.junit.Test;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 
-// Test1: Verify FileProcessor instantiation
+// Test1: DatabaseConnection opens and outputs message
 class Test1 {
+    @Test
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        try (DatabaseConnection conn = new DatabaseConnection("TEST-001")) {
+            // do nothing, just test opening
+        }
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show opening connection message",
+            output.contains("Opening") || output.contains("Открытие") || output.contains("Ochish"));
+    }
+}
+
+// Test2: DatabaseConnection auto-closes and prints close message
+class Test2 {
+    @Test
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        try (DatabaseConnection conn = new DatabaseConnection("TEST-002")) {
+            conn.executeQuery("SELECT 1");
+        }
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show closing connection message",
+            output.contains("Closing") || output.contains("Закрытие") || output.contains("Yopish"));
+    }
+}
+
+// Test3: executeQuery prints query
+class Test3 {
+    @Test
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        try (DatabaseConnection conn = new DatabaseConnection("TEST-003")) {
+            conn.executeQuery("SELECT * FROM users");
+        }
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show executing query",
+            output.contains("Executing") || output.contains("SELECT") ||
+            output.contains("Выполнение") || output.contains("Bajarish"));
+    }
+}
+
+// Test4: FileProcessor can be instantiated
+class Test4 {
     @Test
     public void test() {
         FileProcessor processor = new FileProcessor();
@@ -217,127 +275,129 @@ class Test1 {
     }
 }
 
-// Test2: Verify writeFile method
-class Test2 {
-    @Test
-    public void test() {
-        FileProcessor processor = new FileProcessor();
-        try {
-            processor.writeFile("test_file.txt", "Test content");
-            assertTrue("writeFile should execute", true);
-        } catch (Exception e) {
-            fail("writeFile should not throw: " + e.getMessage());
-        }
-    }
-}
-
-// Test3: Verify readFile method
-class Test3 {
-    @Test
-    public void test() {
-        FileProcessor processor = new FileProcessor();
-        try {
-            processor.writeFile("test_read.txt", "Content to read");
-            processor.readFile("test_read.txt");
-            assertTrue("readFile should execute", true);
-        } catch (Exception e) {
-            fail("readFile should not throw: " + e.getMessage());
-        }
-    }
-}
-
-// Test4: Verify copyFile method
-class Test4 {
-    @Test
-    public void test() {
-        FileProcessor processor = new FileProcessor();
-        try {
-            processor.writeFile("source.txt", "Source content");
-            processor.copyFile("source.txt", "destination.txt");
-            assertTrue("copyFile should execute", true);
-        } catch (Exception e) {
-            fail("copyFile should not throw: " + e.getMessage());
-        }
-    }
-}
-
-// Test5: Verify DatabaseConnection creation
+// Test5: Custom resource demo shows auto-close
 class Test5 {
     @Test
     public void test() {
-        try (DatabaseConnection conn = new DatabaseConnection("TEST-001")) {
-            assertNotNull("DatabaseConnection should be created", conn);
-        }
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        FileProcessor processor = new FileProcessor();
+        processor.demonstrateCustomResource();
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should demonstrate auto-close",
+            output.contains("Closing") || output.contains("Закрытие") || output.contains("Yopish") ||
+            output.contains("Connection opened") || output.contains("closed"));
     }
 }
 
-// Test6: Verify DatabaseConnection auto-close
+// Test6: main produces output with section headers
 class Test6 {
     @Test
     public void test() {
-        try (DatabaseConnection conn = new DatabaseConnection("TEST-002")) {
-            conn.executeQuery("SELECT * FROM test");
-            assertTrue("Query should execute", true);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        Exception caught = null;
+        try {
+            FileProcessor.main(new String[]{});
         } catch (Exception e) {
-            fail("DatabaseConnection should work: " + e.getMessage());
+            caught = e;
         }
+        System.setOut(oldOut);
+        if (caught != null) {
+            fail("FileProcessor.main should handle exceptions internally, but threw: " + caught.getMessage());
+        }
+        String output = out.toString();
+        assertTrue("Should show demo header",
+            output.contains("File Operations Demo") || output.contains("Demo Complete") ||
+            output.contains("Демонстрация файловых операций") || output.contains("Fayl operatsiyalari"));
     }
 }
 
-// Test7: Verify custom resource demonstration
+// Test7: connection ID is preserved
 class Test7 {
     @Test
     public void test() {
-        FileProcessor processor = new FileProcessor();
-        try {
-            processor.demonstrateCustomResource();
-            assertTrue("Custom resource demo should work", true);
-        } catch (Exception e) {
-            fail("Custom resource demo should not throw: " + e.getMessage());
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        try (DatabaseConnection conn = new DatabaseConnection("MY-CONN-007")) {
+            conn.executeQuery("TEST");
         }
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show connection ID", output.contains("MY-CONN-007"));
     }
 }
 
-// Test8: Verify main method execution
+// Test8: demo shows numbered steps
 class Test8 {
     @Test
     public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        Exception caught = null;
         try {
             FileProcessor.main(new String[]{});
-            assertTrue("Main method should execute", true);
         } catch (Exception e) {
-            // File operations might fail in test environment
-            assertTrue("Main execution attempted", true);
+            caught = e;
         }
+        System.setOut(oldOut);
+        if (caught != null) {
+            fail("FileProcessor.main should handle exceptions internally, but threw: " + caught.getMessage());
+        }
+        String output = out.toString();
+        assertTrue("Should show numbered steps",
+            (output.contains("1.") && output.contains("2.")) ||
+            output.contains("Writing") || output.contains("Reading"));
     }
 }
 
-// Test9: Verify try-with-resources closes resources
+// Test9: resources closed in order
 class Test9 {
     @Test
     public void test() {
-        try (DatabaseConnection conn = new DatabaseConnection("TEST-009")) {
-            conn.executeQuery("TEST QUERY");
-            // Resource should auto-close after this block
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        try (DatabaseConnection conn1 = new DatabaseConnection("FIRST");
+             DatabaseConnection conn2 = new DatabaseConnection("SECOND")) {
+            conn1.executeQuery("Q1");
+            conn2.executeQuery("Q2");
         }
-        assertTrue("Resources should be closed automatically", true);
+        System.setOut(oldOut);
+        String output = out.toString();
+        // Both should be closed
+        assertTrue("Both connections should be closed",
+            output.contains("FIRST") && output.contains("SECOND") &&
+            (output.contains("Closing") || output.contains("Закрытие") || output.contains("Yopish")));
     }
 }
 
-// Test10: Verify multiple resource handling
+// Test10: Demo Complete message shown
 class Test10 {
     @Test
     public void test() {
-        FileProcessor processor = new FileProcessor();
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        Exception caught = null;
         try {
-            processor.writeFile("file1.txt", "Content 1");
-            processor.writeFile("file2.txt", "Content 2");
-            processor.copyFile("file1.txt", "file3.txt");
-            assertTrue("Multiple file operations should work", true);
+            FileProcessor.main(new String[]{});
         } catch (Exception e) {
-            // Expected in test environment
-            assertTrue("File operations attempted", true);
+            caught = e;
         }
+        System.setOut(oldOut);
+        if (caught != null) {
+            fail("FileProcessor.main should handle exceptions internally, but threw: " + caught.getMessage());
+        }
+        String output = out.toString();
+        assertTrue("Should show demo complete or custom resource",
+            output.contains("Demo Complete") || output.contains("Демонстрация завершена") ||
+            output.contains("Namoyish yakunlandi") || output.contains("Custom") || output.contains("AutoCloseable"));
     }
 }
 `,
@@ -448,18 +508,22 @@ public class FileProcessor {
         processor.writeFile("test.txt", "Привет, Java! Try-with-resources великолепен!");
 
         // Тест чтения
-        System.out.println("\n2. Чтение файла:");
+        System.out.println("");
+        System.out.println("2. Чтение файла:");
         processor.readFile("test.txt");
 
         // Тест копирования
-        System.out.println("\n3. Копирование файла:");
+        System.out.println("");
+        System.out.println("3. Копирование файла:");
         processor.copyFile("test.txt", "copy.txt");
 
         // Тест пользовательского ресурса
-        System.out.println("\n4. Пользовательский AutoCloseable:");
+        System.out.println("");
+        System.out.println("4. Пользовательский AutoCloseable:");
         processor.demonstrateCustomResource();
 
-        System.out.println("\n=== Демонстрация Завершена ===");
+        System.out.println("");
+        System.out.println("=== Демонстрация Завершена ===");
     }
 }`,
             description: `Реализуйте операции с файлами, используя try-with-resources для автоматического управления ресурсами.
@@ -616,18 +680,22 @@ public class FileProcessor {
         processor.writeFile("test.txt", "Salom, Java! Try-with-resources ajoyib!");
 
         // O'qish testi
-        System.out.println("\n2. Faylni o'qish:");
+        System.out.println("");
+        System.out.println("2. Faylni o'qish:");
         processor.readFile("test.txt");
 
         // Nusxalash testi
-        System.out.println("\n3. Faylni nusxalash:");
+        System.out.println("");
+        System.out.println("3. Faylni nusxalash:");
         processor.copyFile("test.txt", "copy.txt");
 
         // Maxsus resurs testi
-        System.out.println("\n4. Maxsus AutoCloseable:");
+        System.out.println("");
+        System.out.println("4. Maxsus AutoCloseable:");
         processor.demonstrateCustomResource();
 
-        System.out.println("\n=== Namoyish Tugadi ===");
+        System.out.println("");
+        System.out.println("=== Namoyish Tugadi ===");
     }
 }`,
             description: `Avtomatik resurs boshqaruvi uchun try-with-resources dan foydalanib, fayl operatsiyalarini amalga oshiring.

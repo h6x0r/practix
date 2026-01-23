@@ -182,134 +182,150 @@ public class IntermediateOperations {
 }`,
     testCode: `import static org.junit.Assert.*;
 import org.junit.Test;
-import java.util.*;
-import java.util.stream.*;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 
-// Test1: Verify filter() with numbers
+// Test1: main method should produce output
 class Test1 {
     @Test
     public void test() {
-        List<Integer> numbers = Arrays.asList(1, 2, 3, 4, 5, 6);
-        List<Integer> evens = numbers.stream()
-            .filter(n -> n % 2 == 0)
-            .collect(Collectors.toList());
-        assertEquals(3, evens.size());
-        assertTrue(evens.contains(2));
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        IntermediateOperations.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show intermediate operations demo",
+            output.contains("Stream") || output.contains("filter") ||
+            output.contains("Intermediate") || output.contains("Промежуточные"));
     }
 }
 
-// Test2: Verify filter() with strings
+// Test2: should demonstrate filter operation
 class Test2 {
     @Test
     public void test() {
-        List<String> names = Arrays.asList("Jo", "Alice", "Bob", "Charlie");
-        List<String> longNames = names.stream()
-            .filter(name -> name.length() > 3)
-            .collect(Collectors.toList());
-        assertEquals(2, longNames.size());
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        IntermediateOperations.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show filter operation", output.contains("filter") || output.contains("Even") || output.contains("juft"));
     }
 }
 
-// Test3: Verify map() transforms elements
+// Test3: should show filtered even numbers
 class Test3 {
     @Test
     public void test() {
-        List<String> words = Arrays.asList("hello", "world");
-        List<String> upper = words.stream()
-            .map(String::toUpperCase)
-            .collect(Collectors.toList());
-        assertEquals("HELLO", upper.get(0));
-        assertEquals("WORLD", upper.get(1));
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        IntermediateOperations.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show even numbers", output.contains("[2, 4, 6") || output.contains("Even numbers") || output.contains("2, 4"));
     }
 }
 
-// Test4: Verify map() with calculations
+// Test4: should demonstrate map operation
 class Test4 {
     @Test
     public void test() {
-        List<Integer> numbers = Arrays.asList(1, 2, 3, 4, 5);
-        List<Integer> squared = numbers.stream()
-            .map(n -> n * n)
-            .collect(Collectors.toList());
-        assertEquals(Integer.valueOf(25), squared.get(4));
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        IntermediateOperations.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show map operation", output.contains("map") || output.contains("Uppercase") || output.contains("katta harf"));
     }
 }
 
-// Test5: Verify flatMap() flattens nested lists
+// Test5: should show uppercase transformation
 class Test5 {
     @Test
     public void test() {
-        List<List<Integer>> nested = Arrays.asList(
-            Arrays.asList(1, 2),
-            Arrays.asList(3, 4)
-        );
-        List<Integer> flat = nested.stream()
-            .flatMap(List::stream)
-            .collect(Collectors.toList());
-        assertEquals(4, flat.size());
-        assertEquals(Integer.valueOf(3), flat.get(2));
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        IntermediateOperations.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show uppercase", output.contains("HELLO") || output.contains("WORLD") || output.contains("JAVA"));
     }
 }
 
-// Test6: Verify flatMap() splits strings
+// Test6: should demonstrate flatMap operation
 class Test6 {
     @Test
     public void test() {
-        List<String> sentences = Arrays.asList("Hello World", "Java Stream");
-        List<String> words = sentences.stream()
-            .flatMap(s -> Arrays.stream(s.split(" ")))
-            .collect(Collectors.toList());
-        assertEquals(4, words.size());
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        IntermediateOperations.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show flatMap operation", output.contains("flatMap") || output.contains("Flatten") || output.contains("tekis"));
     }
 }
 
-// Test7: Verify distinct() removes duplicates
+// Test7: should show distinct operation
 class Test7 {
     @Test
     public void test() {
-        List<Integer> numbers = Arrays.asList(1, 2, 2, 3, 3, 3);
-        List<Integer> unique = numbers.stream()
-            .distinct()
-            .collect(Collectors.toList());
-        assertEquals(3, unique.size());
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        IntermediateOperations.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show distinct", output.contains("distinct") || output.contains("Distinct") || output.contains("Dublikat"));
     }
 }
 
-// Test8: Verify sorted() orders elements
+// Test8: should show sorted operation
 class Test8 {
     @Test
     public void test() {
-        List<Integer> numbers = Arrays.asList(5, 2, 8, 1, 9);
-        List<Integer> sorted = numbers.stream()
-            .sorted()
-            .collect(Collectors.toList());
-        assertEquals(Integer.valueOf(1), sorted.get(0));
-        assertEquals(Integer.valueOf(9), sorted.get(4));
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        IntermediateOperations.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show sorted", output.contains("sorted") || output.contains("Sorted") || output.contains("saral"));
     }
 }
 
-// Test9: Verify limit() takes first N elements
+// Test9: should show limit or skip operation
 class Test9 {
     @Test
     public void test() {
-        List<Integer> numbers = Arrays.asList(1, 2, 3, 4, 5);
-        List<Integer> limited = numbers.stream()
-            .limit(3)
-            .collect(Collectors.toList());
-        assertEquals(3, limited.size());
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        IntermediateOperations.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show limit or skip", output.contains("limit") || output.contains("skip") || output.contains("First") || output.contains("Skip"));
     }
 }
 
-// Test10: Verify skip() skips first N elements
+// Test10: should have section headers
 class Test10 {
     @Test
     public void test() {
-        List<Integer> numbers = Arrays.asList(1, 2, 3, 4, 5);
-        List<Integer> skipped = numbers.stream()
-            .skip(2)
-            .collect(Collectors.toList());
-        assertEquals(3, skipped.size());
-        assertEquals(Integer.valueOf(3), skipped.get(0));
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        IntermediateOperations.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        boolean hasHeaders = output.contains("===") ||
+                             output.contains("filter") || output.contains("map") || output.contains("operatsiya");
+        assertTrue("Should have section headers", hasHeaders);
     }
 }
 `,

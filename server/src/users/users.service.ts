@@ -6,8 +6,9 @@ import { CreateUserData, UserPreferences } from '../common/types';
 export interface UserStats {
   totalSolved: number;
   totalSubmissions: number;
-  hoursSpent: string;
+  totalMinutes: number;  // Total minutes spent (frontend formats)
   globalRank: number;
+  topPercent: number;    // Percentile (e.g., 5 = top 5%)
   skillPoints: number;
   currentStreak: number;
   maxStreak: number;
@@ -124,6 +125,12 @@ export class UsersService {
    * Get user statistics for Dashboard
    */
   async getUserStats(userId: string): Promise<UserStats> {
+    // Get user record for XP and streak values (source of truth, updated by gamification service)
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { xp: true, currentStreak: true, maxStreak: true },
+    });
+
     // Get all user submissions
     const submissions = await this.prisma.submission.findMany({
       where: { userId },
@@ -139,16 +146,15 @@ export class UsersService {
     });
     const totalSolved = passedTaskIds.size;
 
-    // Calculate hours spent (estimate: ~10 min per submission)
+    // Calculate time spent (estimate: ~10 min per submission)
     const totalMinutes = submissions.length * 10;
-    const hours = Math.floor(totalMinutes / 60);
-    const hoursSpent = hours > 0 ? `${hours}h` : `${totalMinutes}m`;
 
-    // Calculate skill points (100 per solved task)
-    const skillPoints = totalSolved * 100;
+    // Use actual XP from User table (consistent with gamification service)
+    const skillPoints = user?.xp || 0;
 
-    // Calculate streak
-    const { currentStreak, maxStreak } = this.calculateStreak(submissions);
+    // Use streak values from User table (consistent with gamification service)
+    const currentStreak = user?.currentStreak || 0;
+    const maxStreak = user?.maxStreak || 0;
 
     // Calculate this week's solved count
     const weekStart = new Date();
@@ -162,25 +168,22 @@ export class UsersService {
       }
     });
 
-    // Calculate global rank (simple: based on total solved tasks)
-    const allUsersStats = await this.prisma.submission.groupBy({
-      by: ['userId'],
-      where: { status: 'passed' },
-      _count: { taskId: true },
-    });
+    // Calculate global rank and percentile (based on XP - consistent with leaderboard)
+    const [higherRanked, totalUsers] = await Promise.all([
+      this.prisma.user.count({ where: { xp: { gt: user?.xp || 0 } } }),
+      this.prisma.user.count(),
+    ]);
 
-    const sortedUsers = allUsersStats
-      .map(u => ({ userId: u.userId, count: u._count.taskId }))
-      .sort((a, b) => b.count - a.count);
-
-    const userRankIndex = sortedUsers.findIndex(u => u.userId === userId);
-    const globalRank = userRankIndex >= 0 ? userRankIndex + 1 : sortedUsers.length + 1;
+    const globalRank = higherRanked + 1;
+    // Calculate top percent (e.g., rank 5 out of 100 users = top 5%)
+    const topPercent = totalUsers > 0 ? Math.ceil((globalRank / totalUsers) * 100) : 100;
 
     return {
       totalSolved,
       totalSubmissions: submissions.length,
-      hoursSpent,
+      totalMinutes,
       globalRank,
+      topPercent,
       skillPoints,
       currentStreak,
       maxStreak,

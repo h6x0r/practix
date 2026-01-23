@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { userCoursesService, UserCourse } from '@/features/courses/api/userCoursesService';
 import { getCourseTheme } from '@/utils/themeUtils';
 import { IconPlay, IconBook } from '@/components/Icons';
-import { useUITranslation } from '@/contexts/LanguageContext';
+import { useUITranslation, useLanguage } from '@/contexts/LanguageContext';
 import { AuthContext } from '@/components/Layout';
 import { AuthRequiredOverlay } from '@/components/AuthRequiredOverlay';
 
@@ -17,6 +17,7 @@ const MOCK_COURSES = [
 
 const MyTasksPage = () => {
   const { tUI } = useUITranslation();
+  const { t } = useLanguage();
   const { user } = useContext(AuthContext);
   const [myCourses, setMyCourses] = useState<UserCourse[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,7 +49,7 @@ const MyTasksPage = () => {
         title={tUI('myTasks.loginRequired')}
         description={tUI('myTasks.loginRequiredDesc')}
       >
-        <MyTasksContent courses={MOCK_COURSES as any} tUI={tUI} />
+        <MyTasksContent courses={MOCK_COURSES as any} tUI={tUI} t={t} />
       </AuthRequiredOverlay>
     );
   }
@@ -77,11 +78,11 @@ const MyTasksPage = () => {
     );
   }
 
-  return <MyTasksContent courses={myCourses} tUI={tUI} />;
+  return <MyTasksContent courses={myCourses} tUI={tUI} t={t} />;
 };
 
 // Extracted content component for reuse in preview
-const MyTasksContent = ({ courses, tUI }: { courses: any[]; tUI: (key: string) => string }) => {
+const MyTasksContent = ({ courses, tUI, t }: { courses: any[]; tUI: (key: string) => string; t: <T>(entity: T) => T }) => {
   return (
     <div className="max-w-7xl mx-auto space-y-8">
       <div>
@@ -92,6 +93,8 @@ const MyTasksContent = ({ courses, tUI }: { courses: any[]; tUI: (key: string) =
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {courses.map(course => {
           const theme = getCourseTheme(course.slug);
+          // Apply translations to course
+          const translatedCourse = t(course);
           return (
             <div key={course.id} className="group relative bg-white dark:bg-dark-surface rounded-3xl border border-gray-100 dark:border-dark-border overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300">
               {/* Gradient accent bar */}
@@ -105,8 +108,8 @@ const MyTasksContent = ({ courses, tUI }: { courses: any[]; tUI: (key: string) =
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">{course.title}</h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-1">{course.description}</p>
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">{translatedCourse.title}</h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-1">{translatedCourse.description}</p>
                   </div>
                 </div>
 

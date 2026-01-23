@@ -141,103 +141,152 @@ if (optional.isPresent()) {
 - Self-documenting code - Optional signals possible absence
 - Fundamental pattern in Stream API and modern Java libraries`,
     order: 1,
-    testCode: `import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.*;
-import java.util.Optional;
+    testCode: `import static org.junit.Assert.*;
+import org.junit.Test;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 
-// Test 1: Optional.of creates Optional with value
+// Test1: main method should show Optional basics header
 class Test1 {
     @Test
-    void testOptionalOfCreatesWithValue() {
-        Optional<String> opt = Optional.of("Java");
-        assertTrue(opt.isPresent());
-        assertEquals("Java", opt.get());
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        OptionalBasics.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show Optional basics header",
+            output.contains("Optional") || output.contains("Creating") ||
+            output.contains("Создание") || output.contains("Yaratish"));
     }
 }
 
-// Test 2: Optional.ofNullable with value works
+// Test2: should show Optional.of() creation
 class Test2 {
     @Test
-    void testOptionalOfNullableWithValue() {
-        Optional<String> opt = Optional.ofNullable("Python");
-        assertTrue(opt.isPresent());
-        assertEquals("Python", opt.get());
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        OptionalBasics.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show Optional.of()", output.contains("Optional.of()") || output.contains("Optional[Java]"));
     }
 }
 
-// Test 3: Optional.ofNullable with null creates empty
+// Test3: should show Optional.ofNullable() with value
 class Test3 {
     @Test
-    void testOptionalOfNullableWithNull() {
-        Optional<String> opt = Optional.ofNullable(null);
-        assertTrue(opt.isEmpty());
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        OptionalBasics.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show Optional.ofNullable() with value", output.contains("ofNullable") && output.contains("Python"));
     }
 }
 
-// Test 4: Optional.empty creates empty Optional
+// Test4: should show Optional.ofNullable() with null (empty)
 class Test4 {
     @Test
-    void testOptionalEmptyCreatesEmpty() {
-        Optional<String> opt = Optional.empty();
-        assertTrue(opt.isEmpty());
-        assertFalse(opt.isPresent());
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        OptionalBasics.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show empty Optional", output.contains("Optional.empty") || output.contains("empty"));
     }
 }
 
-// Test 5: Optional.of(null) throws NullPointerException
+// Test5: should show Optional.empty() creation
 class Test5 {
     @Test
-    void testOptionalOfNullThrows() {
-        assertThrows(NullPointerException.class, () -> {
-            Optional.of(null);
-        });
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        OptionalBasics.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show Optional.empty()", output.contains("Optional.empty()"));
     }
 }
 
-// Test 6: isPresent returns true for value
+// Test6: should check isPresent for value
 class Test6 {
     @Test
-    void testIsPresentReturnsTrue() {
-        Optional<String> opt = Optional.of("Test");
-        assertTrue(opt.isPresent());
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        OptionalBasics.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show isPresent result", output.contains("Has value: true") || (output.contains("value") && output.contains("true")));
     }
 }
 
-// Test 7: isPresent returns false for empty
+// Test7: should show empty Optional has no value
 class Test7 {
     @Test
-    void testIsPresentReturnsFalse() {
-        Optional<String> opt = Optional.empty();
-        assertFalse(opt.isPresent());
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        OptionalBasics.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show empty has no value", output.contains("Has value: false") || output.contains("false"));
     }
 }
 
-// Test 8: Same value Optionals are equal
+// Test8: should compare Optionals with same value
 class Test8 {
     @Test
-    void testSameValueOptionalEquals() {
-        Optional<String> opt1 = Optional.of("Test");
-        Optional<String> opt2 = Optional.of("Test");
-        assertEquals(opt1, opt2);
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        OptionalBasics.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show equal Optionals", output.contains("equal: true") || output.contains("equal"));
     }
 }
 
-// Test 9: Empty Optionals are equal
+// Test9: should compare empty Optionals
 class Test9 {
     @Test
-    void testEmptyOptionalEquals() {
-        Optional<String> opt1 = Optional.empty();
-        Optional<String> opt2 = Optional.empty();
-        assertEquals(opt1, opt2);
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        OptionalBasics.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should compare empty Optionals", output.contains("Empty optionals") || output.contains("empty"));
     }
 }
 
-// Test 10: get() returns value when present
+// Test10: should have section headers
 class Test10 {
     @Test
-    void testGetReturnsValue() {
-        Optional<Integer> opt = Optional.of(42);
-        assertEquals(42, opt.get());
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        OptionalBasics.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        boolean hasHeaders = output.contains("===") ||
+                             output.contains("Creating") || output.contains("Создание") || output.contains("yaratish");
+        assertTrue("Should have section headers", hasHeaders);
     }
 }`,
     translations: {

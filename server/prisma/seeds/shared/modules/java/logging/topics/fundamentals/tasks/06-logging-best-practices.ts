@@ -354,109 +354,122 @@ class Test2 {
     }
 }
 
-// Test3: Verify LoggingBestPractices main execution
+// Test3: main runs without exceptions
 class Test3 {
     @Test
     public void test() {
+        boolean completed = false;
         try {
             LoggingBestPractices.main(new String[]{});
-            assertTrue("Main method should execute successfully", true);
+            completed = true;
         } catch (Exception e) {
-            fail("Main method should not throw exceptions: " + e.getMessage());
+            fail("Main should not throw: " + e.getMessage());
         }
+        assertTrue("Main should complete without exceptions", completed);
     }
 }
 
-// Test4: Verify good logging practices demonstration
+// Test4: static final logger exists
 class Test4 {
     @Test
     public void test() {
         try {
-            LoggingBestPractices.main(new String[]{});
-            assertTrue("Good logging practices should work", true);
-        } catch (Exception e) {
-            fail("Good logging practices should work");
+            java.lang.reflect.Field loggerField = LoggingBestPractices.class.getDeclaredField("logger");
+            assertTrue("Logger should be static",
+                java.lang.reflect.Modifier.isStatic(loggerField.getModifiers()));
+            assertTrue("Logger should be final",
+                java.lang.reflect.Modifier.isFinal(loggerField.getModifiers()));
+        } catch (NoSuchFieldException e) {
+            fail("Should have a 'logger' field");
         }
     }
 }
 
-// Test5: Verify bad logging practices are avoided
+// Test5: logger is private
 class Test5 {
     @Test
     public void test() {
         try {
-            LoggingBestPractices.main(new String[]{});
-            assertTrue("Bad logging practices should be demonstrated", true);
-        } catch (Exception e) {
-            fail("Bad logging practices demonstration should work");
+            java.lang.reflect.Field loggerField = LoggingBestPractices.class.getDeclaredField("logger");
+            assertTrue("Logger should be private",
+                java.lang.reflect.Modifier.isPrivate(loggerField.getModifiers()));
+        } catch (NoSuchFieldException e) {
+            fail("Should have a 'logger' field");
         }
     }
 }
 
-// Test6: Verify structured logging works
+// Test6: User email is masked in toLogString
 class Test6 {
     @Test
     public void test() {
-        try {
-            LoggingBestPractices.main(new String[]{});
-            assertTrue("Structured logging should work", true);
-        } catch (Exception e) {
-            fail("Structured logging should work");
-        }
+        User user = new User("alice", "password123", "alice.smith@example.com");
+        String logString = user.toLogString();
+        assertFalse("toLogString should mask email",
+            logString.contains("alice.smith@example.com"));
+        assertTrue("toLogString should contain masked email pattern",
+            logString.contains("a***@") || logString.contains("***"));
     }
 }
 
-// Test7: Verify exception logging with context
+// Test7: produces some output
 class Test7 {
     @Test
     public void test() {
-        try {
-            LoggingBestPractices.main(new String[]{});
-            assertTrue("Exception logging with context should work", true);
-        } catch (Exception e) {
-            fail("Exception logging should work");
-        }
+        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+        java.io.ByteArrayOutputStream err = new java.io.ByteArrayOutputStream();
+        java.io.PrintStream oldOut = System.out;
+        java.io.PrintStream oldErr = System.err;
+        System.setOut(new java.io.PrintStream(out));
+        System.setErr(new java.io.PrintStream(err));
+        LoggingBestPractices.main(new String[]{});
+        System.setOut(oldOut);
+        System.setErr(oldErr);
+        String allOutput = out.toString() + err.toString();
+        assertTrue("Should produce some output", allOutput.length() > 0);
     }
 }
 
-// Test8: Verify performance logging
+// Test8: multiple calls work
 class Test8 {
     @Test
     public void test() {
+        int callCount = 0;
         try {
             LoggingBestPractices.main(new String[]{});
-            assertTrue("Performance logging should work", true);
+            callCount++;
+            LoggingBestPractices.main(new String[]{});
+            callCount++;
         } catch (Exception e) {
-            fail("Performance logging should work");
+            fail("Multiple calls should not throw: " + e.getMessage());
         }
+        assertEquals("Both calls should complete", 2, callCount);
     }
 }
 
-// Test9: Verify actionable logs generation
+// Test9: no NullPointerException
 class Test9 {
     @Test
     public void test() {
+        boolean completed = false;
         try {
             LoggingBestPractices.main(new String[]{});
-            assertTrue("Actionable logs should be generated", true);
-        } catch (Exception e) {
-            fail("Actionable logs generation should work");
+            completed = true;
+        } catch (NullPointerException e) {
+            fail("Should not have null pointer exceptions");
         }
+        assertTrue("Should complete without NullPointerException", completed);
     }
 }
 
-// Test10: Verify all best practices are demonstrated
+// Test10: User class has all required getters
 class Test10 {
     @Test
     public void test() {
-        try {
-            LoggingBestPractices.main(new String[]{});
-            User user = new User("finaltest", "pass", "final@test.com");
-            assertNotNull("User should be created", user);
-            assertTrue("All best practices should be demonstrated", true);
-        } catch (Exception e) {
-            fail("All best practices demonstration should work: " + e.getMessage());
-        }
+        User user = new User("testuser", "testpass", "test@example.com");
+        assertEquals("Username getter should work", "testuser", user.getUsername());
+        assertEquals("Password getter should work", "testpass", user.getPassword());
+        assertEquals("Email getter should work", "test@example.com", user.getEmail());
     }
 }
 `,

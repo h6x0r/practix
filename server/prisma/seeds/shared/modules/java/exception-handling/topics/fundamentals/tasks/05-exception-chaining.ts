@@ -166,13 +166,15 @@ public class UserRepository {
             // Access the cause (original exception)
             Throwable cause = e.getCause();
             if (cause != null) {
-                System.out.println("\nOriginal cause:");
+                System.out.println("");
+                System.out.println("Original cause:");
                 System.out.println("  Type: " + cause.getClass().getSimpleName());
                 System.out.println("  Message: " + cause.getMessage());
             }
 
             // Print full stack trace showing chain
-            System.out.println("\nFull stack trace:");
+            System.out.println("");
+            System.out.println("Full stack trace:");
             e.printStackTrace();
         }
     }
@@ -194,10 +196,12 @@ public class UserRepository {
             System.out.println("Root cause: " + e.getCause().getMessage());
         }
 
-        System.out.println("\n=== Example 2: Detailed Exception Chain ===");
+        System.out.println("");
+        System.out.println("=== Example 2: Detailed Exception Chain ===");
         repo.demonstrateExceptionChaining();
 
-        System.out.println("\n=== Example 3: Multiple Operations ===");
+        System.out.println("");
+        System.out.println("=== Example 3: Multiple Operations ===");
         try {
             // Both operations will fail
             User user1 = repo.findUserById(1);
@@ -321,30 +325,38 @@ class Test5 {
     }
 }
 
-// Test6: Verify exception chaining demonstration
+// Test6: demonstration shows exception chain details
 class Test6 {
     @Test
     public void test() {
+        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+        java.io.PrintStream oldOut = System.out;
+        System.setOut(new java.io.PrintStream(out));
         UserRepository repo = new UserRepository();
-        try {
-            repo.demonstrateExceptionChaining();
-            assertTrue("Demonstration should complete", true);
-        } catch (Exception e) {
-            fail("Demonstration should not throw: " + e.getMessage());
-        }
+        repo.demonstrateExceptionChaining();
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show exception chaining",
+            output.contains("Top-level exception") || output.contains("cause") ||
+            output.contains("Original cause") || output.contains("SQLException") ||
+            output.contains("Верхнеуровневое") || output.contains("причина"));
     }
 }
 
-// Test7: Verify main method execution
+// Test7: main shows multiple examples
 class Test7 {
     @Test
     public void test() {
-        try {
-            UserRepository.main(new String[]{});
-            assertTrue("Main method should execute", true);
-        } catch (Exception e) {
-            fail("Main should not throw: " + e.getMessage());
-        }
+        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+        java.io.PrintStream oldOut = System.out;
+        System.setOut(new java.io.PrintStream(out));
+        UserRepository.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show example headers",
+            output.contains("Example 1") || output.contains("Example 2") ||
+            output.contains("Error:") || output.contains("Operation failed") ||
+            output.contains("Пример") || output.contains("Misol"));
     }
 }
 
@@ -501,13 +513,15 @@ public class UserRepository {
             // Доступ к причине (оригинальное исключение)
             Throwable cause = e.getCause();
             if (cause != null) {
-                System.out.println("\nОригинальная причина:");
+                System.out.println("");
+                System.out.println("Оригинальная причина:");
                 System.out.println("  Тип: " + cause.getClass().getSimpleName());
                 System.out.println("  Сообщение: " + cause.getMessage());
             }
 
             // Вывод полного стека вызовов, показывающего цепочку
-            System.out.println("\nПолный стек вызовов:");
+            System.out.println("");
+            System.out.println("Полный стек вызовов:");
             e.printStackTrace();
         }
     }
@@ -529,10 +543,12 @@ public class UserRepository {
             System.out.println("Корневая причина: " + e.getCause().getMessage());
         }
 
-        System.out.println("\n=== Пример 2: Детальная Цепочка Исключений ===");
+        System.out.println("");
+        System.out.println("=== Пример 2: Детальная Цепочка Исключений ===");
         repo.demonstrateExceptionChaining();
 
-        System.out.println("\n=== Пример 3: Множественные Операции ===");
+        System.out.println("");
+        System.out.println("=== Пример 3: Множественные Операции ===");
         try {
             // Обе операции не удастся
             User user1 = repo.findUserById(1);
@@ -694,13 +710,15 @@ public class UserRepository {
             // Sababga kirish (asl istisno)
             Throwable cause = e.getCause();
             if (cause != null) {
-                System.out.println("\nAsl sabab:");
+                System.out.println("");
+                System.out.println("Asl sabab:");
                 System.out.println("  Turi: " + cause.getClass().getSimpleName());
                 System.out.println("  Xabar: " + cause.getMessage());
             }
 
             // Zanjirni ko'rsatuvchi to'liq stek izini chop etish
-            System.out.println("\nTo'liq stek izi:");
+            System.out.println("");
+            System.out.println("To'liq stek izi:");
             e.printStackTrace();
         }
     }
@@ -722,10 +740,12 @@ public class UserRepository {
             System.out.println("Ildiz sababi: " + e.getCause().getMessage());
         }
 
-        System.out.println("\n=== Misol 2: Batafsil Istisnolar Zanjiri ===");
+        System.out.println("");
+        System.out.println("=== Misol 2: Batafsil Istisnolar Zanjiri ===");
         repo.demonstrateExceptionChaining();
 
-        System.out.println("\n=== Misol 3: Ko'p Operatsiyalar ===");
+        System.out.println("");
+        System.out.println("=== Misol 3: Ko'p Operatsiyalar ===");
         try {
             // Ikkala operatsiya ham muvaffaqiyatsiz bo'ladi
             User user1 = repo.findUserById(1);

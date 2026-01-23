@@ -1,7 +1,7 @@
 
 import { Controller, Get, Post, Delete, Body, UseGuards, Request } from '@nestjs/common';
 import { RoadmapsService } from './roadmaps.service';
-import { GenerateRoadmapDto, GenerateRoadmapVariantsDto, SelectRoadmapVariantDto } from './dto/roadmaps.dto';
+import { GenerateRoadmapVariantsDto, SelectRoadmapVariantDto } from './dto/roadmaps.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @Controller('roadmaps')
@@ -35,17 +35,6 @@ export class RoadmapsController {
   @Get('me')
   async getMyRoadmap(@Request() req) {
     return this.roadmapsService.getUserRoadmap(req.user.userId);
-  }
-
-  /**
-   * Generate a new personalized roadmap
-   * Creates or replaces the user's existing roadmap
-   * First generation is FREE, regeneration requires Premium
-   */
-  @UseGuards(JwtAuthGuard)
-  @Post('generate')
-  async generateRoadmap(@Request() req, @Body() dto: GenerateRoadmapDto) {
-    return this.roadmapsService.generateRoadmap(req.user.userId, dto);
   }
 
   /**

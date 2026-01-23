@@ -89,18 +89,11 @@ try {
     order: 1,
     testCode: `import static org.junit.Assert.*;
 import org.junit.Test;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 
-// Test1: Verify SafeDivision class instantiation
+// Test1: successful division returns correct result
 class Test1 {
-    @Test
-    public void test() {
-        SafeDivision sd = new SafeDivision();
-        assertNotNull("SafeDivision instance should be created", sd);
-    }
-}
-
-// Test2: Verify successful division
-class Test2 {
     @Test
     public void test() {
         SafeDivision sd = new SafeDivision();
@@ -109,8 +102,8 @@ class Test2 {
     }
 }
 
-// Test3: Verify division by zero is handled
-class Test3 {
+// Test2: division by zero returns 0
+class Test2 {
     @Test
     public void test() {
         SafeDivision sd = new SafeDivision();
@@ -119,82 +112,123 @@ class Test3 {
     }
 }
 
-// Test4: Verify another successful division
+// Test3: successful division prints success message
+class Test3 {
+    @Test
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        SafeDivision sd = new SafeDivision();
+        sd.divide(10, 2);
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should print success message",
+            output.contains("successful") || output.contains("5") ||
+            output.contains("успешно") || output.contains("muvaffaqiyatli"));
+    }
+}
+
+// Test4: division by zero prints error message
 class Test4 {
     @Test
     public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
         SafeDivision sd = new SafeDivision();
-        int result = sd.divide(15, 3);
-        assertEquals("15 / 3 should equal 5", 5, result);
+        sd.divide(10, 0);
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should print error message for division by zero",
+            output.contains("Error") || output.contains("zero") ||
+            output.contains("Ошибка") || output.contains("ноль") ||
+            output.contains("Xato") || output.contains("nol"));
     }
 }
 
-// Test5: Verify negative number division
+// Test5: finally block always executes (prints completed message)
 class Test5 {
     @Test
     public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
         SafeDivision sd = new SafeDivision();
-        int result = sd.divide(-10, 2);
-        assertEquals("-10 / 2 should equal -5", -5, result);
+        sd.divide(10, 2);
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Finally should print completed message",
+            output.contains("completed") || output.contains("завершен") || output.contains("yakunlandi"));
     }
 }
 
-// Test6: Verify main method executes without errors
+// Test6: finally executes even on exception
 class Test6 {
     @Test
     public void test() {
-        try {
-            SafeDivision.main(new String[]{});
-            assertTrue("Main method should execute successfully", true);
-        } catch (Exception e) {
-            fail("Main method should not throw exceptions: " + e.getMessage());
-        }
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        SafeDivision sd = new SafeDivision();
+        sd.divide(10, 0);
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Finally should execute even on error",
+            output.contains("completed") || output.contains("завершен") || output.contains("yakunlandi"));
     }
 }
 
-// Test7: Verify division with one
+// Test7: negative number division works
 class Test7 {
     @Test
     public void test() {
         SafeDivision sd = new SafeDivision();
-        int result = sd.divide(100, 1);
-        assertEquals("100 / 1 should equal 100", 100, result);
+        assertEquals("-10 / 2 should equal -5", -5, sd.divide(-10, 2));
+        assertEquals("10 / -2 should equal -5", -5, sd.divide(10, -2));
     }
 }
 
-// Test8: Verify large number division
+// Test8: main method produces expected output
 class Test8 {
     @Test
     public void test() {
-        SafeDivision sd = new SafeDivision();
-        int result = sd.divide(1000, 10);
-        assertEquals("1000 / 10 should equal 100", 100, result);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        SafeDivision.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Main should print 10 / 2 result",
+            output.contains("10 / 2") || output.contains("5"));
     }
 }
 
-// Test9: Verify multiple divisions work correctly
+// Test9: main handles division by zero gracefully
 class Test9 {
     @Test
     public void test() {
-        SafeDivision sd = new SafeDivision();
-        assertEquals("First division", 4, sd.divide(20, 5));
-        assertEquals("Second division", 7, sd.divide(21, 3));
-        assertEquals("Third division", 0, sd.divide(10, 0));
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        SafeDivision.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Main should show error handling for 10 / 0",
+            output.contains("10 / 0") || output.contains("Error") ||
+            output.contains("Ошибка") || output.contains("Xato"));
     }
 }
 
-// Test10: Verify exception handling doesn't crash
+// Test10: multiple divisions work correctly
 class Test10 {
     @Test
     public void test() {
         SafeDivision sd = new SafeDivision();
-        try {
-            sd.divide(5, 0);
-            sd.divide(10, 2);
-            assertTrue("Exception handling should work smoothly", true);
-        } catch (Exception e) {
-            fail("No exceptions should propagate: " + e.getMessage());
-        }
+        assertEquals("20 / 5 = 4", 4, sd.divide(20, 5));
+        assertEquals("21 / 3 = 7", 7, sd.divide(21, 3));
+        assertEquals("100 / 1 = 100", 100, sd.divide(100, 1));
+        assertEquals("0 / 5 = 0", 0, sd.divide(0, 5));
     }
 }
 `,

@@ -131,13 +131,14 @@ describe('GamificationService', () => {
     });
 
     it('should handle XP at and beyond max threshold', () => {
-      // The for loop in calculateLevel iterates from the highest threshold down
-      // Any XP >= 60000 returns level 20 (since 60000 is LEVEL_THRESHOLDS[19] and i+1=20)
-      // Lines 59-60 are for negative XP (unreachable in practice)
+      // Beyond level 20: each additional level requires 10,000 XP
+      // Level 20 = 60000 XP threshold
+      // Level 21 = 60000 + 10000 = 70000 XP
+      // Level 24 = 60000 + 40000 = 100000 XP
       expect(service.calculateLevel(60000)).toBe(20); // Exactly at threshold
       expect(service.calculateLevel(69999)).toBe(20); // Still level 20
-      expect(service.calculateLevel(70000)).toBe(20); // Still level 20
-      expect(service.calculateLevel(100000)).toBe(20); // Still level 20 (max defined level)
+      expect(service.calculateLevel(70000)).toBe(21); // 60000 + 10000 = level 21
+      expect(service.calculateLevel(100000)).toBe(24); // 60000 + 40000 = level 24
     });
 
     it('should handle edge case of very low XP', () => {
@@ -174,12 +175,12 @@ describe('GamificationService', () => {
   // awardTaskXp()
   // ============================================
   describe('awardTaskXp()', () => {
-    const setupTransactionMock = (userState = mockUser) => {
+    const setupTransactionMock = (userState = mockUser, xpToAdd = 25) => {
       mockPrismaService.$transaction.mockImplementation(async (fn) => {
         const tx = {
           user: {
             findUnique: jest.fn().mockResolvedValue(userState),
-            update: jest.fn().mockResolvedValue({ xp: (userState.xp || 0) + 10 }),
+            update: jest.fn().mockResolvedValue({ xp: (userState.xp || 0) + xpToAdd }),
           },
         };
         return fn(tx);
@@ -193,26 +194,22 @@ describe('GamificationService', () => {
       mockPrismaService.submission.count.mockResolvedValue(1);
     });
 
-    it('should award 10 XP for easy difficulty', async () => {
+    it('should award 25 XP for easy difficulty', async () => {
       const result = await service.awardTaskXp('user-123', 'easy');
-
-      expect(result.xpEarned).toBe(10);
-    });
-
-    it('should award 25 XP for medium difficulty', async () => {
-      const result = await service.awardTaskXp('user-123', 'medium');
 
       expect(result.xpEarned).toBe(25);
     });
 
-    it('should award 50 XP for hard difficulty', async () => {
-      const result = await service.awardTaskXp('user-123', 'hard');
+    it('should award 50 XP for medium difficulty', async () => {
+      setupTransactionMock(mockUser, 50);
+      const result = await service.awardTaskXp('user-123', 'medium');
 
       expect(result.xpEarned).toBe(50);
     });
 
-    it('should award 100 XP for expert difficulty', async () => {
-      const result = await service.awardTaskXp('user-123', 'expert');
+    it('should award 100 XP for hard difficulty', async () => {
+      setupTransactionMock(mockUser, 100);
+      const result = await service.awardTaskXp('user-123', 'hard');
 
       expect(result.xpEarned).toBe(100);
     });
@@ -220,7 +217,7 @@ describe('GamificationService', () => {
     it('should default to easy XP for unknown difficulty', async () => {
       const result = await service.awardTaskXp('user-123', 'unknown');
 
-      expect(result.xpEarned).toBe(10);
+      expect(result.xpEarned).toBe(25);
     });
 
     it('should update user total XP', async () => {
@@ -242,22 +239,22 @@ describe('GamificationService', () => {
         expect.objectContaining({
           where: { id: 'user-123' },
           data: expect.objectContaining({
-            xp: { increment: 10 },
+            xp: { increment: 25 },
           }),
         })
       );
     });
 
     it('should calculate new level correctly', async () => {
-      setupTransactionMock({ ...mockUser, xp: 95 });
+      setupTransactionMock({ ...mockUser, xp: 80 });
 
       const result = await service.awardTaskXp('user-123', 'easy');
 
-      expect(result.level).toBe(2); // 95 + 10 = 105 XP = Level 2
+      expect(result.level).toBe(2); // 80 + 25 = 105 XP = Level 2
     });
 
     it('should detect level up', async () => {
-      setupTransactionMock({ ...mockUser, xp: 95 });
+      setupTransactionMock({ ...mockUser, xp: 80 });
 
       const result = await service.awardTaskXp('user-123', 'easy');
 

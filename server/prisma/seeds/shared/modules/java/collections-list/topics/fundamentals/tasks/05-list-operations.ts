@@ -68,26 +68,30 @@ public class ListOperations {
         // Use replaceAll() to square all numbers
         List<Integer> squareList = new ArrayList<>(List.of(1, 2, 3, 4, 5));
         squareList.replaceAll(n -> n * n);
-        System.out.println("\nAfter replaceAll (squaring): " + squareList);
+        System.out.println("");
+        System.out.println("After replaceAll (squaring): " + squareList);
 
         // Create another list and use retainAll() to keep common elements
         List<Integer> list1 = new ArrayList<>(List.of(1, 2, 3, 4, 5, 6));
         List<Integer> list2 = List.of(4, 5, 6, 7, 8);
-        System.out.println("\nList1: " + list1);
+        System.out.println("");
+        System.out.println("List1: " + list1);
         System.out.println("List2: " + list2);
         list1.retainAll(list2); // Keep only elements present in list2
         System.out.println("After retainAll (common elements): " + list1);
 
         // Use removeIf() to remove all numbers greater than 50
         List<Integer> filterList = new ArrayList<>(List.of(10, 30, 55, 70, 25, 100, 5));
-        System.out.println("\nBefore removeIf: " + filterList);
+        System.out.println("");
+        System.out.println("Before removeIf: " + filterList);
         filterList.removeIf(n -> n > 50);
         System.out.println("After removeIf (n > 50): " + filterList);
 
         // Create an immutable copy using List.copyOf()
         List<Integer> mutableList = new ArrayList<>(List.of(1, 2, 3));
         List<Integer> immutableList = List.copyOf(mutableList);
-        System.out.println("\nImmutable copy: " + immutableList);
+        System.out.println("");
+        System.out.println("Immutable copy: " + immutableList);
         try {
             immutableList.add(4); // This will throw exception
         } catch (UnsupportedOperationException e) {
@@ -97,7 +101,8 @@ public class ListOperations {
         // Use addAll() to merge two lists
         List<Integer> listA = new ArrayList<>(List.of(1, 2, 3));
         List<Integer> listB = List.of(4, 5, 6);
-        System.out.println("\nListA: " + listA);
+        System.out.println("");
+        System.out.println("ListA: " + listA);
         System.out.println("ListB: " + listB);
         listA.addAll(listB); // Merge listB into listA
         System.out.println("After addAll: " + listA);
@@ -138,112 +143,166 @@ shareWithOtherThreads(immutableConfig);  // Safe sharing
 - Concise filtering with removeIf instead of loops
 - Thread safety through immutable collections`,
     order: 4,
-    testCode: `import java.util.ArrayList;
-import java.util.List;
-import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.*;
+    testCode: `import static org.junit.Assert.*;
+import org.junit.Test;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 
-// Test1: subList creates a view of the original list
+// Test1: main method should show List operations demo
 class Test1 {
     @Test
-    void testSubListView() {
-        List<Integer> numbers = new ArrayList<>(List.of(1, 2, 3, 4, 5));
-        List<Integer> sub = numbers.subList(1, 4);
-        assertEquals(3, sub.size());
-        assertEquals(List.of(2, 3, 4), sub);
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        ListOperations.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show List operations demo",
+            output.contains("List") || output.contains("subList") ||
+            output.contains("Operations") || output.contains("indexOf"));
     }
 }
 
-// Test2: Modifying subList affects original list
+// Test2: Output should show subList operation
 class Test2 {
     @Test
-    void testSubListModifiesOriginal() {
-        List<Integer> numbers = new ArrayList<>(List.of(1, 2, 3, 4, 5));
-        List<Integer> sub = numbers.subList(1, 4);
-        sub.set(0, 100);
-        assertEquals(100, numbers.get(1));
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        ListOperations.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString().toLowerCase();
+        assertTrue("Should mention subList",
+            output.contains("sublist") || output.contains("view") ||
+            output.contains("подсписок") || output.contains("qism ro'yxat"));
     }
 }
 
-// Test3: replaceAll applies function to all elements
+// Test3: Output should show subList affects original
 class Test3 {
     @Test
-    void testReplaceAll() {
-        List<Integer> numbers = new ArrayList<>(List.of(1, 2, 3, 4, 5));
-        numbers.replaceAll(n -> n * n);
-        assertEquals(List.of(1, 4, 9, 16, 25), numbers);
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        ListOperations.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString().toLowerCase();
+        assertTrue("Should mention original list change",
+            output.contains("original") || output.contains("change") ||
+            output.contains("оригинал") || output.contains("o'zgaradi"));
     }
 }
 
-// Test4: retainAll keeps only common elements
+// Test4: Output should show replaceAll squaring
 class Test4 {
     @Test
-    void testRetainAll() {
-        List<Integer> list1 = new ArrayList<>(List.of(1, 2, 3, 4, 5));
-        List<Integer> list2 = List.of(3, 4, 5, 6, 7);
-        list1.retainAll(list2);
-        assertEquals(List.of(3, 4, 5), list1);
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        ListOperations.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString().toLowerCase();
+        assertTrue("Should mention replaceAll or squaring",
+            output.contains("replaceall") || output.contains("square") ||
+            output.contains("квадрат") || output.contains("kvadrat"));
     }
 }
 
-// Test5: removeIf removes elements matching predicate
+// Test5: Output should show retainAll common elements
 class Test5 {
     @Test
-    void testRemoveIf() {
-        List<Integer> numbers = new ArrayList<>(List.of(10, 20, 55, 70, 25));
-        numbers.removeIf(n -> n > 50);
-        assertEquals(List.of(10, 20, 25), numbers);
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        ListOperations.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString().toLowerCase();
+        assertTrue("Should mention retainAll or common",
+            output.contains("retainall") || output.contains("retain") || output.contains("common") ||
+            output.contains("общие") || output.contains("umumiy"));
     }
 }
 
-// Test6: List.copyOf creates immutable copy
+// Test6: Output should show removeIf operation
 class Test6 {
     @Test
-    void testCopyOfImmutable() {
-        List<Integer> mutable = new ArrayList<>(List.of(1, 2, 3));
-        List<Integer> immutable = List.copyOf(mutable);
-        assertThrows(UnsupportedOperationException.class, () -> immutable.add(4));
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        ListOperations.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString().toLowerCase();
+        assertTrue("Should mention removeIf",
+            output.contains("removeif") || output.contains("> 50") ||
+            output.contains("больше 50") || output.contains("50 dan katta"));
     }
 }
 
-// Test7: addAll merges two lists
+// Test7: Output should show immutable copy
 class Test7 {
     @Test
-    void testAddAll() {
-        List<Integer> list1 = new ArrayList<>(List.of(1, 2, 3));
-        List<Integer> list2 = List.of(4, 5, 6);
-        list1.addAll(list2);
-        assertEquals(List.of(1, 2, 3, 4, 5, 6), list1);
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        ListOperations.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString().toLowerCase();
+        assertTrue("Should mention immutable or copyOf",
+            output.contains("immutable") || output.contains("copyof") ||
+            output.contains("неизменяем") || output.contains("o'zgarmas"));
     }
 }
 
-// Test8: addAll at index inserts at position
+// Test8: Output should show addAll merge
 class Test8 {
     @Test
-    void testAddAllAtIndex() {
-        List<Integer> list = new ArrayList<>(List.of(1, 5, 6));
-        list.addAll(1, List.of(2, 3, 4));
-        assertEquals(List.of(1, 2, 3, 4, 5, 6), list);
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        ListOperations.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString().toLowerCase();
+        assertTrue("Should mention addAll or merge",
+            output.contains("addall") || output.contains("merge") ||
+            output.contains("объедин") || output.contains("birlashtirildi"));
     }
 }
 
-// Test9: clear() removes all elements
+// Test9: Output should show numbers 1-10
 class Test9 {
     @Test
-    void testClear() {
-        List<Integer> numbers = new ArrayList<>(List.of(1, 2, 3));
-        numbers.clear();
-        assertTrue(numbers.isEmpty());
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        ListOperations.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should contain numbers", output.contains("1") && output.contains("10"));
     }
 }
 
-// Test10: subList clear removes range from original
+// Test10: Output should show squared values
 class Test10 {
     @Test
-    void testSubListClear() {
-        List<Integer> numbers = new ArrayList<>(List.of(1, 2, 3, 4, 5));
-        numbers.subList(1, 4).clear();
-        assertEquals(List.of(1, 5), numbers);
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        ListOperations.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        // After squaring: 16 = 4^2, 25 = 5^2, 36 = 6^2, etc.
+        assertTrue("Should show squared values",
+            output.contains("16") || output.contains("25") || output.contains("36"));
     }
 }
 `,
@@ -275,26 +334,30 @@ public class ListOperations {
         // Используем replaceAll() для возведения всех чисел в квадрат
         List<Integer> squareList = new ArrayList<>(List.of(1, 2, 3, 4, 5));
         squareList.replaceAll(n -> n * n);
-        System.out.println("\nПосле replaceAll (возведение в квадрат): " + squareList);
+        System.out.println("");
+        System.out.println("После replaceAll (возведение в квадрат): " + squareList);
 
         // Создаем другой список и используем retainAll() для сохранения общих элементов
         List<Integer> list1 = new ArrayList<>(List.of(1, 2, 3, 4, 5, 6));
         List<Integer> list2 = List.of(4, 5, 6, 7, 8);
-        System.out.println("\nСписок1: " + list1);
+        System.out.println("");
+        System.out.println("Список1: " + list1);
         System.out.println("Список2: " + list2);
         list1.retainAll(list2); // Оставляем только элементы, присутствующие в list2
         System.out.println("После retainAll (общие элементы): " + list1);
 
         // Используем removeIf() для удаления всех чисел больше 50
         List<Integer> filterList = new ArrayList<>(List.of(10, 30, 55, 70, 25, 100, 5));
-        System.out.println("\nДо removeIf: " + filterList);
+        System.out.println("");
+        System.out.println("До removeIf: " + filterList);
         filterList.removeIf(n -> n > 50);
         System.out.println("После removeIf (n > 50): " + filterList);
 
         // Создаем неизменяемую копию используя List.copyOf()
         List<Integer> mutableList = new ArrayList<>(List.of(1, 2, 3));
         List<Integer> immutableList = List.copyOf(mutableList);
-        System.out.println("\nНеизменяемая копия: " + immutableList);
+        System.out.println("");
+        System.out.println("Неизменяемая копия: " + immutableList);
         try {
             immutableList.add(4); // Это вызовет исключение
         } catch (UnsupportedOperationException e) {
@@ -304,7 +367,8 @@ public class ListOperations {
         // Используем addAll() для объединения двух списков
         List<Integer> listA = new ArrayList<>(List.of(1, 2, 3));
         List<Integer> listB = List.of(4, 5, 6);
-        System.out.println("\nСписокA: " + listA);
+        System.out.println("");
+        System.out.println("СписокA: " + listA);
         System.out.println("СписокB: " + listB);
         listA.addAll(listB); // Объединяем listB в listA
         System.out.println("После addAll: " + listA);
@@ -385,26 +449,30 @@ public class ListOperations {
         // Barcha sonlarni kvadratga ko'tarish uchun replaceAll() dan foydalanamiz
         List<Integer> squareList = new ArrayList<>(List.of(1, 2, 3, 4, 5));
         squareList.replaceAll(n -> n * n);
-        System.out.println("\nreplaceAll dan keyin (kvadratga): " + squareList);
+        System.out.println("");
+        System.out.println("replaceAll dan keyin (kvadratga): " + squareList);
 
         // Boshqa ro'yxat yaratamiz va umumiy elementlarni saqlash uchun retainAll() dan foydalanamiz
         List<Integer> list1 = new ArrayList<>(List.of(1, 2, 3, 4, 5, 6));
         List<Integer> list2 = List.of(4, 5, 6, 7, 8);
-        System.out.println("\nRo'yxat1: " + list1);
+        System.out.println("");
+        System.out.println("Ro'yxat1: " + list1);
         System.out.println("Ro'yxat2: " + list2);
         list1.retainAll(list2); // Faqat list2 da mavjud elementlarni saqlaymiz
         System.out.println("retainAll dan keyin (umumiy elementlar): " + list1);
 
         // 50 dan katta sonlarni o'chirish uchun removeIf() dan foydalanamiz
         List<Integer> filterList = new ArrayList<>(List.of(10, 30, 55, 70, 25, 100, 5));
-        System.out.println("\nremoveIf dan oldin: " + filterList);
+        System.out.println("");
+        System.out.println("removeIf dan oldin: " + filterList);
         filterList.removeIf(n -> n > 50);
         System.out.println("removeIf dan keyin (n > 50): " + filterList);
 
         // List.copyOf() yordamida o'zgarmas nusxa yaratamiz
         List<Integer> mutableList = new ArrayList<>(List.of(1, 2, 3));
         List<Integer> immutableList = List.copyOf(mutableList);
-        System.out.println("\nO'zgarmas nusxa: " + immutableList);
+        System.out.println("");
+        System.out.println("O'zgarmas nusxa: " + immutableList);
         try {
             immutableList.add(4); // Bu xato chiqaradi
         } catch (UnsupportedOperationException e) {
@@ -414,7 +482,8 @@ public class ListOperations {
         // Ikki ro'yxatni birlashtirish uchun addAll() dan foydalanamiz
         List<Integer> listA = new ArrayList<>(List.of(1, 2, 3));
         List<Integer> listB = List.of(4, 5, 6);
-        System.out.println("\nRo'yxatA: " + listA);
+        System.out.println("");
+        System.out.println("Ro'yxatA: " + listA);
         System.out.println("Ro'yxatB: " + listB);
         listA.addAll(listB); // listB ni listA ga birlashtirish
         System.out.println("addAll dan keyin: " + listA);

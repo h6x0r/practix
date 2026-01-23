@@ -18,8 +18,9 @@ interface AiTutorPanelProps {
 export const AiTutorPanel = memo(({ isOpen, onToggle, chat, question, onQuestionChange, onSend, isLoading, isPremium }: AiTutorPanelProps) => {
   const { tUI } = useUITranslation();
   return (
-    <div className="border-t border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-black/50 backdrop-blur-sm">
-        <button 
+    <div data-testid="ai-tutor-panel" className="border-t border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-black/50 backdrop-blur-sm">
+        <button
+        data-testid="ai-tutor-toggle"
         onClick={onToggle}
         className="w-full flex items-center justify-between px-4 py-3 text-xs font-bold text-gray-600 dark:text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors"
         >
@@ -30,30 +31,31 @@ export const AiTutorPanel = memo(({ isOpen, onToggle, chat, question, onQuestion
         <IconChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
         </button>
         {isOpen && (
-        <div className="h-72 flex flex-col border-t border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface">
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+        <div data-testid="ai-tutor-chat" className="h-72 flex flex-col border-t border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface">
+            <div data-testid="ai-tutor-messages" className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
             {chat.length === 0 && (
-                <div className="h-full flex flex-col items-center justify-center text-center opacity-40">
+                <div data-testid="ai-tutor-empty" className="h-full flex flex-col items-center justify-center text-center opacity-40">
                 <IconSparkles className="w-10 h-10 mb-3 text-purple-400" />
                 <p className="text-xs max-w-[200px]">{tUI('task.aiTutorEmpty')}</p>
                 </div>
             )}
             {chat.map((msg, i) => (
-                <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <div key={i} data-testid={`ai-tutor-message-${msg.role}`} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div className={`max-w-[85%] rounded-2xl px-4 py-3 text-xs leading-relaxed shadow-sm ${
-                    msg.role === 'user' 
-                    ? 'bg-brand-600 text-white rounded-br-none' 
+                    msg.role === 'user'
+                    ? 'bg-brand-600 text-white rounded-br-none'
                     : 'bg-gray-100 dark:bg-dark-bg text-gray-800 dark:text-gray-200 rounded-bl-none border border-gray-200 dark:border-dark-border'
                 }`}>
                     {msg.text}
                 </div>
                 </div>
             ))}
-            {isLoading && <div className="text-xs text-gray-400 animate-pulse pl-2">{tUI('task.aiThinking')}</div>}
+            {isLoading && <div data-testid="ai-tutor-loading" className="text-xs text-gray-400 animate-pulse pl-2">{tUI('task.aiThinking')}</div>}
             </div>
             <div className="p-3 bg-gray-50 dark:bg-black border-t border-gray-200 dark:border-dark-border">
             <div className="relative">
                 <input
+                data-testid="ai-tutor-input"
                 type="text"
                 value={question}
                 onChange={(e) => onQuestionChange(e.target.value)}
@@ -62,7 +64,8 @@ export const AiTutorPanel = memo(({ isOpen, onToggle, chat, question, onQuestion
                 placeholder={isPremium ? tUI('task.aiAskPlaceholder') : tUI('task.aiUnlockToChat')}
                 className="w-full bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border rounded-xl pl-4 pr-10 py-3 text-xs focus:ring-2 focus:ring-brand-500 outline-none dark:text-white shadow-sm transition-all"
                 />
-                <button 
+                <button
+                data-testid="ai-tutor-send"
                 onClick={onSend}
                 disabled={!isPremium || isLoading}
                 className="absolute right-1.5 top-1.5 p-1.5 bg-brand-600 text-white rounded-lg hover:bg-brand-700 disabled:opacity-50 transition-colors"

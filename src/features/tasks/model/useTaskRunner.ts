@@ -101,6 +101,9 @@ export const detectTaskLanguage = (task: Task | null, courseId?: string): string
   return task?.tags?.[0] || 'java';
 };
 
+// Rate limiting cooldown in milliseconds (5 seconds)
+const RATE_LIMIT_COOLDOWN_MS = 5000;
+
 export const useTaskRunner = (task: Task | null, courseId?: string) => {
   const [code, setCodeState] = useState('');
   const [activeTab, setActiveTab] = useState<'editor' | 'history'>('editor');
@@ -114,9 +117,15 @@ export const useTaskRunner = (task: Task | null, courseId?: string) => {
   const [runResult, setRunResult] = useState<RunTestsResult | null>(null);
   const [isRunResultsOpen, setIsRunResultsOpen] = useState(false);
 
+  // Rate limiting state - track last request time and cooldown
+  const [cooldownRemaining, setCooldownRemaining] = useState(0);
+  const lastRequestTimeRef = useRef<number>(0);
+  const cooldownTimerRef = useRef<NodeJS.Timeout | null>(null);
+
   // Track mounted state and abort controllers for cleanup
   const isMountedRef = useRef(true);
   const submissionsAbortRef = useRef<AbortController | null>(null);
+  const runResultAbortRef = useRef<AbortController | null>(null);
   const runAbortRef = useRef<AbortController | null>(null);
   const submitAbortRef = useRef<AbortController | null>(null);
 
@@ -167,6 +176,30 @@ export const useTaskRunner = (task: Task | null, courseId?: string) => {
     }
   }, [task?.id]);
 
+  // Load latest run result for the task from backend (persisted across page reloads)
+  useEffect(() => {
+    if (task?.id) {
+      // Abort previous request if task changed
+      runResultAbortRef.current?.abort();
+      const controller = new AbortController();
+      runResultAbortRef.current = controller;
+
+      taskService.getRunResult(task.id, { signal: controller.signal })
+        .then((result) => {
+          if (isMountedRef.current && !controller.signal.aborted && result) {
+            setRunResult(result);
+            log.log('Loaded persisted run result for task', task.slug);
+          }
+        })
+        .catch((error) => {
+          if (isAbortError(error)) return;
+          log.warn('Failed to load run result', error);
+        });
+    } else {
+      setRunResult(null);
+    }
+  }, [task?.id]);
+
   // Wrapper to save code to localStorage with debounce
   const setCode = useCallback((newCode: string) => {
     setCodeState(newCode);
@@ -183,7 +216,7 @@ export const useTaskRunner = (task: Task | null, courseId?: string) => {
     }
   }, [task]);
 
-  // Cleanup on unmount - abort all pending requests and clear debounce
+  // Cleanup on unmount - abort all pending requests and clear timers
   useEffect(() => {
     isMountedRef.current = true;
     return () => {
@@ -191,11 +224,52 @@ export const useTaskRunner = (task: Task | null, courseId?: string) => {
       if (debounceRef.current) {
         clearTimeout(debounceRef.current);
       }
+      if (cooldownTimerRef.current) {
+        clearInterval(cooldownTimerRef.current);
+      }
       // Abort all pending requests
       submissionsAbortRef.current?.abort();
+      runResultAbortRef.current?.abort();
       runAbortRef.current?.abort();
       submitAbortRef.current?.abort();
     };
+  }, []);
+
+  /**
+   * Start cooldown timer after a request
+   * Updates cooldownRemaining every 100ms until it reaches 0
+   */
+  const startCooldown = useCallback(() => {
+    lastRequestTimeRef.current = Date.now();
+    setCooldownRemaining(RATE_LIMIT_COOLDOWN_MS);
+
+    // Clear any existing timer
+    if (cooldownTimerRef.current) {
+      clearInterval(cooldownTimerRef.current);
+    }
+
+    // Update cooldown every 100ms
+    cooldownTimerRef.current = setInterval(() => {
+      const elapsed = Date.now() - lastRequestTimeRef.current;
+      const remaining = Math.max(0, RATE_LIMIT_COOLDOWN_MS - elapsed);
+
+      if (isMountedRef.current) {
+        setCooldownRemaining(remaining);
+      }
+
+      if (remaining === 0 && cooldownTimerRef.current) {
+        clearInterval(cooldownTimerRef.current);
+        cooldownTimerRef.current = null;
+      }
+    }, 100);
+  }, []);
+
+  /**
+   * Check if rate limited - returns true if request should be blocked
+   */
+  const isRateLimited = useCallback((): boolean => {
+    const elapsed = Date.now() - lastRequestTimeRef.current;
+    return elapsed < RATE_LIMIT_COOLDOWN_MS;
   }, []);
 
   /**
@@ -203,6 +277,15 @@ export const useTaskRunner = (task: Task | null, courseId?: string) => {
    */
   const runQuickTests = useCallback(async () => {
     if (!task) return;
+
+    // Check rate limiting - prevent rapid button spam
+    if (isRateLimited()) {
+      log.warn('Rate limited - please wait before running again');
+      return;
+    }
+
+    // Start cooldown immediately
+    startCooldown();
 
     // Abort previous run if still pending
     runAbortRef.current?.abort();
@@ -244,13 +327,22 @@ export const useTaskRunner = (task: Task | null, courseId?: string) => {
         });
       }
     }
-  }, [task, code, courseId]);
+  }, [task, code, courseId, isRateLimited, startCooldown]);
 
   /**
    * Submit code for full evaluation (all tests) - saves to DB
    */
   const submitCode = useCallback(async () => {
     if (!task) return;
+
+    // Check rate limiting - prevent rapid button spam
+    if (isRateLimited()) {
+      log.warn('Rate limited - please wait before submitting again');
+      return;
+    }
+
+    // Start cooldown immediately
+    startCooldown();
 
     // Abort previous submission if still pending
     submitAbortRef.current?.abort();
@@ -300,7 +392,7 @@ export const useTaskRunner = (task: Task | null, courseId?: string) => {
         setSubmissions(prev => [errorSubmission, ...prev]);
       }
     }
-  }, [task, code, courseId]);
+  }, [task, code, courseId, isRateLimited, startCooldown]);
 
   const closeRunResults = () => {
     setIsRunResultsOpen(false);
@@ -321,5 +413,7 @@ export const useTaskRunner = (task: Task | null, courseId?: string) => {
     runResult,
     isRunResultsOpen,
     closeRunResults,
+    // Rate limiting state (cooldown in ms, 0 = ready)
+    cooldownRemaining,
   };
 };

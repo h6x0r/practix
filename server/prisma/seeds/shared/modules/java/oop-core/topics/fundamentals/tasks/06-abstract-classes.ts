@@ -234,15 +234,18 @@ public class AbstractDemo {
                              " - Area: " + String.format("%.2f", shape.calculateArea()));
             totalArea += shape.calculateArea();
         }
-        System.out.println("\nTotal area of all shapes: " +
+        System.out.println("");
+        System.out.println("Total area of all shapes: " +
                           String.format("%.2f", totalArea));
 
-        System.out.println("\n=== Testing Rectangle-specific method ===");
+        System.out.println("");
+        System.out.println("=== Testing Rectangle-specific method ===");
         Rectangle square = new Rectangle("White", 5, 5);
         System.out.println("Is this rectangle a square? " + square.isSquare());
 
         // Demonstrate downcasting to access subclass-specific methods
-        System.out.println("\n=== Downcasting Example ===");
+        System.out.println("");
+        System.out.println("=== Downcasting Example ===");
         for (Shape shape : shapes) {
             if (shape instanceof Rectangle) {
                 Rectangle rect = (Rectangle) shape;
@@ -251,7 +254,8 @@ public class AbstractDemo {
         }
 
         // Try to create invalid triangle - will throw exception
-        System.out.println("\n=== Testing Triangle Validation ===");
+        System.out.println("");
+        System.out.println("=== Testing Triangle Validation ===");
         try {
             Triangle invalidTriangle = new Triangle("Black", 1, 2, 10);
         } catch (IllegalArgumentException e) {
@@ -549,15 +553,18 @@ public class AbstractDemo {
                              " - Площадь: " + String.format("%.2f", shape.calculateArea()));
             totalArea += shape.calculateArea();
         }
-        System.out.println("\nОбщая площадь всех фигур: " +
+        System.out.println("");
+        System.out.println("Общая площадь всех фигур: " +
                           String.format("%.2f", totalArea));
 
-        System.out.println("\n=== Тестирование метода специфичного для Rectangle ===");
+        System.out.println("");
+        System.out.println("=== Тестирование метода специфичного для Rectangle ===");
         Rectangle square = new Rectangle("Белый", 5, 5);
         System.out.println("Является ли этот прямоугольник квадратом? " + square.isSquare());
 
         // Демонстрация нисходящего приведения для доступа к методам подкласса
-        System.out.println("\n=== Пример нисходящего приведения ===");
+        System.out.println("");
+        System.out.println("=== Пример нисходящего приведения ===");
         for (Shape shape : shapes) {
             if (shape instanceof Rectangle) {
                 Rectangle rect = (Rectangle) shape;
@@ -566,7 +573,8 @@ public class AbstractDemo {
         }
 
         // Попытка создать недопустимый треугольник - вызовет исключение
-        System.out.println("\n=== Тестирование валидации треугольника ===");
+        System.out.println("");
+        System.out.println("=== Тестирование валидации треугольника ===");
         try {
             Triangle invalidTriangle = new Triangle("Черный", 1, 2, 10);
         } catch (IllegalArgumentException e) {
@@ -793,15 +801,18 @@ public class AbstractDemo {
                              " - Maydoni: " + String.format("%.2f", shape.calculateArea()));
             totalArea += shape.calculateArea();
         }
-        System.out.println("\nBarcha shakllarning umumiy maydoni: " +
+        System.out.println("");
+        System.out.println("Barcha shakllarning umumiy maydoni: " +
                           String.format("%.2f", totalArea));
 
-        System.out.println("\n=== Rectangle ga xos metodini sinash ===");
+        System.out.println("");
+        System.out.println("=== Rectangle ga xos metodini sinash ===");
         Rectangle square = new Rectangle("Oq", 5, 5);
         System.out.println("Bu to'rtburchak kvadratmi? " + square.isSquare());
 
         // Subsinf metodlariga kirish uchun pastga kastingni namoyish etish
-        System.out.println("\n=== Pastga Kasting Misoli ===");
+        System.out.println("");
+        System.out.println("=== Pastga Kasting Misoli ===");
         for (Shape shape : shapes) {
             if (shape instanceof Rectangle) {
                 Rectangle rect = (Rectangle) shape;
@@ -810,7 +821,8 @@ public class AbstractDemo {
         }
 
         // Noto'g'ri uchburchak yaratishga harakat - istisno beradi
-        System.out.println("\n=== Uchburchak Tekshiruvini Sinash ===");
+        System.out.println("");
+        System.out.println("=== Uchburchak Tekshiruvini Sinash ===");
         try {
             Triangle invalidTriangle = new Triangle("Qora", 1, 2, 10);
         } catch (IllegalArgumentException e) {

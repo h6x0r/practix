@@ -179,108 +179,150 @@ public class TerminalOperations {
 }`,
     testCode: `import static org.junit.Assert.*;
 import org.junit.Test;
-import java.util.*;
-import java.util.stream.*;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 
-// Test1: Verify forEach processes all elements
+// Test1: main method should show terminal operations demo
 class Test1 {
     @Test
     public void test() {
-        List<Integer> numbers = Arrays.asList(1, 2, 3);
-        List<Integer> result = new ArrayList<>();
-        numbers.stream().forEach(result::add);
-        assertEquals(3, result.size());
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        TerminalOperations.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show terminal operations demo",
+            output.contains("Terminal") || output.contains("forEach") ||
+            output.contains("Терминальные") || output.contains("Yakuniy"));
     }
 }
 
-// Test2: Verify collect() to List
+// Test2: should demonstrate forEach operation
 class Test2 {
     @Test
     public void test() {
-        List<Integer> numbers = Arrays.asList(1, 2, 3, 4, 5);
-        List<Integer> collected = numbers.stream().collect(Collectors.toList());
-        assertEquals(5, collected.size());
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        TerminalOperations.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show forEach", output.contains("forEach") || output.contains("1 2 3") || output.contains("forEachOrdered"));
     }
 }
 
-// Test3: Verify collect() to Set removes duplicates
+// Test3: should demonstrate collect operation
 class Test3 {
     @Test
     public void test() {
-        List<Integer> numbers = Arrays.asList(1, 2, 2, 3, 3, 3);
-        Set<Integer> collected = numbers.stream().collect(Collectors.toSet());
-        assertEquals(3, collected.size());
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        TerminalOperations.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show collect", output.contains("collect") || output.contains("Collect") || output.contains("yig'ish"));
     }
 }
 
-// Test4: Verify reduce() sum operation
+// Test4: should show collect to Set
 class Test4 {
     @Test
     public void test() {
-        List<Integer> numbers = Arrays.asList(1, 2, 3, 4, 5);
-        int sum = numbers.stream().reduce(0, (a, b) -> a + b);
-        assertEquals(15, sum);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        TerminalOperations.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show collect to Set", output.contains("Set") || output.contains("set") || output.contains("[1, 2, 3"));
     }
 }
 
-// Test5: Verify reduce() product operation
+// Test5: should demonstrate reduce operation
 class Test5 {
     @Test
     public void test() {
-        List<Integer> numbers = Arrays.asList(2, 3, 4);
-        int product = numbers.stream().reduce(1, (a, b) -> a * b);
-        assertEquals(24, product);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        TerminalOperations.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show reduce", output.contains("reduce") || output.contains("Sum") || output.contains("yig'indi"));
     }
 }
 
-// Test6: Verify count() terminal operation
+// Test6: should show sum result
 class Test6 {
     @Test
     public void test() {
-        List<Integer> numbers = Arrays.asList(1, 2, 3, 4, 5);
-        long count = numbers.stream().filter(n -> n % 2 == 0).count();
-        assertEquals(2, count);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        TerminalOperations.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show sum", output.contains("55") || output.contains("Sum") || output.contains("Product"));
     }
 }
 
-// Test7: Verify findFirst() returns Optional
+// Test7: should demonstrate count operation
 class Test7 {
     @Test
     public void test() {
-        List<Integer> numbers = Arrays.asList(1, 2, 3, 4, 5);
-        Optional<Integer> first = numbers.stream().findFirst();
-        assertTrue(first.isPresent());
-        assertEquals(Integer.valueOf(1), first.get());
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        TerminalOperations.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show count", output.contains("Count") || output.contains("count") || output.contains("hisoblash"));
     }
 }
 
-// Test8: Verify anyMatch() returns true when match found
+// Test8: should show matching operations
 class Test8 {
     @Test
     public void test() {
-        List<Integer> numbers = Arrays.asList(1, 2, 3, 4, 5);
-        boolean anyEven = numbers.stream().anyMatch(n -> n % 2 == 0);
-        assertTrue(anyEven);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        TerminalOperations.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show matching", output.contains("Match") || output.contains("match") || output.contains("even") || output.contains("true"));
     }
 }
 
-// Test9: Verify allMatch() checks all elements
+// Test9: should show allMatch and noneMatch
 class Test9 {
     @Test
     public void test() {
-        List<Integer> numbers = Arrays.asList(2, 4, 6, 8);
-        boolean allEven = numbers.stream().allMatch(n -> n % 2 == 0);
-        assertTrue(allEven);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        TerminalOperations.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show allMatch or noneMatch", output.contains("All") || output.contains("None") || output.contains("positive") || output.contains("negative"));
     }
 }
 
-// Test10: Verify noneMatch() when no matches exist
+// Test10: should have section headers
 class Test10 {
     @Test
     public void test() {
-        List<Integer> numbers = Arrays.asList(1, 2, 3, 4, 5);
-        boolean noneNegative = numbers.stream().noneMatch(n -> n < 0);
-        assertTrue(noneNegative);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        TerminalOperations.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        boolean hasHeaders = output.contains("===") ||
+                             output.contains("forEach") || output.contains("collect") || output.contains("operatsiya");
+        assertTrue("Should have section headers", hasHeaders);
     }
 }
 `,

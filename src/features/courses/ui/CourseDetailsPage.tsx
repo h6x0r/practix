@@ -139,7 +139,7 @@ const CourseDetailsPage = () => {
                   </span>
                </div>
                
-               <h1 className="text-5xl font-display font-bold text-gray-900 dark:text-white mb-4 leading-tight">
+               <h1 data-testid="course-title" className="text-5xl font-display font-bold text-gray-900 dark:text-white mb-4 leading-tight">
                  {course.title}
                </h1>
                <p className="text-xl text-gray-500 dark:text-gray-400 max-w-2xl leading-relaxed">
@@ -154,7 +154,7 @@ const CourseDetailsPage = () => {
                        <span>{tUI('courseDetails.trackProgress')}</span>
                        <span>{course.progress}%</span>
                      </div>
-                     <div className="h-3 bg-gray-100 dark:bg-dark-bg rounded-full overflow-hidden shadow-inner">
+                     <div data-testid="course-progress" className="h-3 bg-gray-100 dark:bg-dark-bg rounded-full overflow-hidden shadow-inner">
                         <div className={`h-full bg-gradient-to-r ${theme.from} ${theme.to}`} style={{width: `${course.progress}%`}}></div>
                      </div>
                    </div>
@@ -194,7 +194,7 @@ const CourseDetailsPage = () => {
              const moduleProgress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
              
              return (
-               <div key={module.id} className={`bg-white dark:bg-dark-surface rounded-3xl border transition-all duration-300 overflow-hidden ${isExpanded ? 'border-brand-500 ring-4 ring-brand-500/10 shadow-xl' : 'border-gray-100 dark:border-dark-border shadow-sm hover:border-gray-300 dark:hover:border-gray-600'}`}>
+               <div key={module.id} data-testid="module-item" className={`bg-white dark:bg-dark-surface rounded-3xl border transition-all duration-300 overflow-hidden ${isExpanded ? 'border-brand-500 ring-4 ring-brand-500/10 shadow-xl' : 'border-gray-100 dark:border-dark-border shadow-sm hover:border-gray-300 dark:hover:border-gray-600'}`}>
                   
                   {/* Module Header */}
                   <div 
@@ -249,7 +249,7 @@ const CourseDetailsPage = () => {
                     <div className="border-t border-gray-100 dark:border-dark-border bg-gray-50/50 dark:bg-black/20 p-4 md:p-8 relative z-0">
                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           {module.topics.map((topic, i) => (
-                             <div key={topic.id} id={topic.id} className="relative bg-white dark:bg-dark-surface p-5 rounded-2xl border border-gray-200 dark:border-dark-border hover:border-gray-300 dark:hover:border-gray-600 transition-all hover:shadow-lg group overflow-hidden">
+                             <div key={topic.id} id={topic.id} data-testid="topic-item" className="relative bg-white dark:bg-dark-surface p-5 rounded-2xl border border-gray-200 dark:border-dark-border hover:border-gray-300 dark:hover:border-gray-600 transition-all hover:shadow-lg group overflow-hidden">
                                 {/* Gradient accent line */}
                                 <div className={`absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b ${theme.from} ${theme.to}`}></div>
 
@@ -282,9 +282,10 @@ const CourseDetailsPage = () => {
                                 
                                 <div className="space-y-2 pl-3">
                                    {topic.tasks.map(task => (
-                                     <Link 
+                                     <Link
                                        to={`/course/${course.id}/task/${task.slug}`}
-                                       key={task.id} 
+                                       key={task.id}
+                                       data-testid="task-link"
                                        className="flex items-center justify-between p-2 rounded-lg bg-gray-50 dark:bg-dark-bg hover:bg-gray-100 dark:hover:bg-dark-border transition-colors cursor-pointer group/task relative z-10"
                                      >
                                         <div className="flex items-center gap-2 overflow-hidden flex-1">

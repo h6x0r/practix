@@ -77,12 +77,14 @@ public class LinkedListDeque {
         System.out.println("Current last: " + numbers.getLast());
 
         // When to use LinkedList vs ArrayList?
-        System.out.println("\nLinkedList vs ArrayList:");
+        System.out.println("");
+        System.out.println("LinkedList vs ArrayList:");
         System.out.println("Use LinkedList when:");
         System.out.println("  - Frequent insertions/deletions at beginning or end");
         System.out.println("  - Implementing queue or deque operations");
         System.out.println("  - Memory overhead is acceptable");
-        System.out.println("\nUse ArrayList when:");
+        System.out.println("");
+        System.out.println("Use ArrayList when:");
         System.out.println("  - Random access (get by index) is frequent");
         System.out.println("  - Memory efficiency is important");
         System.out.println("  - Mostly appending to the end");
@@ -112,140 +114,158 @@ if (recentLogs.size() > MAX_LOGS) {
 - Ideal for implementing queues and stacks
 - Does not require contiguous memory block`,
     order: 1,
-    testCode: `import java.util.LinkedList;
-import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.*;
+    testCode: `import static org.junit.Assert.*;
+import org.junit.Test;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 
-// Test1: LinkedList can be created and starts empty
+// Test1: main method should show LinkedList/Deque demo
 class Test1 {
     @Test
-    void testLinkedListCreation() {
-        LinkedList<Integer> list = new LinkedList<>();
-        assertTrue(list.isEmpty());
-        assertEquals(0, list.size());
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        LinkedListDeque.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show LinkedList/Deque demo",
+            output.contains("LinkedList") || output.contains("Deque") ||
+            output.contains("addFirst") || output.contains("First"));
     }
 }
 
-// Test2: addFirst() adds elements to the front
+// Test2: Output should show addFirst result
 class Test2 {
     @Test
-    void testAddFirst() {
-        LinkedList<Integer> numbers = new LinkedList<>();
-        numbers.addFirst(1);
-        numbers.addFirst(2);
-        numbers.addFirst(3);
-        assertEquals(3, numbers.getFirst());
-        assertEquals(1, numbers.getLast());
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        LinkedListDeque.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString().toLowerCase();
+        assertTrue("Should mention addFirst", output.contains("addfirst") || output.contains("front") || output.contains("начало"));
     }
 }
 
-// Test3: addLast() adds elements to the end
+// Test3: Output should show addLast result
 class Test3 {
     @Test
-    void testAddLast() {
-        LinkedList<Integer> numbers = new LinkedList<>();
-        numbers.addLast(7);
-        numbers.addLast(8);
-        numbers.addLast(9);
-        assertEquals(7, numbers.getFirst());
-        assertEquals(9, numbers.getLast());
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        LinkedListDeque.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString().toLowerCase();
+        assertTrue("Should mention addLast", output.contains("addlast") || output.contains("end") || output.contains("конец"));
     }
 }
 
-// Test4: add() is equivalent to addLast()
+// Test4: Output should show numbers 7, 8, 9 added
 class Test4 {
     @Test
-    void testAddEquivalentToAddLast() {
-        LinkedList<Integer> numbers = new LinkedList<>();
-        numbers.add(1);
-        numbers.add(2);
-        assertEquals(1, numbers.getFirst());
-        assertEquals(2, numbers.getLast());
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        LinkedListDeque.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should contain 7", output.contains("7"));
+        assertTrue("Should contain 8", output.contains("8"));
+        assertTrue("Should contain 9", output.contains("9"));
     }
 }
 
-// Test5: removeFirst() removes and returns first element
+// Test5: Output should show add(10)
 class Test5 {
     @Test
-    void testRemoveFirst() {
-        LinkedList<Integer> numbers = new LinkedList<>();
-        numbers.add(1);
-        numbers.add(2);
-        numbers.add(3);
-        Integer removed = numbers.removeFirst();
-        assertEquals(1, removed);
-        assertEquals(2, numbers.size());
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        LinkedListDeque.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should contain 10", output.contains("10"));
     }
 }
 
-// Test6: removeLast() removes and returns last element
+// Test6: Output should show removeFirst/removeLast
 class Test6 {
     @Test
-    void testRemoveLast() {
-        LinkedList<Integer> numbers = new LinkedList<>();
-        numbers.add(1);
-        numbers.add(2);
-        numbers.add(3);
-        Integer removed = numbers.removeLast();
-        assertEquals(3, removed);
-        assertEquals(2, numbers.size());
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        LinkedListDeque.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString().toLowerCase();
+        assertTrue("Should mention removal", output.contains("remov") || output.contains("удален") || output.contains("o'chirildi"));
     }
 }
 
-// Test7: getFirst() returns first element without removing
+// Test7: Output should show getFirst/getLast results
 class Test7 {
     @Test
-    void testGetFirst() {
-        LinkedList<Integer> numbers = new LinkedList<>();
-        numbers.add(5);
-        numbers.add(10);
-        assertEquals(5, numbers.getFirst());
-        assertEquals(2, numbers.size());
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        LinkedListDeque.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString().toLowerCase();
+        assertTrue("Should mention first element", output.contains("first") || output.contains("первый") || output.contains("birinchi"));
+        assertTrue("Should mention last element", output.contains("last") || output.contains("последний") || output.contains("oxirgi"));
     }
 }
 
-// Test8: getLast() returns last element without removing
+// Test8: Output should contain comparison LinkedList vs ArrayList
 class Test8 {
     @Test
-    void testGetLast() {
-        LinkedList<Integer> numbers = new LinkedList<>();
-        numbers.add(5);
-        numbers.add(10);
-        assertEquals(10, numbers.getLast());
-        assertEquals(2, numbers.size());
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        LinkedListDeque.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should mention LinkedList", output.contains("LinkedList"));
+        assertTrue("Should mention ArrayList", output.contains("ArrayList"));
     }
 }
 
-// Test9: Combined addFirst and addLast operations
+// Test9: Output should mention when to use LinkedList
 class Test9 {
     @Test
-    void testCombinedOperations() {
-        LinkedList<Integer> numbers = new LinkedList<>();
-        numbers.addFirst(2);
-        numbers.addFirst(1);
-        numbers.addLast(3);
-        numbers.addLast(4);
-        assertEquals(4, numbers.size());
-        assertEquals(1, numbers.getFirst());
-        assertEquals(4, numbers.getLast());
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        LinkedListDeque.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString().toLowerCase();
+        assertTrue("Should mention insertion/deletion or queue",
+            output.contains("insert") || output.contains("delet") || output.contains("queue") ||
+            output.contains("вставк") || output.contains("удален") || output.contains("очередь"));
     }
 }
 
-// Test10: Deque operations in sequence
+// Test10: Output should mention when to use ArrayList
 class Test10 {
     @Test
-    void testDequeSequence() {
-        LinkedList<Integer> numbers = new LinkedList<>();
-        numbers.addFirst(1);
-        numbers.addFirst(2);
-        numbers.addFirst(3);
-        numbers.addLast(7);
-        numbers.addLast(8);
-        numbers.add(10);
-        assertEquals(6, numbers.size());
-        numbers.removeFirst();
-        numbers.removeLast();
-        assertEquals(4, numbers.size());
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        LinkedListDeque.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString().toLowerCase();
+        assertTrue("Should mention random access or index",
+            output.contains("random") || output.contains("access") || output.contains("index") ||
+            output.contains("произвольн") || output.contains("индекс"));
     }
 }
 `,
@@ -287,12 +307,14 @@ public class LinkedListDeque {
         System.out.println("Текущий последний: " + numbers.getLast());
 
         // Когда использовать LinkedList вместо ArrayList?
-        System.out.println("\nLinkedList vs ArrayList:");
+        System.out.println("");
+        System.out.println("LinkedList vs ArrayList:");
         System.out.println("Используйте LinkedList когда:");
         System.out.println("  - Частые вставки/удаления в начале или конце");
         System.out.println("  - Реализация очереди или двусторонней очереди");
         System.out.println("  - Дополнительные затраты памяти допустимы");
-        System.out.println("\nИспользуйте ArrayList когда:");
+        System.out.println("");
+        System.out.println("Используйте ArrayList когда:");
         System.out.println("  - Частый произвольный доступ (get по индексу)");
         System.out.println("  - Важна эффективность памяти");
         System.out.println("  - Преимущественно добавление в конец");
@@ -372,12 +394,14 @@ public class LinkedListDeque {
         System.out.println("Hozirgi oxirgi: " + numbers.getLast());
 
         // LinkedList va ArrayList qachon ishlatiladi?
-        System.out.println("\nLinkedList vs ArrayList:");
+        System.out.println("");
+        System.out.println("LinkedList vs ArrayList:");
         System.out.println("LinkedList dan foydalaning:");
         System.out.println("  - Boshi yoki oxirida tez-tez qo'shish/o'chirish");
         System.out.println("  - Navbat yoki ikki tomonlama navbat amalga oshirish");
         System.out.println("  - Xotira sarfi qabul qilinadigan bo'lsa");
-        System.out.println("\nArrayList dan foydalaning:");
+        System.out.println("");
+        System.out.println("ArrayList dan foydalaning:");
         System.out.println("  - Tasodifiy kirish (indeks bo'yicha get) tez-tez");
         System.out.println("  - Xotira samaradorligi muhim");
         System.out.println("  - Asosan oxiriga qo'shish");

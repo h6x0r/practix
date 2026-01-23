@@ -261,28 +261,17 @@ model.fit(X_train, y_train)
 
 ### General Structure
 
-Every task MUST have a `testCode` field with 10 test cases:
+Every task MUST have a `testCode` field with 10 test cases. The test runner automatically captures `expected` and `actual` values for display in the UI.
 
-```typescript
-testCode: `# Test code for Python
-import unittest
+### Language-Specific Test Formats
 
-class Test(unittest.TestCase):
-    def test_1(self):
-        # Basic functionality
-        result = function_name(input)
-        self.assertEqual(result, expected)
+| Language | Test Format | Expected/Actual Capture |
+|----------|-------------|------------------------|
+| Python | `unittest.TestCase` with `self.assert*` | Automatic via assertion parsing |
+| Go | `func TestX(t *testing.T)` with `t.Error()` | Via comment `// TestN: description` |
+| Java | `class TestN { void test() }` with `Assert.assertEquals()` | Automatic via Assert tracking |
 
-    def test_2(self):
-        # Edge case
-        ...
-
-    # ... tests 3-10
-
-if __name__ == '__main__':
-    unittest.main()
-`
-```
+---
 
 ### Python Test Template
 
@@ -331,6 +320,169 @@ pd.testing.assert_series_equal(result, expected)
 self.assertAlmostEqual(accuracy, 0.95, places=2)
 self.assertGreater(r2_score, 0.8)
 ```
+
+---
+
+### Go Test Template
+
+Go tests use the standard `testing` package. For Input/Expected/Actual display in UI, use comments like `// TestN: description`.
+
+```go
+package main
+
+import (
+    "testing"
+)
+
+// Test1: Empty slice input
+func Test1(t *testing.T) {
+    result := YourFunction([]int{})
+    expected := 0
+    if result != expected {
+        t.Errorf("Expected %d, got %d", expected, result)
+    }
+}
+
+// Test2: Single element
+func Test2(t *testing.T) {
+    result := YourFunction([]int{5})
+    expected := 5
+    if result != expected {
+        t.Errorf("Expected %d, got %d", expected, result)
+    }
+}
+
+// Test3: Multiple elements
+func Test3(t *testing.T) {
+    result := YourFunction([]int{1, 2, 3, 4, 5})
+    expected := 15
+    if result != expected {
+        t.Errorf("Expected %d, got %d", expected, result)
+    }
+}
+
+// Test4: Negative numbers
+func Test4(t *testing.T) {
+    result := YourFunction([]int{-1, -2, -3})
+    expected := -6
+    if result != expected {
+        t.Errorf("Expected %d, got %d", expected, result)
+    }
+}
+
+// ... 6 more tests (total 10)
+```
+
+**Key points for Go tests:**
+- Use `// TestN: description` comment BEFORE each test function for Input display
+- Use `t.Errorf("Expected %v, got %v", expected, result)` format for clear error messages
+- Expected/Actual values are extracted from the error message
+- Test function names MUST match pattern `TestN` (Test1, Test2, etc.)
+
+---
+
+### Java Test Template
+
+Java tests use a custom lightweight test framework. Each test is a class implementing `Testable` interface.
+
+```java
+// Test classes
+class Test1 implements Testable {
+    public void test() {
+        // Test basic functionality
+        Calculator calc = new Calculator();
+        int result = calc.add(2, 3);
+        Assert.assertEquals(5, result);
+    }
+}
+
+class Test2 implements Testable {
+    public void test() {
+        // Test with zero
+        Calculator calc = new Calculator();
+        int result = calc.add(0, 5);
+        Assert.assertEquals(5, result);
+    }
+}
+
+class Test3 implements Testable {
+    public void test() {
+        // Test negative numbers
+        Calculator calc = new Calculator();
+        int result = calc.add(-1, -2);
+        Assert.assertEquals(-3, result);
+    }
+}
+
+class Test4 implements Testable {
+    public void test() {
+        // Test string result
+        Greeter greeter = new Greeter();
+        String result = greeter.hello("World");
+        Assert.assertEquals("Hello, World!", result);
+    }
+}
+
+// ... 6 more tests (total 10)
+```
+
+**Key points for Java tests:**
+- Each test is a separate class: `class TestN implements Testable`
+- Use `Assert.assertEquals(expected, actual)` for automatic value capture
+- The test runner captures `lastExpected` and `lastActual` for UI display
+- Do NOT add imports in testCode - they are handled by the test runner
+- Supported assertions:
+  - `Assert.assertEquals(Object expected, Object actual)`
+  - `Assert.assertEquals(int expected, int actual)`
+  - `Assert.assertTrue(boolean condition)`
+  - `Assert.assertFalse(boolean condition)`
+
+**Available Assert methods in Java tests:**
+
+```java
+// Object comparison (uses .equals())
+Assert.assertEquals("expected string", result);
+
+// Numeric comparison
+Assert.assertEquals(42, result);
+
+// Boolean checks
+Assert.assertTrue(result > 0);
+Assert.assertFalse(list.isEmpty());
+```
+
+---
+
+### Test Runner Output Format
+
+All language test runners produce JSON output in this format:
+
+```json
+{
+  "tests": [
+    {
+      "name": "Test1",
+      "passed": true,
+      "expected": "5",
+      "output": "5"
+    },
+    {
+      "name": "Test2",
+      "passed": false,
+      "expected": "10",
+      "output": "8",
+      "error": "Expected: 10, Got: 8"
+    }
+  ],
+  "passed": 1,
+  "total": 2
+}
+```
+
+The UI displays:
+- **Input**: From test description/comment
+- **Expected**: The expected value from assertion
+- **Actual**: The actual value produced by student code
 
 ---
 

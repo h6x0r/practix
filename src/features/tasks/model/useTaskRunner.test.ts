@@ -10,6 +10,8 @@ vi.mock('../api/taskService', () => ({
     getTaskSubmissions: vi.fn(),
     runTests: vi.fn(),
     submitCode: vi.fn(),
+    getRunResult: vi.fn().mockResolvedValue(null),
+    saveRunResult: vi.fn().mockResolvedValue(undefined),
   },
 }));
 

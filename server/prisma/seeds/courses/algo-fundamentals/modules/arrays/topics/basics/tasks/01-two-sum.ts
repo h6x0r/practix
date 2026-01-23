@@ -116,12 +116,14 @@ class TestTwoSum:
     def test_zero_target(self):
         """Test with zero as target"""
         result = two_sum([-1, 0, 1, 2, -1, -4], 0)
-        assert sorted(result) in [[0, 2], [1, 4]]
+        # -1 + 1 = 0, indices [0, 2]
+        assert sorted(result) == [0, 2]
 
     def test_mixed_positive_negative(self):
         """Test with mixed positive and negative numbers"""
         result = two_sum([5, -2, 3, -7, 8], 1)
-        assert sorted(result) == [1, 3]
+        # -2 + 3 = 1 (indices [1, 2]) or -7 + 8 = 1 (indices [3, 4])
+        assert sorted(result) in [[1, 2], [3, 4]]
 
     def test_solution_at_end(self):
         """Test when solution is at the end of array"""
@@ -130,7 +132,7 @@ class TestTwoSum:
 
     def test_large_numbers(self):
         """Test with large numbers"""
-        result = two_sum([1000000, 500000, 2000000, 1500000], 2500000)
+        result = two_sum([1000000, 500000, 3000000, 1500000], 2500000)
         assert sorted(result) == [0, 3]`,
 	hint1: `Create a dictionary to store each number as the key and its index as the value. For each number, check if (target - num) exists in the dictionary using the 'in' operator.`,
 	hint2: `When you find the complement in the dictionary, return [seen[complement], i]. If not found after the loop, return [-1, -1].`,

@@ -62,7 +62,8 @@ public class CopyOnWriteDemo {
         System.out.println("After adding Listener4: " + listeners);
 
         // Iterate while another thread modifies the list
-        System.out.println("\nIterating while modifying (CopyOnWriteArrayList):");
+        System.out.println("");
+        System.out.println("Iterating while modifying (CopyOnWriteArrayList):");
         Thread modifier = new Thread(() -> {
             try {
                 Thread.sleep(100);
@@ -92,7 +93,8 @@ public class CopyOnWriteDemo {
         System.out.println("Final listeners: " + listeners);
 
         // Create a CopyOnWriteArraySet for unique subscriptions
-        System.out.println("\n=== CopyOnWriteArraySet Demo ===");
+        System.out.println("");
+        System.out.println("=== CopyOnWriteArraySet Demo ===");
         CopyOnWriteArraySet<String> subscriptions = new CopyOnWriteArraySet<>();
         subscriptions.add("user1@email.com");
         subscriptions.add("user2@email.com");
@@ -114,7 +116,8 @@ public class CopyOnWriteDemo {
         System.out.println("Final subscriptions: " + subscriptions);
 
         // Demonstrate safe iteration during modifications
-        System.out.println("\nSafe iteration during concurrent modifications:");
+        System.out.println("");
+        System.out.println("Safe iteration during concurrent modifications:");
         Thread setModifier = new Thread(() -> {
             try {
                 Thread.sleep(50);
@@ -140,7 +143,8 @@ public class CopyOnWriteDemo {
         System.out.println("Final set: " + subscriptions);
 
         // Compare with regular ArrayList (would throw ConcurrentModificationException)
-        System.out.println("\n=== Regular ArrayList (Unsafe) ===");
+        System.out.println("");
+        System.out.println("=== Regular ArrayList (Unsafe) ===");
         ArrayList<String> regularList = new ArrayList<>();
         regularList.add("Item1");
         regularList.add("Item2");
@@ -396,7 +400,8 @@ public class CopyOnWriteDemo {
         System.out.println("После добавления Listener4: " + listeners);
 
         // Итерируем пока другой поток модифицирует список
-        System.out.println("\nИтерация во время модификации (CopyOnWriteArrayList):");
+        System.out.println("");
+        System.out.println("Итерация во время модификации (CopyOnWriteArrayList):");
         Thread modifier = new Thread(() -> {
             try {
                 Thread.sleep(100);
@@ -426,7 +431,8 @@ public class CopyOnWriteDemo {
         System.out.println("Финальные слушатели: " + listeners);
 
         // Создаем CopyOnWriteArraySet для уникальных подписок
-        System.out.println("\n=== Демо CopyOnWriteArraySet ===");
+        System.out.println("");
+        System.out.println("=== Демо CopyOnWriteArraySet ===");
         CopyOnWriteArraySet<String> subscriptions = new CopyOnWriteArraySet<>();
         subscriptions.add("user1@email.com");
         subscriptions.add("user2@email.com");
@@ -448,7 +454,8 @@ public class CopyOnWriteDemo {
         System.out.println("Финальные подписки: " + subscriptions);
 
         // Демонстрируем безопасную итерацию во время модификаций
-        System.out.println("\nБезопасная итерация во время конкурентных модификаций:");
+        System.out.println("");
+        System.out.println("Безопасная итерация во время конкурентных модификаций:");
         Thread setModifier = new Thread(() -> {
             try {
                 Thread.sleep(50);
@@ -474,7 +481,8 @@ public class CopyOnWriteDemo {
         System.out.println("Финальный set: " + subscriptions);
 
         // Сравниваем с обычным ArrayList (бросит ConcurrentModificationException)
-        System.out.println("\n=== Обычный ArrayList (Небезопасно) ===");
+        System.out.println("");
+        System.out.println("=== Обычный ArrayList (Небезопасно) ===");
         ArrayList<String> regularList = new ArrayList<>();
         regularList.add("Item1");
         regularList.add("Item2");
@@ -564,7 +572,8 @@ public class CopyOnWriteDemo {
         System.out.println("Listener4 qo'shilgandan keyin: " + listeners);
 
         // Boshqa oqim ro'yxatni o'zgartirgan vaqtda iteratsiya qilamiz
-        System.out.println("\nO'zgartirish vaqtida iteratsiya (CopyOnWriteArrayList):");
+        System.out.println("");
+        System.out.println("O'zgartirish vaqtida iteratsiya (CopyOnWriteArrayList):");
         Thread modifier = new Thread(() -> {
             try {
                 Thread.sleep(100);
@@ -594,7 +603,8 @@ public class CopyOnWriteDemo {
         System.out.println("Yakuniy tinglovchilar: " + listeners);
 
         // Noyob obunalar uchun CopyOnWriteArraySet yaratamiz
-        System.out.println("\n=== CopyOnWriteArraySet Demosi ===");
+        System.out.println("");
+        System.out.println("=== CopyOnWriteArraySet Demosi ===");
         CopyOnWriteArraySet<String> subscriptions = new CopyOnWriteArraySet<>();
         subscriptions.add("user1@email.com");
         subscriptions.add("user2@email.com");
@@ -616,7 +626,8 @@ public class CopyOnWriteDemo {
         System.out.println("Yakuniy obunalar: " + subscriptions);
 
         // O'zgartirishlar vaqtida xavfsiz iteratsiyani ko'rsatamiz
-        System.out.println("\nKonkurrent o'zgarishlar vaqtida xavfsiz iteratsiya:");
+        System.out.println("");
+        System.out.println("Konkurrent o'zgarishlar vaqtida xavfsiz iteratsiya:");
         Thread setModifier = new Thread(() -> {
             try {
                 Thread.sleep(50);
@@ -642,7 +653,8 @@ public class CopyOnWriteDemo {
         System.out.println("Yakuniy set: " + subscriptions);
 
         // Oddiy ArrayList bilan solishtiramiz (ConcurrentModificationException beradi)
-        System.out.println("\n=== Oddiy ArrayList (Xavfli) ===");
+        System.out.println("");
+        System.out.println("=== Oddiy ArrayList (Xavfli) ===");
         ArrayList<String> regularList = new ArrayList<>();
         regularList.add("Item1");
         regularList.add("Item2");

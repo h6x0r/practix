@@ -4,8 +4,9 @@ import { api } from '@/lib/api';
 export interface UserStats {
   totalSolved: number;
   totalSubmissions: number;
-  hoursSpent: string;
+  totalMinutes: number;
   globalRank: number;
+  topPercent: number;
   skillPoints: number;
   currentStreak: number;
   maxStreak: number;

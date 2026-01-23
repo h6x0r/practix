@@ -12,7 +12,6 @@ describe('RoadmapsController', () => {
     getTemplates: jest.fn(),
     canGenerateRoadmap: jest.fn(),
     getUserRoadmap: jest.fn(),
-    generateRoadmap: jest.fn(),
     deleteRoadmap: jest.fn(),
     generateRoadmapVariants: jest.fn(),
     getUserVariants: jest.fn(),
@@ -194,51 +193,6 @@ describe('RoadmapsController', () => {
     });
   });
 
-  describe('generateRoadmap', () => {
-    // Matches GenerateRoadmapDto
-    const generateDto = {
-      role: 'backend_developer',
-      level: 'junior',
-      goal: 'Become a backend developer',
-      preferredTopics: ['go', 'java'],
-      hoursPerWeek: 10,
-    };
-
-    it('should generate a new roadmap', async () => {
-      mockRoadmapsService.generateRoadmap.mockResolvedValue(mockRoadmap);
-
-      const result = await controller.generateRoadmap(
-        { user: { userId: 'user-123' } },
-        generateDto
-      );
-
-      expect(result).toEqual(mockRoadmap);
-      expect(mockRoadmapsService.generateRoadmap).toHaveBeenCalledWith('user-123', generateDto);
-    });
-
-    it('should throw error for free user trying to regenerate', async () => {
-      mockRoadmapsService.generateRoadmap.mockRejectedValue(
-        new ForbiddenException('Premium required for regeneration')
-      );
-
-      await expect(
-        controller.generateRoadmap({ user: { userId: 'free-user' } }, generateDto)
-      ).rejects.toThrow(ForbiddenException);
-    });
-
-    it('should regenerate roadmap for premium user', async () => {
-      const regeneratedRoadmap = { ...mockRoadmap, title: 'Updated Roadmap' };
-      mockRoadmapsService.generateRoadmap.mockResolvedValue(regeneratedRoadmap);
-
-      const result = await controller.generateRoadmap(
-        { user: { userId: 'premium-user' } },
-        generateDto
-      );
-
-      expect(result.title).toBe('Updated Roadmap');
-    });
-  });
-
   describe('deleteRoadmap', () => {
     it('should delete user roadmap', async () => {
       mockRoadmapsService.deleteRoadmap.mockResolvedValue({ success: true });
@@ -396,44 +350,47 @@ describe('RoadmapsController', () => {
       await expect(controller.getTemplates()).rejects.toThrow('Database connection failed');
     });
 
-    it('should handle unicode in goal description', async () => {
+    it('should handle unicode in variant generation params', async () => {
       const unicodeDto = {
-        role: 'backend_developer',
-        level: 'junior',
-        goal: 'Стать backend разработчиком 成为后端开发者',
+        knownLanguages: ['python'],
+        yearsOfExperience: 2,
+        interests: ['backend'],
+        goal: 'first-job',
         hoursPerWeek: 10,
+        targetMonths: 6,
       };
-      mockRoadmapsService.generateRoadmap.mockResolvedValue(mockRoadmap);
+      mockRoadmapsService.generateRoadmapVariants.mockResolvedValue({
+        variants: [],
+        expiresAt: new Date().toISOString(),
+      });
 
-      await controller.generateRoadmap({ user: { userId: 'user-123' } }, unicodeDto);
+      await controller.generateVariants({ user: { userId: 'user-123' } }, unicodeDto);
 
-      expect(mockRoadmapsService.generateRoadmap).toHaveBeenCalledWith('user-123', unicodeDto);
+      expect(mockRoadmapsService.generateRoadmapVariants).toHaveBeenCalledWith('user-123', unicodeDto);
     });
 
-    it('should handle concurrent roadmap generation requests', async () => {
-      mockRoadmapsService.generateRoadmap.mockResolvedValue(mockRoadmap);
+    it('should handle concurrent variant generation requests', async () => {
+      mockRoadmapsService.generateRoadmapVariants.mockResolvedValue({
+        variants: [],
+        expiresAt: new Date().toISOString(),
+      });
 
-      const dto = { role: 'backend', level: 'junior', goal: 'Test', hoursPerWeek: 5 };
+      const dto = {
+        knownLanguages: [],
+        yearsOfExperience: 0,
+        interests: ['backend'],
+        goal: 'first-job',
+        hoursPerWeek: 5,
+        targetMonths: 3,
+      };
       const promises = Array.from({ length: 3 }, () =>
-        controller.generateRoadmap({ user: { userId: 'user-123' } }, dto)
+        controller.generateVariants({ user: { userId: 'user-123' } }, dto)
       );
 
       const results = await Promise.all(promises);
 
       expect(results).toHaveLength(3);
-      expect(mockRoadmapsService.generateRoadmap).toHaveBeenCalledTimes(3);
-    });
-
-    it('should handle very long goal description', async () => {
-      const longGoal = 'a'.repeat(1000);
-      mockRoadmapsService.generateRoadmap.mockResolvedValue(mockRoadmap);
-
-      await controller.generateRoadmap(
-        { user: { userId: 'user-123' } },
-        { role: 'developer', level: 'senior', goal: longGoal, hoursPerWeek: 10 }
-      );
-
-      expect(mockRoadmapsService.generateRoadmap).toHaveBeenCalled();
+      expect(mockRoadmapsService.generateRoadmapVariants).toHaveBeenCalledTimes(3);
     });
   });
 });

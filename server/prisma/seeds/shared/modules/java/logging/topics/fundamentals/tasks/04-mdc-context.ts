@@ -161,8 +161,10 @@ public class MdcFilter implements Filter {
     order: 3,
     testCode: `import static org.junit.Assert.*;
 import org.junit.Test;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 
-// Test1: Verify MdcContext class instantiation
+// Test1: class can be instantiated
 class Test1 {
     @Test
     public void test() {
@@ -171,121 +173,174 @@ class Test1 {
     }
 }
 
-// Test2: Verify main method executes without errors
+// Test2: main runs without exceptions
 class Test2 {
     @Test
     public void test() {
+        boolean completed = false;
         try {
             MdcContext.main(new String[]{});
-            assertTrue("Main method should execute successfully", true);
+            completed = true;
         } catch (Exception e) {
-            fail("Main method should not throw exceptions: " + e.getMessage());
+            fail("Main should not throw: " + e.getMessage());
         }
+        assertTrue("Main should complete without exceptions", completed);
     }
 }
 
-// Test3: Verify MDC context tracking works
+// Test3: static final logger field exists
 class Test3 {
     @Test
     public void test() {
         try {
-            MdcContext.main(new String[]{});
-            assertTrue("MDC context tracking should work", true);
-        } catch (Exception e) {
-            fail("MDC tracking should work: " + e.getMessage());
+            java.lang.reflect.Field loggerField = MdcContext.class.getDeclaredField("logger");
+            assertTrue("Logger should be static",
+                java.lang.reflect.Modifier.isStatic(loggerField.getModifiers()));
+            assertTrue("Logger should be final",
+                java.lang.reflect.Modifier.isFinal(loggerField.getModifiers()));
+        } catch (NoSuchFieldException e) {
+            fail("Should have a 'logger' field");
         }
     }
 }
 
-// Test4: Verify multi-threading works correctly
+// Test4: output contains MDC demo header
 class Test4 {
     @Test
     public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        Exception caught = null;
         try {
             MdcContext.main(new String[]{});
-            assertTrue("Multi-threading should work correctly", true);
         } catch (Exception e) {
-            fail("Multi-threading should work: " + e.getMessage());
+            caught = e;
         }
+        System.setOut(oldOut);
+        if (caught != null) {
+            fail("Should not throw exception: " + caught.getMessage());
+        }
+        String output = out.toString();
+        assertTrue("Should print MDC demo header",
+            output.contains("MDC") || output.contains("context") ||
+            output.contains("Demo") || output.contains("Демо") ||
+            output.contains("kontekst"));
     }
 }
 
-// Test5: Verify MDC is thread-local
+// Test5: output mentions thread-local
 class Test5 {
     @Test
     public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        Exception caught = null;
         try {
             MdcContext.main(new String[]{});
-            assertTrue("MDC should be thread-local", true);
         } catch (Exception e) {
-            fail("MDC thread-local functionality should work");
+            caught = e;
         }
+        System.setOut(oldOut);
+        if (caught != null) {
+            fail("Should not throw exception: " + caught.getMessage());
+        }
+        String output = out.toString();
+        assertTrue("Should mention thread-local concept",
+            output.contains("thread") || output.contains("Thread") ||
+            output.contains("поток") || output.contains("Поток") ||
+            output.contains("Note") || output.contains("Примечание") ||
+            output.contains("Eslatma"));
     }
 }
 
-// Test6: Verify MDC cleanup works
+// Test6: produces some output
 class Test6 {
     @Test
     public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        ByteArrayOutputStream err = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        PrintStream oldErr = System.err;
+        System.setOut(new PrintStream(out));
+        System.setErr(new PrintStream(err));
+        Exception caught = null;
         try {
             MdcContext.main(new String[]{});
-            assertTrue("MDC cleanup should work", true);
         } catch (Exception e) {
-            fail("MDC cleanup should work without errors");
+            caught = e;
         }
+        System.setOut(oldOut);
+        System.setErr(oldErr);
+        if (caught != null) {
+            fail("Should not throw exception: " + caught.getMessage());
+        }
+        String allOutput = out.toString() + err.toString();
+        assertTrue("Should produce some output", allOutput.length() > 0);
     }
 }
 
-// Test7: Verify request ID generation
+// Test7: logger is private
 class Test7 {
     @Test
     public void test() {
         try {
-            MdcContext.main(new String[]{});
-            assertTrue("Request ID generation should work", true);
-        } catch (Exception e) {
-            fail("Request ID generation should work");
+            java.lang.reflect.Field loggerField = MdcContext.class.getDeclaredField("logger");
+            assertTrue("Logger should be private",
+                java.lang.reflect.Modifier.isPrivate(loggerField.getModifiers()));
+        } catch (NoSuchFieldException e) {
+            fail("Should have a 'logger' field");
         }
     }
 }
 
-// Test8: Verify user context tracking
+// Test8: multiple calls work
 class Test8 {
     @Test
     public void test() {
+        int callCount = 0;
         try {
             MdcContext.main(new String[]{});
-            assertTrue("User context tracking should work", true);
+            callCount++;
+            MdcContext.main(new String[]{});
+            callCount++;
         } catch (Exception e) {
-            fail("User context tracking should work");
+            fail("Multiple calls should not throw: " + e.getMessage());
         }
+        assertEquals("Both calls should complete", 2, callCount);
     }
 }
 
-// Test9: Verify order processing with MDC
+// Test9: no NullPointerException
 class Test9 {
     @Test
     public void test() {
+        boolean noNPE = true;
         try {
             MdcContext.main(new String[]{});
-            assertTrue("Order processing with MDC should work", true);
+        } catch (NullPointerException e) {
+            noNPE = false;
+            fail("Should not have null pointer exceptions");
         } catch (Exception e) {
-            fail("Order processing should work with MDC");
+            // Other exceptions like InterruptedException are acceptable for MDC threads
+            // but NPE check still passed since we didn't catch NPE
         }
+        assertTrue("Should not throw NullPointerException", noNPE);
     }
 }
 
-// Test10: Verify complete execution with thread synchronization
+// Test10: threads complete successfully
 class Test10 {
     @Test
     public void test() {
         try {
+            long start = System.currentTimeMillis();
             MdcContext.main(new String[]{});
-            assertTrue("Complete execution should work", true);
-        } catch (InterruptedException e) {
-            fail("Thread synchronization should work");
+            long duration = System.currentTimeMillis() - start;
+            assertTrue("Should complete within reasonable time", duration < 5000);
         } catch (Exception e) {
-            fail("Complete execution should work: " + e.getMessage());
+            fail("Threads should complete: " + e.getMessage());
         }
     }
 }

@@ -77,15 +77,18 @@ public class ExceptionDemo {
         System.out.println("=== Demonstrating Exception Hierarchy ===");
 
         // 1. Checked exception example
-        System.out.println("\n1. Checked Exception (IOException):");
+        System.out.println("");
+        System.out.println("1. Checked Exception (IOException):");
         handleCheckedException("nonexistent.txt");
 
         // 2. Unchecked exception example
-        System.out.println("\n2. Unchecked Exception (NullPointerException):");
+        System.out.println("");
+        System.out.println("2. Unchecked Exception (NullPointerException):");
         handleUncheckedException(null);
 
         // 3. Multiple exception types in one try
-        System.out.println("\n3. Multiple Exception Types:");
+        System.out.println("");
+        System.out.println("3. Multiple Exception Types:");
         try {
             String[] array = {"Hello", null, "World"};
             for (String str : array) {
@@ -99,7 +102,8 @@ public class ExceptionDemo {
             System.out.println("Caught general Exception");
         }
 
-        System.out.println("\n=== Demo Complete ===");
+        System.out.println("");
+        System.out.println("=== Demo Complete ===");
     }
 
     public static void main(String[] args) {
@@ -137,132 +141,175 @@ public void processRequest(Request req) {
     order: 2,
     testCode: `import static org.junit.Assert.*;
 import org.junit.Test;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 
-// Test1: Verify ExceptionDemo class instantiation
+// Test1: main produces output with header
 class Test1 {
     @Test
     public void test() {
-        ExceptionDemo demo = new ExceptionDemo();
-        assertNotNull("ExceptionDemo instance should be created", demo);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        ExceptionDemo.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show exception hierarchy header",
+            output.contains("Demonstrating Exception Hierarchy") ||
+            output.contains("Демонстрация Иерархии Исключений") ||
+            output.contains("Istisnolar Ierarxiyasini"));
     }
 }
 
-// Test2: Verify checked exception handling
+// Test2: shows checked exception handling with FileNotFoundException
 class Test2 {
     @Test
     public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
         ExceptionDemo demo = new ExceptionDemo();
-        try {
-            demo.handleCheckedException("nonexistent.txt");
-            assertTrue("Checked exception handling should work", true);
-        } catch (Exception e) {
-            fail("Should handle checked exceptions gracefully");
-        }
+        demo.handleCheckedException("nonexistent.txt");
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should catch FileNotFoundException",
+            output.contains("FileNotFoundException") ||
+            output.contains("Checked:") ||
+            output.contains("Проверяемое:") ||
+            output.contains("Tekshiriladigan:"));
     }
 }
 
-// Test3: Verify unchecked exception handling
+// Test3: shows unchecked exception handling with NullPointerException
 class Test3 {
     @Test
     public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
         ExceptionDemo demo = new ExceptionDemo();
-        try {
-            demo.handleUncheckedException(null);
-            assertTrue("Unchecked exception handling should work", true);
-        } catch (Exception e) {
-            fail("Should handle unchecked exceptions gracefully");
-        }
+        demo.handleUncheckedException(null);
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should catch NullPointerException",
+            output.contains("NullPointerException") ||
+            output.contains("null string") ||
+            output.contains("null строка") ||
+            output.contains("null satr"));
     }
 }
 
-// Test4: Verify demonstrateExceptionTypes method
+// Test4: valid string shows length
 class Test4 {
     @Test
     public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
         ExceptionDemo demo = new ExceptionDemo();
-        try {
-            demo.demonstrateExceptionTypes();
-            assertTrue("demonstrateExceptionTypes should execute", true);
-        } catch (Exception e) {
-            fail("demonstrateExceptionTypes should not throw: " + e.getMessage());
-        }
+        demo.handleUncheckedException("test");
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show string length",
+            output.contains("length") || output.contains("4") ||
+            output.contains("Длина") || output.contains("uzunligi"));
     }
 }
 
-// Test5: Verify main method execution
+// Test5: demonstrates multiple exception types section
 class Test5 {
     @Test
     public void test() {
-        try {
-            ExceptionDemo.main(new String[]{});
-            assertTrue("Main method should execute successfully", true);
-        } catch (Exception e) {
-            fail("Main method should not throw exceptions: " + e.getMessage());
-        }
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        ExceptionDemo.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show multiple exception types section",
+            output.contains("Multiple Exception Types") ||
+            output.contains("Множественные Типы") ||
+            output.contains("Ko'p Istisno Turlari"));
     }
 }
 
-// Test6: Verify FileNotFoundException is handled
+// Test6: catches NullPointerException in array processing
 class Test6 {
     @Test
     public void test() {
-        ExceptionDemo demo = new ExceptionDemo();
-        demo.handleCheckedException("invalid_file_path.txt");
-        assertTrue("FileNotFoundException should be caught", true);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        ExceptionDemo.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should catch NullPointerException in array",
+            output.contains("Caught NullPointerException") ||
+            output.contains("Перехвачено NullPointerException") ||
+            output.contains("NullPointerException ushlandi"));
     }
 }
 
-// Test7: Verify NullPointerException is handled
+// Test7: shows demo complete message
 class Test7 {
     @Test
     public void test() {
-        ExceptionDemo demo = new ExceptionDemo();
-        demo.handleUncheckedException(null);
-        assertTrue("NullPointerException should be caught", true);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        ExceptionDemo.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show demo complete message",
+            output.contains("Demo Complete") ||
+            output.contains("Демонстрация Завершена") ||
+            output.contains("Namoyish Tugadi"));
     }
 }
 
-// Test8: Verify valid string handling
+// Test8: has numbered sections (1., 2., 3.)
 class Test8 {
     @Test
     public void test() {
-        ExceptionDemo demo = new ExceptionDemo();
-        try {
-            demo.handleUncheckedException("valid string");
-            assertTrue("Valid string should be processed", true);
-        } catch (Exception e) {
-            fail("Valid string handling should work");
-        }
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        ExceptionDemo.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should have numbered sections",
+            output.contains("1.") && output.contains("2.") && output.contains("3."));
     }
 }
 
-// Test9: Verify exception hierarchy demonstration
+// Test9: mentions IOException in checked exception section
 class Test9 {
     @Test
     public void test() {
-        ExceptionDemo demo = new ExceptionDemo();
-        try {
-            demo.demonstrateExceptionTypes();
-            assertTrue("Exception hierarchy demo should complete", true);
-        } catch (Exception e) {
-            fail("Exception hierarchy demo should not fail");
-        }
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        ExceptionDemo.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should mention IOException",
+            output.contains("IOException") || output.contains("Checked Exception"));
     }
 }
 
-// Test10: Verify all exception types are handled
+// Test10: processes first valid string before hitting null
 class Test10 {
     @Test
     public void test() {
-        ExceptionDemo demo = new ExceptionDemo();
-        try {
-            demo.handleCheckedException("file.txt");
-            demo.handleUncheckedException(null);
-            demo.handleUncheckedException("test");
-            assertTrue("All exception types should be handled", true);
-        } catch (Exception e) {
-            fail("All methods should handle exceptions: " + e.getMessage());
-        }
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        ExceptionDemo.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should process HELLO before catching null",
+            output.contains("HELLO") || output.contains("ПРИВЕТ") || output.contains("SALOM") ||
+            output.contains("Processing:") || output.contains("Обработка:") || output.contains("Qayta ishlash:"));
     }
 }
 `,
@@ -303,15 +350,18 @@ public class ExceptionDemo {
         System.out.println("=== Демонстрация Иерархии Исключений ===");
 
         // 1. Пример проверяемого исключения
-        System.out.println("\n1. Проверяемое Исключение (IOException):");
+        System.out.println("");
+        System.out.println("1. Проверяемое Исключение (IOException):");
         handleCheckedException("несуществующий.txt");
 
         // 2. Пример непроверяемого исключения
-        System.out.println("\n2. Непроверяемое Исключение (NullPointerException):");
+        System.out.println("");
+        System.out.println("2. Непроверяемое Исключение (NullPointerException):");
         handleUncheckedException(null);
 
         // 3. Множественные типы исключений в одном try
-        System.out.println("\n3. Множественные Типы Исключений:");
+        System.out.println("");
+        System.out.println("3. Множественные Типы Исключений:");
         try {
             String[] array = {"Привет", null, "Мир"};
             for (String str : array) {
@@ -325,7 +375,8 @@ public class ExceptionDemo {
             System.out.println("Перехвачено общее Exception");
         }
 
-        System.out.println("\n=== Демонстрация Завершена ===");
+        System.out.println("");
+        System.out.println("=== Демонстрация Завершена ===");
     }
 
     public static void main(String[] args) {
@@ -411,15 +462,18 @@ public class ExceptionDemo {
         System.out.println("=== Istisnolar Ierarxiyasini Namoyish Qilish ===");
 
         // 1. Tekshiriladigan istisno misoli
-        System.out.println("\n1. Tekshiriladigan Istisno (IOException):");
+        System.out.println("");
+        System.out.println("1. Tekshiriladigan Istisno (IOException):");
         handleCheckedException("mavjud_emas.txt");
 
         // 2. Tekshirilmaydigan istisno misoli
-        System.out.println("\n2. Tekshirilmaydigan Istisno (NullPointerException):");
+        System.out.println("");
+        System.out.println("2. Tekshirilmaydigan Istisno (NullPointerException):");
         handleUncheckedException(null);
 
         // 3. Bitta try da ko'p istisno turlari
-        System.out.println("\n3. Ko'p Istisno Turlari:");
+        System.out.println("");
+        System.out.println("3. Ko'p Istisno Turlari:");
         try {
             String[] array = {"Salom", null, "Dunyo"};
             for (String str : array) {
@@ -433,7 +487,8 @@ public class ExceptionDemo {
             System.out.println("Umumiy Exception ushlandi");
         }
 
-        System.out.println("\n=== Namoyish Tugadi ===");
+        System.out.println("");
+        System.out.println("=== Namoyish Tugadi ===");
     }
 
     public static void main(String[] args) {

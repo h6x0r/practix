@@ -283,4 +283,67 @@ export class CacheService implements OnModuleInit, OnModuleDestroy {
       return { connected: false };
     }
   }
+
+  // ============================================
+  // Run Validation Cache Methods
+  // ============================================
+
+  private readonly RUN_VALIDATION_TTL = 3600; // 1 hour
+
+  /**
+   * Generate cache key for run validation
+   */
+  getRunValidationKey(userId: string, taskId: string): string {
+    return `run_valid:${userId}:${taskId}`;
+  }
+
+  /**
+   * Mark task as validated via Run (user passed 5+ tests)
+   */
+  async setRunValidated(userId: string, taskId: string, testsPassed: number): Promise<void> {
+    if (!this.isConnected) return;
+
+    try {
+      const key = this.getRunValidationKey(userId, taskId);
+      const data = { testsPassed, validatedAt: new Date().toISOString() };
+      await this.redis.setex(key, this.RUN_VALIDATION_TTL, JSON.stringify(data));
+      this.logger.debug(`Run validated: user=${userId}, task=${taskId}, tests=${testsPassed}`);
+    } catch (error) {
+      this.logger.warn(`Run validation set error: ${error.message}`);
+    }
+  }
+
+  /**
+   * Check if task is validated via Run
+   * Returns number of tests passed, or null if not validated
+   */
+  async getRunValidation(userId: string, taskId: string): Promise<{ testsPassed: number; validatedAt: string } | null> {
+    if (!this.isConnected) {
+      // If cache is not available, allow submission (fail-open for better UX)
+      return { testsPassed: 5, validatedAt: new Date().toISOString() };
+    }
+
+    try {
+      const key = this.getRunValidationKey(userId, taskId);
+      const cached = await this.redis.get(key);
+      return cached ? JSON.parse(cached) : null;
+    } catch (error) {
+      this.logger.warn(`Run validation get error: ${error.message}`);
+      return null;
+    }
+  }
+
+  /**
+   * Clear run validation after successful submission
+   */
+  async clearRunValidation(userId: string, taskId: string): Promise<void> {
+    if (!this.isConnected) return;
+
+    try {
+      const key = this.getRunValidationKey(userId, taskId);
+      await this.redis.del(key);
+    } catch (error) {
+      this.logger.warn(`Run validation clear error: ${error.message}`);
+    }
+  }
 }

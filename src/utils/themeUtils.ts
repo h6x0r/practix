@@ -58,6 +58,11 @@ export const getCourseTheme = (courseId: string): CourseTheme => {
     return { from: 'from-emerald-400', to: 'to-green-600', accent: 'emerald' };
   }
 
+  // Prompt Engineering - Pink/Purple family
+  if (id.includes('prompt') || id === 'c_prompt_engineering') {
+    return { from: 'from-pink-500', to: 'to-purple-600', accent: 'pink' };
+  }
+
   // Default
   return { from: 'from-gray-500', to: 'to-gray-700', accent: 'gray' };
 };

@@ -39,6 +39,7 @@ describe('UsersService', () => {
       findUnique: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
+      count: jest.fn().mockResolvedValue(0),
     },
     submission: {
       findMany: jest.fn(),
@@ -65,6 +66,30 @@ describe('UsersService', () => {
 
   it('should be defined', () => {
     expect(service).toBeDefined();
+  });
+
+  // ============================================
+  // findOneForAuth()
+  // ============================================
+  describe('findOneForAuth()', () => {
+    it('should find user by email including password', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+
+      const result = await service.findOneForAuth('test@example.com');
+
+      expect(result).toEqual(mockUser);
+      expect(mockPrismaService.user.findUnique).toHaveBeenCalledWith({
+        where: { email: 'test@example.com' },
+      });
+    });
+
+    it('should return null if user not found', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue(null);
+
+      const result = await service.findOneForAuth('nonexistent@example.com');
+
+      expect(result).toBeNull();
+    });
   });
 
   // ============================================
@@ -219,15 +244,28 @@ describe('UsersService', () => {
       expect(result.globalRank).toBe(1);
     });
 
-    it('should calculate hours spent', async () => {
-      // 10 submissions * 10 min = 100 min = 1h 40m
+    it('should calculate total minutes spent', async () => {
+      // 10 submissions * 10 min = 100 min
       const submissions = Array(10).fill({ ...mockSubmission, status: 'passed' });
       mockPrismaService.submission.findMany.mockResolvedValue(submissions);
       mockPrismaService.submission.groupBy.mockResolvedValue([]);
 
       const result = await service.getUserStats('user-123');
 
-      expect(result.hoursSpent).toBe('1h');
+      expect(result.totalMinutes).toBe(100);
+    });
+
+    it('should calculate top percent', async () => {
+      mockPrismaService.submission.findMany.mockResolvedValue([]);
+      mockPrismaService.user.count
+        .mockResolvedValueOnce(4)  // 4 users with higher XP
+        .mockResolvedValueOnce(100); // 100 total users
+
+      const result = await service.getUserStats('user-123');
+
+      // Rank 5 out of 100 = top 5%
+      expect(result.globalRank).toBe(5);
+      expect(result.topPercent).toBe(5);
     });
 
     it('should handle user with no submissions', async () => {
@@ -365,6 +403,124 @@ describe('UsersService', () => {
       const result = await service.getActivePlan('user-123');
 
       expect(result).toBeNull();
+    });
+  });
+
+  // ============================================
+  // calculateStreak() - private method testing
+  // ============================================
+  describe('calculateStreak() - private method', () => {
+    const calculateStreak = (submissions: { status: string; createdAt: Date }[]) => {
+      return (service as any).calculateStreak(submissions);
+    };
+
+    it('should return 0 for empty submissions', () => {
+      const result = calculateStreak([]);
+      expect(result.currentStreak).toBe(0);
+      expect(result.maxStreak).toBe(0);
+    });
+
+    it('should return 0 for submissions with no passed status', () => {
+      const result = calculateStreak([
+        { status: 'failed', createdAt: new Date('2025-01-01') },
+        { status: 'failed', createdAt: new Date('2025-01-02') },
+      ]);
+      expect(result.currentStreak).toBe(0);
+      expect(result.maxStreak).toBe(0);
+    });
+
+    it('should calculate single day streak', () => {
+      const today = new Date();
+      const result = calculateStreak([
+        { status: 'passed', createdAt: today },
+      ]);
+      expect(result.currentStreak).toBe(1);
+      expect(result.maxStreak).toBe(1);
+    });
+
+    it('should calculate consecutive day streak', () => {
+      const today = new Date();
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      const dayBefore = new Date(today);
+      dayBefore.setDate(dayBefore.getDate() - 2);
+
+      const result = calculateStreak([
+        { status: 'passed', createdAt: today },
+        { status: 'passed', createdAt: yesterday },
+        { status: 'passed', createdAt: dayBefore },
+      ]);
+      expect(result.currentStreak).toBe(3);
+      expect(result.maxStreak).toBe(3);
+    });
+
+    it('should calculate max streak separately from current streak', () => {
+      // Scenario: 5 day streak last week, but no activity recently
+      const submissions = [
+        { status: 'passed', createdAt: new Date('2025-01-01') },
+        { status: 'passed', createdAt: new Date('2025-01-02') },
+        { status: 'passed', createdAt: new Date('2025-01-03') },
+        { status: 'passed', createdAt: new Date('2025-01-04') },
+        { status: 'passed', createdAt: new Date('2025-01-05') },
+      ];
+
+      const result = calculateStreak(submissions);
+      expect(result.maxStreak).toBe(5);
+      // Current streak is 0 because none of these are today/yesterday
+      expect(result.currentStreak).toBe(0);
+    });
+
+    it('should handle broken streaks correctly', () => {
+      // Streak of 2, gap, then streak of 3
+      const submissions = [
+        { status: 'passed', createdAt: new Date('2025-01-01') },
+        { status: 'passed', createdAt: new Date('2025-01-02') },
+        // Gap on Jan 3
+        { status: 'passed', createdAt: new Date('2025-01-04') },
+        { status: 'passed', createdAt: new Date('2025-01-05') },
+        { status: 'passed', createdAt: new Date('2025-01-06') },
+      ];
+
+      const result = calculateStreak(submissions);
+      expect(result.maxStreak).toBe(3); // The longest consecutive run
+    });
+
+    it('should count current streak from yesterday if no activity today', () => {
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const dayBefore = new Date();
+      dayBefore.setDate(dayBefore.getDate() - 2);
+
+      const result = calculateStreak([
+        { status: 'passed', createdAt: yesterday },
+        { status: 'passed', createdAt: dayBefore },
+      ]);
+      expect(result.currentStreak).toBe(2);
+    });
+
+    it('should only count passed submissions for streak', () => {
+      const today = new Date();
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+
+      const result = calculateStreak([
+        { status: 'passed', createdAt: today },
+        { status: 'failed', createdAt: yesterday }, // Should not count
+      ]);
+      expect(result.currentStreak).toBe(1);
+      expect(result.maxStreak).toBe(1);
+    });
+
+    it('should handle multiple submissions on same day', () => {
+      const today = new Date();
+      const result = calculateStreak([
+        { status: 'passed', createdAt: today },
+        { status: 'passed', createdAt: today },
+        { status: 'passed', createdAt: today },
+      ]);
+      // Same day counts as 1
+      expect(result.currentStreak).toBe(1);
+      expect(result.maxStreak).toBe(1);
     });
   });
 });

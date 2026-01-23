@@ -1,17 +1,58 @@
-# API Client Usage Guide
+# API Client Guide & Architecture
+
+> Complete guide to the frontend API layer: architecture, usage, and best practices.
+
+---
+
+## Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                      React Components                            │
+│  (Pages, Features UI, etc.)                                      │
+└──────────────┬──────────────────────────────────────────────────┘
+               │
+    ┌──────────▼──────────┐          ┌───────────────────────┐
+    │  Feature Services   │          │   Shared API Utils    │
+    │  /features/*/api/   │◄─────────│   /lib/api/           │
+    └──────────┬──────────┘          └───────────────────────┘
+               │
+    ┌──────────▼──────────┐
+    │  API Client (api)   │
+    │  - GET, POST, etc.  │
+    │  - Error Handling   │
+    │  - Interceptors     │
+    └──────────┬──────────┘
+               │
+    ┌──────────▼──────────┐
+    │   Backend API       │
+    │   (NestJS)          │
+    └─────────────────────┘
+```
+
+### Layer Responsibilities
+
+| Layer | Location | Responsibility |
+|-------|----------|----------------|
+| **Components** | `/src/features/*/ui/` | UI rendering, user interaction |
+| **Feature Services** | `/src/features/*/api/` | Business logic, data transformation |
+| **Shared Utils** | `/src/lib/api/` | HTTP client, error handling, interceptors |
+| **Backend** | NestJS | REST API, authentication, data persistence |
+
+---
 
 ## Quick Reference
 
 ### Basic Imports
 
 ```typescript
-// For shared API utilities (HTTP client, error handling, interceptors)
+// Shared API utilities
 import { api, ApiError, setupInterceptors } from '@/lib/api';
 
-// For generic API client factory
+// Generic API client factory
 import { createApiClient } from '@/lib/api';
 
-// For feature-specific services
+// Feature-specific services
 import { authService } from '@/features/auth/api/authService';
 import { courseService } from '@/features/courses/api/courseService';
 import { taskService } from '@/features/tasks/api/taskService';
@@ -19,9 +60,11 @@ import { askAiTutor } from '@/features/ai/api/geminiService';
 import { playgroundService } from '@/features/playground/api/playgroundService';
 ```
 
+---
+
 ## Using the Base API Client
 
-### Simple GET Request
+### GET Request
 ```typescript
 import { api } from '@/lib/api';
 
@@ -36,8 +79,6 @@ const user = await api.get<User>('/users/123');
 
 ### POST Request
 ```typescript
-import { api } from '@/lib/api';
-
 const newUser = await api.post<User>('/users', {
   name: 'John Doe',
   email: 'john@example.com'
@@ -46,8 +87,6 @@ const newUser = await api.post<User>('/users', {
 
 ### PATCH Request
 ```typescript
-import { api } from '@/lib/api';
-
 const updated = await api.patch<User>('/users/123', {
   name: 'Jane Doe'
 });
@@ -55,10 +94,10 @@ const updated = await api.patch<User>('/users/123', {
 
 ### DELETE Request
 ```typescript
-import { api } from '@/lib/api';
-
 await api.delete('/users/123');
 ```
+
+---
 
 ## Error Handling
 
@@ -73,7 +112,7 @@ try {
     console.error('API Error:', error.message);
     console.error('Status:', error.status);
     console.error('Data:', error.data);
-    
+
     if (error.status === 401) {
       // Handle unauthorized
     } else if (error.status === 404) {
@@ -83,22 +122,23 @@ try {
 }
 ```
 
-## Setting Up Interceptors
+### Setting Up Interceptors
 
-### Global 401 Handler
 ```typescript
+// In App.tsx
 import { setupInterceptors } from '@/lib/api';
 import { authService } from '@/features/auth/api/authService';
 
-// In your App.tsx or main entry point
 setupInterceptors(() => {
-  console.warn("Session expired");
+  // This runs on any 401 response
   authService.logout();
-  // Redirect to login, etc.
+  setUser(null);
 });
 ```
 
-## Using the Generic API Client Factory
+---
+
+## Generic API Client Factory
 
 The `createApiClient` function creates a typed CRUD client for any resource.
 
@@ -135,27 +175,25 @@ const updated = await productClient.update('123', {
 await productClient.delete('123');
 ```
 
-### Creating a Feature Service with Generic Client
+### Extending with Custom Methods
 ```typescript
 // src/features/products/api/productService.ts
-import { createApiClient } from '@/lib/api';
+import { createApiClient, api } from '@/lib/api';
 import { Product } from '../model/types';
 
-const productClient = createApiClient<Product>('/products');
+const baseClient = createApiClient<Product>('/products');
 
 export const productService = {
-  ...productClient,
-  
-  // Add custom methods specific to products
-  getFeatured: async () => {
-    return api.get<Product[]>('/products/featured');
-  },
-  
-  searchByName: async (query: string) => {
-    return api.get<Product[]>(`/products/search?q=${encodeURIComponent(query)}`);
-  }
+  ...baseClient,
+
+  // Add custom methods
+  getFeatured: async () => api.get<Product[]>('/products/featured'),
+  searchByName: async (query: string) =>
+    api.get<Product[]>(`/products/search?q=${encodeURIComponent(query)}`)
 };
 ```
+
+---
 
 ## Feature Service Examples
 
@@ -181,22 +219,14 @@ const currentUser = await authService.getMe();
 
 // Logout
 authService.logout();
-
-// Upgrade to premium
-const upgradedUser = await authService.upgrade();
 ```
 
 ### Course Service
 ```typescript
 import { courseService } from '@/features/courses/api/courseService';
 
-// Get all courses
 const courses = await courseService.getAllCourses();
-
-// Get specific course
 const course = await courseService.getCourseById('course-123');
-
-// Get course structure with modules
 const modules = await courseService.getCourseStructure('course-123');
 ```
 
@@ -204,23 +234,9 @@ const modules = await courseService.getCourseStructure('course-123');
 ```typescript
 import { taskService } from '@/features/tasks/api/taskService';
 
-// Fetch a task by slug
 const task = await taskService.fetchTask('two-sum');
-
-// Get recent tasks
 const recentTasks = await taskService.getRecentTasks();
-
-// Submit code for a task
-const submission = await taskService.submitCode(
-  'console.log("Hello")',
-  'task-123'
-);
-
-// Check if task is completed (uses localStorage)
-const isCompleted = taskService.isResourceCompleted('task-123', 'task');
-
-// Mark task as completed (saves to localStorage)
-taskService.markTaskAsCompleted('task-123');
+const submission = await taskService.submitCode('console.log("Hello")', 'task-123');
 ```
 
 ### AI Tutor Service
@@ -240,24 +256,29 @@ const answer = await askAiTutor(
 ```typescript
 import { playgroundService } from '@/features/playground/api/playgroundService';
 
-// Run code
 const result = await playgroundService.runCode(
   'console.log("Hello World")',
   'javascript',
   '' // optional stdin
 );
 
-// Get available languages
 const { languages, default: defaultLang } = await playgroundService.getLanguages();
-
-// Get judge system status
-const status = await playgroundService.getJudgeStatus();
 ```
+
+---
 
 ## Best Practices
 
-### 1. Use Type Safety
-Always provide TypeScript types for better IDE support and type checking:
+### 1. Always Use Feature Services
+```typescript
+// Bad - direct API call in component
+const user = await api.get('/users/me');
+
+// Good - use feature service
+const user = await authService.getMe();
+```
+
+### 2. Type Everything
 ```typescript
 interface MyData {
   id: string;
@@ -268,12 +289,10 @@ const data = await api.get<MyData>('/endpoint');
 // `data` is now typed as MyData
 ```
 
-### 2. Handle Errors Properly
-Always wrap API calls in try-catch blocks:
+### 3. Handle Errors Properly
 ```typescript
 try {
   const data = await api.get('/data');
-  // Handle success
 } catch (error) {
   if (error instanceof ApiError) {
     // Handle API errors
@@ -283,72 +302,63 @@ try {
 }
 ```
 
-### 3. Use Feature Services
-Don't use the raw API client in components. Always create/use feature services:
+### 4. Use Generic Client for CRUD
 ```typescript
-// Bad - directly in component
-const user = await api.get('/users/me');
-
-// Good - use feature service
-const user = await authService.getMe();
-```
-
-### 4. Keep Services in Feature Directories
-New services should go in `/src/features/[feature-name]/api/`:
-```
-src/
-  features/
-    products/
-      api/
-        productService.ts
-      model/
-        types.ts
-      ui/
-        ProductList.tsx
-```
-
-### 5. Reuse Generic Client When Possible
-For simple CRUD operations, use `createApiClient`:
-```typescript
-// Instead of writing:
+// Instead of:
 export const userService = {
   getAll: () => api.get('/users'),
   get: (id: string) => api.get(`/users/${id}`),
   create: (data: User) => api.post('/users', data),
-  // ... etc
 };
 
 // Just do:
 export const userService = createApiClient<User>('/users');
 ```
 
+---
+
 ## Directory Structure
 
 ```
 src/
-  lib/
-    api/
-      client.ts          # Core API client
-      createApiClient.ts # Generic CRUD factory
-      index.ts           # Public exports
-  features/
-    auth/
-      api/
-        authService.ts
-    courses/
-      api/
-        courseService.ts
-    tasks/
-      api/
-        taskService.ts
-    ai/
-      api/
-        geminiService.ts
-    playground/
-      api/
-        playgroundService.ts
+├── lib/
+│   └── api/
+│       ├── client.ts          # Core API client
+│       ├── createApiClient.ts # Generic CRUD factory
+│       └── index.ts           # Public exports
+└── features/
+    ├── auth/
+    │   └── api/
+    │       └── authService.ts
+    ├── courses/
+    │   └── api/
+    │       └── courseService.ts
+    ├── tasks/
+    │   └── api/
+    │       └── taskService.ts
+    └── ...
 ```
 
 ---
 
-*For migration details, see [API_SERVICES_MIGRATION.md](./API_SERVICES_MIGRATION.md)*
+## Configuration
+
+### Environment Setup
+```typescript
+// /src/config/env.ts
+export const ENV = {
+  API_URL: import.meta.env.VITE_API_URL || 'http://localhost:3001'
+};
+
+export const getHeaders = () => {
+  const token = localStorage.getItem('token');
+  return {
+    'Content-Type': 'application/json',
+    ...(token && { Authorization: `Bearer ${token}` })
+  };
+};
+```
+
+---
+
+*Last updated: January 2026*

@@ -8,5 +8,6 @@ import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
   imports: [UsersModule, SubscriptionsModule],
   controllers: [AiController],
   providers: [AiService],
+  exports: [AiService],
 })
 export class AiModule {}

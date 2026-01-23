@@ -12,6 +12,12 @@ enum UserRole {
   ADMIN
 }
 
+// Task type for different submission flows
+enum TaskType {
+  CODE    // Traditional code tasks (executed by Piston)
+  PROMPT  // Prompt engineering tasks (evaluated by AI)
+}
+
 model User {
   id        String   @id @default(uuid())
   email     String   @unique
@@ -20,6 +26,7 @@ model User {
   avatarUrl String?
   isPremium Boolean  @default(false)
   role      UserRole @default(USER)
+  isBot     Boolean  @default(false) // Demo/seed users for analytics display
 
   // Subscription plan details { name: string, expiresAt: string }
   plan Json?
@@ -46,10 +53,12 @@ model User {
   aiUsage          AiUsage[]
   bugReports       BugReport[]
   subscriptions    Subscription[]
+  purchases        Purchase[]
   badges           UserBadge[]
   courses          UserCourse[]
   sessions         Session[]
   taskCompletions  TaskCompletion[]
+  runResults       RunResult[]
 
   // Performance indexes for leaderboard and gamification queries
   @@index([level, xp])        // Leaderboard sorting
@@ -130,8 +139,15 @@ model Task {
   youtubeUrl    String?
   order         Int      @default(0)
 
+  // Task type: CODE (default) or PROMPT (for prompt engineering)
+  taskType      TaskType @default(CODE)
+
   // ML visualization support
   visualizationType String? // 'none' | 'line' | 'bar' | 'scatter' | 'heatmap' | 'confusion_matrix' | 'multi'
+
+  // Prompt Engineering configuration (only for taskType: PROMPT)
+  // Structure: { testScenarios: [...], judgePrompt: string, passingScore: number }
+  promptConfig  Json?
 
   // Multi-language support: { ru: { title, description, hint1, hint2, solutionExplanation, whyItMatters }, uz: {...} }
   translations  Json?
@@ -140,6 +156,7 @@ model Task {
   submissions     Submission[]
   bugReports      BugReport[]
   taskCompletions TaskCompletion[]
+  runResults      RunResult[]
 }
 
 model Submission {
@@ -168,6 +185,31 @@ model Submission {
   @@index([taskId])              // For task-only queries
   @@index([status])              // For status-only filters
   @@index([userId, createdAt])   // For user's recent submissions
+}
+
+// Stores the latest Run Code result for each user+task pair (UPSERT)
+// This allows persisting quick test results across page reloads
+model RunResult {
+  id          String   @id @default(uuid())
+  userId      String
+  taskId      String
+  status      String   // 'passed' | 'failed' | 'error'
+  testsPassed Int
+  testsTotal  Int
+  runtime     String
+  message     String?
+  testCases   Json?    // Array of test case results
+  code        String   // The code that was run
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  // Only one RunResult per user+task pair
+  @@unique([userId, taskId])
+  @@index([userId])
+  @@index([taskId])
 }
 
 model UserRoadmap {
@@ -258,15 +300,15 @@ model Subscription {
   @@index([userId, status])   // For user's active subscriptions
 }
 
-// Payment history (for future payment integration)
+// Payment history (for subscription payments)
 model Payment {
   id             String   @id @default(uuid())
   subscriptionId String
   amount         Int      // Amount in tiyn
   currency       String   @default("UZS")
   status         String   // 'pending' | 'completed' | 'failed' | 'refunded'
-  provider       String?  // 'uzcard' | 'humo' | 'visa' | 'mastercard' | null
-  providerTxId   String?  // External transaction ID
+  provider       String?  // 'payme' | 'click' | null
+  providerTxId   String?  // External transaction ID from provider
   metadata       Json?    // Provider-specific data
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
@@ -275,6 +317,50 @@ model Payment {
 
   @@index([subscriptionId])
   @@index([status])
+}
+
+// One-time purchases (roadmap generations, AI credits, etc.)
+model Purchase {
+  id           String   @id @default(uuid())
+  userId       String
+  type         String   // 'roadmap_generation' | 'ai_credits'
+  quantity     Int      @default(1)
+  amount       Int      // Amount in tiyn
+  currency     String   @default("UZS")
+  status       String   // 'pending' | 'completed' | 'failed' | 'refunded'
+  provider     String?  // 'payme' | 'click' | null
+  providerTxId String?  // External transaction ID from provider
+  metadata     Json?    // Provider-specific data (order details, etc.)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@index([type])
+}
+
+// Payment transaction log (for all payment attempts - debugging & audit)
+model PaymentTransaction {
+  id             String   @id @default(uuid())
+  orderId        String   // Internal order ID (subscription or purchase ID)
+  orderType      String   // 'subscription' | 'purchase'
+  provider       String   // 'payme' | 'click'
+  providerTxId   String?  // External transaction ID
+  amount         Int      // Amount in tiyn
+  state          Int      // Provider-specific state code
+  action         String   // 'create' | 'perform' | 'cancel' | 'check'
+  request        Json?    // Raw request from provider
+  response       Json?    // Raw response sent to provider
+  errorCode      Int?     // Error code if failed
+  errorMessage   String?  // Error message if failed
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([orderId])
+  @@index([providerTxId])
+  @@index([provider])
 }
 
 // === GAMIFICATION MODELS ===
@@ -329,26 +415,35 @@ model UserCourse {
 }
 
 // === SESSION MANAGEMENT ===
-// For single-device authentication enforcement
+// Multi-device auth: 1 mobile + 1 desktop allowed simultaneously
+
+enum DeviceType {
+  MOBILE
+  DESKTOP
+  UNKNOWN
+}
+
 model Session {
-  id           String   @id @default(uuid())
+  id           String     @id @default(uuid())
   userId       String
-  token        String   @unique
-  deviceInfo   String?  // Browser, OS info
+  token        String     @unique
+  deviceType   DeviceType @default(UNKNOWN)  // For per-device-type session limiting
+  deviceInfo   String?    // Browser, OS info (User-Agent string)
   ipAddress    String?
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
+  isActive     Boolean    @default(true)
+  createdAt    DateTime   @default(now())
   expiresAt    DateTime
-  lastActiveAt DateTime @default(now())
+  lastActiveAt DateTime   @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([token])
+  @@index([userId, deviceType])             // For per-device-type session lookup
   // Indexes for session cleanup queries
-  @@index([expiresAt])                    // Expired sessions cleanup
-  @@index([isActive, lastActiveAt])       // Inactive sessions cleanup
-  @@index([createdAt])                    // Old sessions cleanup (30 days)
+  @@index([expiresAt])                      // Expired sessions cleanup
+  @@index([isActive, lastActiveAt])         // Inactive sessions cleanup
+  @@index([createdAt])                      // Old sessions cleanup (30 days)
 }
 
 // === TASK COMPLETION TRACKING ===

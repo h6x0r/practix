@@ -1,6 +1,6 @@
 
 import React, { useContext, useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   IconDashboard, IconBook, IconCode, IconChart, IconSettings,
   IconMoon, IconSun, IconSparkles, IconCreditCard, IconMap, IconTerminal, IconTrophy
@@ -178,6 +178,12 @@ const Header = () => {
   const { language, setLanguage } = useLanguage();
   const { tUI } = useUITranslation();
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
 
   const getPageTitle = () => {
     const path = location.pathname;
@@ -246,7 +252,7 @@ const Header = () => {
 
         {/* User Auth */}
         {user ? (
-          <div className="flex items-center gap-3 pl-4 border-l border-gray-200 dark:border-dark-border">
+          <div data-testid="user-menu" className="flex items-center gap-3 pl-4 border-l border-gray-200 dark:border-dark-border">
             <div className="text-right hidden md:block">
               <div className="text-sm font-bold text-gray-900 dark:text-white leading-none">{user.name}</div>
               <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 flex items-center justify-end gap-1">
@@ -264,7 +270,7 @@ const Header = () => {
                 <div className="w-9 h-9 rounded-full bg-gradient-to-br from-brand-500 to-purple-600 text-white flex items-center justify-center font-bold shadow-sm">{user.name.charAt(0)}</div>
             )}
 
-            <button onClick={logout} className="ml-2 text-xs text-red-500 hover:text-red-600 font-bold">{tUI('nav.logout')}</button>
+            <button data-testid="logout-button" onClick={handleLogout} className="ml-2 text-xs text-red-500 hover:text-red-600 font-bold">{tUI('nav.logout')}</button>
           </div>
         ) : (
           <Link

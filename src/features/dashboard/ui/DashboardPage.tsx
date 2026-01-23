@@ -3,12 +3,10 @@ import { Link } from 'react-router-dom';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { AuthContext } from '@/components/Layout';
 import { AuthRequiredOverlay } from '@/components/AuthRequiredOverlay';
-import { courseService } from '@/features/courses/api/courseService';
 import { taskService } from '@/features/tasks/api/taskService';
 import { dashboardService, UserStats, DayActivity } from '../api/dashboardService';
-import { getCourseTheme } from '@/utils/themeUtils';
 import { IconCheckCircle, IconClock, IconPlay, IconChart } from '@/components/Icons';
-import { Course, Submission } from '@/types';
+import { Submission } from '@/types';
 import { useUITranslation } from '@/contexts/LanguageContext';
 import { createLogger } from '@/lib/logger';
 
@@ -17,23 +15,22 @@ const log = createLogger('Dashboard');
 const DashboardPage = () => {
   const { user } = useContext(AuthContext);
   const { tUI } = useUITranslation();
-  const [courses, setCourses] = useState<Course[]>([]);
   const [recentSubmissions, setRecentSubmissions] = useState<Submission[]>([]);
   const [userStats, setUserStats] = useState<UserStats | null>(null);
   const [chartData, setChartData] = useState<DayActivity[]>([]);
+  const [chartDays, setChartDays] = useState<number>(7);
   const [loading, setLoading] = useState(true);
+  const [chartLoading, setChartLoading] = useState(false);
 
   // Load Data via Services
   useEffect(() => {
     if (user) {
         setLoading(true);
         Promise.all([
-            courseService.getAllCourses(),
             taskService.getRecentSubmissions(15), // Last 15 submissions
             dashboardService.getStats(),
-            dashboardService.getWeeklyActivity(7)
-        ]).then(([coursesData, submissionsData, statsData, activityData]) => {
-            setCourses(coursesData);
+            dashboardService.getWeeklyActivity(chartDays)
+        ]).then(([submissionsData, statsData, activityData]) => {
             setRecentSubmissions(submissionsData);
             setUserStats(statsData);
             setChartData(activityData);
@@ -44,6 +41,20 @@ const DashboardPage = () => {
         });
     }
   }, [user]);
+
+  // Handle chart period change
+  const handleChartPeriodChange = async (days: number) => {
+    setChartDays(days);
+    setChartLoading(true);
+    try {
+      const activityData = await dashboardService.getWeeklyActivity(days);
+      setChartData(activityData);
+    } catch (error) {
+      log.error('Failed to load chart data', error);
+    } finally {
+      setChartLoading(false);
+    }
+  };
 
   if (!user) {
     return (
@@ -72,6 +83,15 @@ const DashboardPage = () => {
     return points.toString();
   };
 
+  // Format time spent (minutes -> hours or minutes with i18n)
+  const formatTimeSpent = (totalMinutes: number) => {
+    const hours = Math.floor(totalMinutes / 60);
+    if (hours > 0) {
+      return `${hours}${tUI('dashboard.hours')}`;
+    }
+    return `${totalMinutes}${tUI('dashboard.minutes')}`;
+  };
+
   const stats = [
     {
       label: tUI('dashboard.totalSolved'),
@@ -82,22 +102,22 @@ const DashboardPage = () => {
     },
     {
       label: tUI('dashboard.hoursSpent'),
-      val: userStats?.hoursSpent || '0m',
-      sub: `${userStats?.totalSubmissions || 0} submissions`,
+      val: formatTimeSpent(userStats?.totalMinutes || 0),
+      sub: `${userStats?.totalSubmissions || 0} ${tUI('dashboard.submissions')}`,
       color: 'text-purple-500',
       bg: 'bg-purple-500/10'
     },
     {
       label: tUI('dashboard.globalRank'),
       val: userStats?.globalRank ? `#${userStats.globalRank}` : '-',
-      sub: tUI('dashboard.topPercent'),
+      sub: `${tUI('dashboard.topPercent')} ${userStats?.topPercent || 0}%`,
       color: 'text-emerald-500',
       bg: 'bg-emerald-500/10'
     },
     {
       label: tUI('dashboard.skillPoints'),
       val: formatSkillPoints(userStats?.skillPoints || 0),
-      sub: `max streak: ${userStats?.maxStreak || 0}`,
+      sub: `${tUI('dashboard.maxStreak')}: ${userStats?.maxStreak || 0}`,
       color: 'text-amber-500',
       bg: 'bg-amber-500/10'
     },
@@ -141,12 +161,22 @@ const DashboardPage = () => {
         <div className="lg:col-span-2 bg-white dark:bg-dark-surface p-6 rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-lg font-bold text-gray-900 dark:text-white">{tUI('dashboard.activityOverview')}</h2>
-            <select className="bg-gray-50 dark:bg-dark-bg border border-gray-200 dark:border-dark-border text-xs rounded-lg px-2 py-1 outline-none dark:text-gray-300">
-              <option>{tUI('dashboard.last7Days')}</option>
-              <option>{tUI('dashboard.last30Days')}</option>
+            <select
+              value={chartDays}
+              onChange={(e) => handleChartPeriodChange(Number(e.target.value))}
+              disabled={chartLoading}
+              className="bg-gray-50 dark:bg-dark-bg border border-gray-200 dark:border-dark-border text-xs rounded-lg px-2 py-1 outline-none dark:text-gray-300 disabled:opacity-50"
+            >
+              <option value={7}>{tUI('dashboard.last7Days')}</option>
+              <option value={30}>{tUI('dashboard.last30Days')}</option>
             </select>
           </div>
-          <div className="h-72 w-full">
+          <div className="h-72 w-full relative">
+            {chartLoading && (
+              <div className="absolute inset-0 flex items-center justify-center bg-white/50 dark:bg-dark-surface/50 z-10">
+                <div className="text-gray-500 animate-pulse">{tUI('common.loading')}</div>
+              </div>
+            )}
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartData}>
                 <defs>
@@ -169,7 +199,7 @@ const DashboardPage = () => {
         </div>
 
         {/* Task Lists */}
-        <div className="bg-white dark:bg-dark-surface rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm flex flex-col overflow-hidden h-[380px]">
+        <div data-testid="my-courses-section" className="bg-white dark:bg-dark-surface rounded-2xl border border-gray-100 dark:border-dark-border shadow-sm flex flex-col overflow-hidden h-[380px]">
           <div className="p-4 border-b border-gray-100 dark:border-dark-border bg-gray-50/50 dark:bg-dark-surface flex-shrink-0">
             <h2 className="text-lg font-bold text-gray-900 dark:text-white">{tUI('dashboard.recentActivity')}</h2>
           </div>
@@ -206,7 +236,7 @@ const DashboardPage = () => {
                 </h3>
                 <div className="space-y-2">
                   {passedSubmissions.slice(0, 5).map(sub => (
-                    <Link to={`/task/${sub.task?.slug || sub.taskId}`} key={sub.id} className="group flex items-center justify-between p-3 rounded-xl bg-green-50/50 dark:bg-green-900/10 border border-green-100 dark:border-green-900/20 hover:border-green-300 transition-colors cursor-pointer">
+                    <Link to={`/task/${sub.task?.slug || sub.taskId}`} key={sub.id} data-testid="course-progress-card" className="group flex items-center justify-between p-3 rounded-xl bg-green-50/50 dark:bg-green-900/10 border border-green-100 dark:border-green-900/20 hover:border-green-300 transition-colors cursor-pointer">
                        <div className="flex items-center gap-3">
                          <div className="w-2 h-2 rounded-full bg-green-500"></div>
                          <div>
@@ -235,29 +265,6 @@ const DashboardPage = () => {
         </div>
       </div>
       
-      {/* Active Courses row */}
-      <div>
-        <h2 className="text-lg font-bold mb-4 text-gray-900 dark:text-white">{tUI('dashboard.activeCourses')}</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-           {courses.slice(0, 2).map(course => {
-             const theme = getCourseTheme(course.id);
-             return (
-               <div key={course.id} className="bg-white dark:bg-dark-surface p-4 rounded-xl border border-gray-100 dark:border-dark-border flex items-center gap-4">
-                 <div className={`w-12 h-12 rounded-lg flex items-center justify-center text-2xl bg-gradient-to-br ${theme.from} ${theme.to} text-white shadow-lg`}>
-                   {course.icon}
-                 </div>
-                 <div className="flex-1">
-                   <h3 className="font-bold text-sm text-gray-900 dark:text-white">{course.title}</h3>
-                   <div className="w-full h-1.5 bg-gray-100 dark:bg-dark-bg rounded-full mt-2 overflow-hidden">
-                     <div className={`h-full bg-gradient-to-r ${theme.from} ${theme.to}`} style={{width: `${course.progress}%`}}></div>
-                   </div>
-                   <div className="text-xs text-gray-500 mt-1">{course.progress}{tUI('dashboard.percentCompleted')}</div>
-                 </div>
-               </div>
-             );
-           })}
-        </div>
-      </div>
     </div>
   );
 };

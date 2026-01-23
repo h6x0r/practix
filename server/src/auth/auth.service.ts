@@ -1,11 +1,11 @@
-
 import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
 import { UsersService } from '../users/users.service';
 import { SessionsService } from '../sessions/sessions.service';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { LoginDto, RegisterDto } from '../common/dto';
-import { User } from '@prisma/client';
+import { User, DeviceType } from '@prisma/client';
+import { parseDeviceType } from '../common/utils/device-parser';
 
 @Injectable()
 export class AuthService {
@@ -15,7 +15,11 @@ export class AuthService {
     private jwtService: JwtService,
   ) {}
 
-  async register(registerDto: RegisterDto, deviceInfo?: string, ipAddress?: string) {
+  async register(
+    registerDto: RegisterDto,
+    userAgent?: string,
+    ipAddress?: string,
+  ) {
     // Check if user exists
     const existing = await this.usersService.findOne(registerDto.email);
     if (existing) {
@@ -36,16 +40,25 @@ export class AuthService {
         editorTheme: 'vs-dark',
         editorLineNumbers: true,
         notifications: {
-            emailDigest: true,
-            newCourses: true
-        }
+          emailDigest: true,
+          newCourses: true,
+        },
       },
     });
 
     const token = this.generateToken(user);
 
-    // Create session for single-device enforcement
-    await this.sessionsService.createSession(user.id, token, deviceInfo, ipAddress);
+    // Parse device type from User-Agent
+    const deviceType = parseDeviceType(userAgent);
+
+    // Create session with device type (new user, no need to invalidate existing)
+    await this.sessionsService.createSession(
+      user.id,
+      token,
+      deviceType,
+      userAgent,
+      ipAddress,
+    );
 
     // Compute isPremium and plan from active subscriptions
     const isPremium = await this.usersService.isPremiumUser(user.id);
@@ -55,7 +68,11 @@ export class AuthService {
     return { user: this.transformUser(user, isPremium, plan), token };
   }
 
-  async login(loginDto: LoginDto, deviceInfo?: string, ipAddress?: string) {
+  async login(
+    loginDto: LoginDto,
+    userAgent?: string,
+    ipAddress?: string,
+  ) {
     // Use findOneForAuth to get password for verification
     const user = await this.usersService.findOneForAuth(loginDto.email);
     if (!user) {
@@ -67,13 +84,23 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    // Invalidate all existing sessions for single-device enforcement
-    await this.sessionsService.invalidateUserSessions(user.id);
+    // Parse device type from User-Agent
+    const deviceType = parseDeviceType(userAgent);
+
+    // Invalidate only sessions of the SAME device type
+    // This allows 1 mobile + 1 desktop session simultaneously
+    await this.sessionsService.invalidateUserSessionsByDevice(user.id, deviceType);
 
     const token = this.generateToken(user);
 
-    // Create new session
-    await this.sessionsService.createSession(user.id, token, deviceInfo, ipAddress);
+    // Create new session with device type
+    await this.sessionsService.createSession(
+      user.id,
+      token,
+      deviceType,
+      userAgent,
+      ipAddress,
+    );
 
     // Compute isPremium and plan from active subscriptions
     const isPremium = await this.usersService.isPremiumUser(user.id);

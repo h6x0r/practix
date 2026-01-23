@@ -30,6 +30,33 @@ export type VisualizationType =
 	| 'multi'; // For tasks with multiple chart types
 
 /**
+ * Task type enum
+ * CODE: Traditional code tasks executed by Piston
+ * PROMPT: Prompt engineering tasks evaluated by AI
+ */
+export type TaskType = 'CODE' | 'PROMPT';
+
+/**
+ * Test scenario for prompt engineering tasks
+ * Each scenario tests the prompt against specific input and criteria
+ */
+export interface PromptTestScenario {
+	input: string; // Context/data to inject into the prompt
+	expectedCriteria: string[]; // What the output should contain/achieve
+	rubric?: string; // Detailed grading criteria for AI judge
+}
+
+/**
+ * Configuration for prompt engineering tasks
+ * Used when taskType is 'PROMPT'
+ */
+export interface PromptConfig {
+	testScenarios: PromptTestScenario[];
+	judgePrompt: string; // Prompt template for AI evaluator
+	passingScore: number; // Minimum score to pass (1-10)
+}
+
+/**
  * Task - the smallest unit of learning content
  * Contains code challenge, solution, hints, and multilingual translations
  */
@@ -50,9 +77,17 @@ export interface Task {
 	hint3?: string; // Optional third hint for complex tasks
 	whyItMatters: string;
 	order: number;
+
+	// Task type: CODE (default) or PROMPT (for prompt engineering)
+	taskType?: TaskType; // Defaults to 'CODE' if not specified
+
 	// ML visualization support
 	visualizationType?: VisualizationType; // Chart type for ML tasks
 	expectedVisualization?: object; // Expected chart data for validation
+
+	// Prompt Engineering configuration (only for taskType: 'PROMPT')
+	promptConfig?: PromptConfig;
+
 	translations: {
 		ru: TaskTranslation;
 		uz: TaskTranslation;

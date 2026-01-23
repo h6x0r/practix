@@ -3,6 +3,7 @@ import { ForbiddenException } from '@nestjs/common';
 import { RoadmapsService } from './roadmaps.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
+import { CacheService } from '../cache/cache.service';
 
 // Mock @google/genai
 const mockGenerateContent = jest.fn();
@@ -91,12 +92,19 @@ describe('RoadmapsService', () => {
     get: jest.fn().mockReturnValue(null), // No API key by default
   };
 
+  const mockCacheService = {
+    get: jest.fn().mockResolvedValue(null),
+    set: jest.fn().mockResolvedValue(undefined),
+    delete: jest.fn().mockResolvedValue(undefined),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         RoadmapsService,
         { provide: PrismaService, useValue: mockPrismaService },
         { provide: ConfigService, useValue: mockConfigService },
+        { provide: CacheService, useValue: mockCacheService },
       ],
     }).compile();
 
@@ -1052,12 +1060,19 @@ describe('RoadmapsService with AI', () => {
     }),
   };
 
+  const mockCacheServiceForAI = {
+    get: jest.fn().mockResolvedValue(null),
+    set: jest.fn().mockResolvedValue(undefined),
+    delete: jest.fn().mockResolvedValue(undefined),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         RoadmapsService,
         { provide: PrismaService, useValue: mockPrismaService },
         { provide: ConfigService, useValue: mockConfigServiceWithAI },
+        { provide: CacheService, useValue: mockCacheServiceForAI },
       ],
     }).compile();
 

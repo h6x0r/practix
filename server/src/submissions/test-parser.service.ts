@@ -27,6 +27,7 @@ export interface ParsedTestOutput {
 interface RawTestResult {
   name?: string;
   passed?: boolean;
+  input?: string;
   expected?: string;
   output?: string;
   error?: string;
@@ -85,6 +86,7 @@ export class TestParserService {
       const testCases: TestCaseResult[] = parsed.tests.map((t: RawTestResult) => ({
         name: t.name || 'test',
         passed: t.passed || false,
+        input: t.input,
         expectedOutput: t.expected,
         actualOutput: t.output,
         error: t.error,

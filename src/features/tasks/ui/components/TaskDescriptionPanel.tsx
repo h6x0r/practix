@@ -1,13 +1,18 @@
 
-import React, { useState, useContext, useMemo, memo } from 'react';
+import React, { useState, useContext, useMemo, memo, useRef, useEffect, useCallback } from 'react';
 import { Task, AiChatMessage } from '@/types';
 import { DescriptionRenderer } from './DescriptionRenderer';
 import { HintsPanel } from './HintsPanel';
 import { SolutionExplanationTab } from './SolutionExplanationTab';
-import { IconBook, IconSparkles, IconLock, IconMessageCircle } from '@/components/Icons';
+import { ResultsTab } from './ResultsTab';
+import { IconBook, IconSparkles, IconLock, IconMessageCircle, IconPlayCircle } from '@/components/Icons';
 import { AuthContext } from '@/components/Layout';
 import { Link } from 'react-router-dom';
 import { useUITranslation, useLanguage } from '@/contexts/LanguageContext';
+import { Submission } from '../../model/types';
+import { RunTestsResult } from '../../api/taskService';
+
+export type DescriptionPanelTab = 'description' | 'results' | 'solution' | 'ai';
 
 interface TaskDescriptionPanelProps {
   task: Task;
@@ -20,6 +25,15 @@ interface TaskDescriptionPanelProps {
   // Access control props
   canSeeSolution?: boolean;
   canUseAiTutor?: boolean;
+  // Results tab props
+  runResult?: RunTestsResult | null;
+  isRunLoading?: boolean;
+  submissions?: Submission[];
+  isLoadingSubmissions?: boolean;
+  onLoadSubmissionCode?: (code: string) => void;
+  // Controlled tab state
+  activeTab?: DescriptionPanelTab;
+  onTabChange?: (tab: DescriptionPanelTab) => void;
 }
 
 export const TaskDescriptionPanel = memo(({
@@ -30,12 +44,63 @@ export const TaskDescriptionPanel = memo(({
   onAiSend,
   aiLoading = false,
   canSeeSolution = false,
-  canUseAiTutor = false
+  canUseAiTutor = false,
+  // Results tab props
+  runResult,
+  isRunLoading = false,
+  submissions = [],
+  isLoadingSubmissions = false,
+  onLoadSubmissionCode,
+  // Controlled tab state
+  activeTab: controlledActiveTab,
+  onTabChange,
 }: TaskDescriptionPanelProps) => {
-  const [activeTab, setActiveTab] = useState<'description' | 'solution' | 'ai'>('description');
+  // Use controlled state if provided, otherwise use internal state
+  const [internalTab, setInternalTab] = useState<DescriptionPanelTab>('description');
+  const activeTab = controlledActiveTab ?? internalTab;
+  const setActiveTab = onTabChange ?? setInternalTab;
   const { user } = useContext(AuthContext);
   const { tUI } = useUITranslation();
   const { language } = useLanguage();
+
+  // Compact mode for tabs when they don't fit in one line
+  const tabsContainerRef = useRef<HTMLDivElement>(null);
+  const [isCompactTabs, setIsCompactTabs] = useState(false);
+
+  // Check if tabs overflow their container
+  // We use a threshold based on container width - if container is too narrow, switch to compact
+  const checkTabsOverflow = useCallback(() => {
+    const container = tabsContainerRef.current;
+    if (!container) return;
+
+    // Minimum width needed to show all tabs with text (approximately)
+    // Description (~100px) + Results (~80px) + Solution (~80px) + AI Tutor (~90px) + padding (~80px) ≈ 430px
+    const MIN_WIDTH_FOR_TEXT = 420;
+
+    const containerWidth = container.clientWidth;
+    const shouldBeCompact = containerWidth < MIN_WIDTH_FOR_TEXT;
+
+    setIsCompactTabs(shouldBeCompact);
+  }, []);
+
+  // Use ResizeObserver to detect container size changes
+  useEffect(() => {
+    const container = tabsContainerRef.current;
+    if (!container) return;
+
+    // Initial check
+    checkTabsOverflow();
+
+    const resizeObserver = new ResizeObserver(() => {
+      checkTabsOverflow();
+    });
+
+    resizeObserver.observe(container);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [checkTabsOverflow]);
 
   // Apply translations based on current language
   const localizedTask = useMemo(() => {
@@ -67,48 +132,75 @@ export const TaskDescriptionPanel = memo(({
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* Tab Header */}
-      <div className="flex border-b border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-bg/50 px-4">
+      <div
+        ref={tabsContainerRef}
+        className="flex border-b border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-bg/50 px-4"
+      >
         <button
           onClick={() => setActiveTab('description')}
-          className={`flex items-center gap-2 px-4 py-3 text-sm font-bold border-b-2 transition-colors ${
+          data-testid="description-tab"
+          title={isCompactTabs ? tUI('task.description') : undefined}
+          className={`flex items-center gap-2 px-4 py-3 text-sm font-bold border-b-2 transition-colors whitespace-nowrap ${
             activeTab === 'description'
               ? 'border-brand-500 text-brand-600 dark:text-brand-400'
               : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
           }`}
         >
-          <IconBook className="w-4 h-4" />
-          {tUI('task.description')}
+          <IconBook className="w-4 h-4 flex-shrink-0" />
+          {!isCompactTabs && <span>{tUI('task.description')}</span>}
+        </button>
+        <button
+          onClick={() => setActiveTab('results')}
+          data-testid="results-tab"
+          title={isCompactTabs ? tUI('task.results') : undefined}
+          className={`flex items-center gap-2 px-4 py-3 text-sm font-bold border-b-2 transition-colors whitespace-nowrap ${
+            activeTab === 'results'
+              ? 'border-brand-500 text-brand-600 dark:text-brand-400'
+              : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+          }`}
+        >
+          <IconPlayCircle className="w-4 h-4 flex-shrink-0" />
+          {!isCompactTabs && <span>{tUI('task.results')}</span>}
+          {/* Status indicator dot */}
+          {runResult && (
+            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${
+              runResult.status === 'passed' ? 'bg-green-500' : 'bg-red-500'
+            }`} />
+          )}
         </button>
         <button
           onClick={() => setActiveTab('solution')}
-          className={`flex items-center gap-2 px-4 py-3 text-sm font-bold border-b-2 transition-colors ${
+          title={isCompactTabs ? tUI('task.solution') : undefined}
+          className={`flex items-center gap-2 px-4 py-3 text-sm font-bold border-b-2 transition-colors whitespace-nowrap ${
             activeTab === 'solution'
               ? 'border-brand-500 text-brand-600 dark:text-brand-400'
               : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
           }`}
         >
-          <IconSparkles className={`w-4 h-4 ${canSeeSolution ? 'text-green-500' : 'text-amber-500'}`} />
-          {tUI('task.solution')}
-          {!canSeeSolution && <IconLock className="w-3 h-3 text-amber-500" />}
+          <IconSparkles className={`w-4 h-4 flex-shrink-0 ${canSeeSolution ? 'text-green-500' : 'text-amber-500'}`} />
+          {!isCompactTabs && <span>{tUI('task.solution')}</span>}
+          {!canSeeSolution && <IconLock className="w-3 h-3 text-amber-500 flex-shrink-0" />}
         </button>
         <button
+          data-testid="ai-tutor-toggle"
           onClick={() => setActiveTab('ai')}
-          className={`flex items-center gap-2 px-4 py-3 text-sm font-bold border-b-2 transition-colors ${
+          title={isCompactTabs ? tUI('task.aiTutor') : undefined}
+          className={`flex items-center gap-2 px-4 py-3 text-sm font-bold border-b-2 transition-colors whitespace-nowrap ${
             activeTab === 'ai'
               ? 'border-brand-500 text-brand-600 dark:text-brand-400'
               : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
           }`}
         >
-          <IconMessageCircle className={`w-4 h-4 ${canUseAiTutor ? 'text-purple-500' : 'text-amber-500'}`} />
-          {tUI('task.aiTutor')}
-          {!canUseAiTutor && <IconLock className="w-3 h-3 text-amber-500" />}
+          <IconMessageCircle className={`w-4 h-4 flex-shrink-0 ${canUseAiTutor ? 'text-purple-500' : 'text-amber-500'}`} />
+          {!isCompactTabs && <span>{tUI('task.aiTutor')}</span>}
+          {!canUseAiTutor && <IconLock className="w-3 h-3 text-amber-500 flex-shrink-0" />}
         </button>
       </div>
 
       {/* Tab Content */}
       <div className="flex-1 overflow-y-auto custom-scrollbar">
         {activeTab === 'description' && (
-          <div className="p-5">
+          <div className="p-5" data-testid="task-description">
             <DescriptionRenderer text={localizedTask.description} />
 
             {/* Hints Section */}
@@ -127,6 +219,16 @@ export const TaskDescriptionPanel = memo(({
               </div>
             </div>
           </div>
+        )}
+
+        {activeTab === 'results' && (
+          <ResultsTab
+            runResult={runResult ?? null}
+            isRunLoading={isRunLoading}
+            submissions={submissions}
+            isLoadingSubmissions={isLoadingSubmissions}
+            onLoadSubmissionCode={onLoadSubmissionCode}
+          />
         )}
 
         {activeTab === 'solution' && (
@@ -152,11 +254,11 @@ export const TaskDescriptionPanel = memo(({
 
         {activeTab === 'ai' && (
           canUseAiTutor ? (
-            <div className="flex flex-col h-full">
+            <div data-testid="ai-tutor-chat" className="flex flex-col h-full">
               {/* Chat Messages */}
-              <div className="flex-1 overflow-y-auto p-6 space-y-4">
+              <div data-testid="ai-tutor-messages" className="flex-1 overflow-y-auto p-6 space-y-4">
                 {aiChat.length === 0 && (
-                  <div className="h-full flex flex-col items-center justify-center text-center py-16">
+                  <div data-testid="ai-tutor-empty" className="h-full flex flex-col items-center justify-center text-center py-16">
                     <div className="w-20 h-20 bg-purple-100 dark:bg-purple-900/20 rounded-full flex items-center justify-center mb-4">
                       <IconMessageCircle className="w-10 h-10 text-purple-500" />
                     </div>
@@ -178,7 +280,7 @@ export const TaskDescriptionPanel = memo(({
                   </div>
                 ))}
                 {aiLoading && (
-                  <div className="flex justify-start">
+                  <div data-testid="ai-tutor-loading" className="flex justify-start">
                     <div className="bg-gray-100 dark:bg-dark-bg rounded-2xl rounded-bl-none px-4 py-3 border border-gray-200 dark:border-dark-border">
                       <div className="flex gap-1">
                         <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
@@ -194,6 +296,7 @@ export const TaskDescriptionPanel = memo(({
               <div className="p-4 bg-gray-50 dark:bg-black border-t border-gray-200 dark:border-dark-border">
                 <div className="relative">
                   <input
+                    data-testid="ai-tutor-input"
                     type="text"
                     value={aiQuestion}
                     onChange={(e) => onAiQuestionChange?.(e.target.value)}
@@ -203,6 +306,7 @@ export const TaskDescriptionPanel = memo(({
                     className="w-full bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border rounded-xl pl-4 pr-12 py-3 text-sm focus:ring-2 focus:ring-purple-500 outline-none dark:text-white shadow-sm transition-all"
                   />
                   <button
+                    data-testid="ai-tutor-send"
                     onClick={onAiSend}
                     disabled={aiLoading || !aiQuestion.trim()}
                     className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
@@ -215,7 +319,7 @@ export const TaskDescriptionPanel = memo(({
               </div>
             </div>
           ) : (
-            <div className="flex-1 flex items-center justify-center p-8">
+            <div data-testid="ai-tutor-locked" className="flex-1 flex items-center justify-center p-8">
               <div className="text-center max-w-sm p-8 bg-white dark:bg-dark-surface rounded-2xl shadow-xl border border-gray-100 dark:border-dark-border">
                 <div className="w-16 h-16 bg-purple-100 dark:bg-purple-900/20 rounded-full flex items-center justify-center mx-auto mb-6 text-purple-500">
                   <IconMessageCircle className="w-8 h-8" />

@@ -191,8 +191,10 @@ Pattern elements:
     order: 4,
     testCode: `import static org.junit.Assert.*;
 import org.junit.Test;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 
-// Test1: Verify LogbackConfiguration class instantiation
+// Test1: class can be instantiated
 class Test1 {
     @Test
     public void test() {
@@ -201,120 +203,148 @@ class Test1 {
     }
 }
 
-// Test2: Verify main method executes successfully
+// Test2: main runs without exceptions
 class Test2 {
     @Test
     public void test() {
+        boolean completed = false;
         try {
             LogbackConfiguration.main(new String[]{});
-            assertTrue("Main method should execute successfully", true);
+            completed = true;
         } catch (Exception e) {
-            fail("Main method should not throw exceptions: " + e.getMessage());
+            fail("Main should not throw: " + e.getMessage());
         }
+        assertTrue("Main should complete without exceptions", completed);
     }
 }
 
-// Test3: Verify all log levels are logged
+// Test3: static final logger exists
 class Test3 {
     @Test
     public void test() {
         try {
-            LogbackConfiguration.main(new String[]{});
-            assertTrue("All log levels should work", true);
-        } catch (Exception e) {
-            fail("All log levels should work: " + e.getMessage());
+            java.lang.reflect.Field loggerField = LogbackConfiguration.class.getDeclaredField("logger");
+            assertTrue("Logger should be static",
+                java.lang.reflect.Modifier.isStatic(loggerField.getModifiers()));
+            assertTrue("Logger should be final",
+                java.lang.reflect.Modifier.isFinal(loggerField.getModifiers()));
+        } catch (NoSuchFieldException e) {
+            fail("Should have a 'logger' field");
         }
     }
 }
 
-// Test4: Verify MDC context in logs
+// Test4: logger is private
 class Test4 {
     @Test
     public void test() {
         try {
-            LogbackConfiguration.main(new String[]{});
-            assertTrue("MDC context in logs should work", true);
-        } catch (Exception e) {
-            fail("MDC context should work: " + e.getMessage());
+            java.lang.reflect.Field loggerField = LogbackConfiguration.class.getDeclaredField("logger");
+            assertTrue("Logger should be private",
+                java.lang.reflect.Modifier.isPrivate(loggerField.getModifiers()));
+        } catch (NoSuchFieldException e) {
+            fail("Should have a 'logger' field");
         }
     }
 }
 
-// Test5: Verify exception logging
+// Test5: produces some output
 class Test5 {
     @Test
     public void test() {
-        try {
-            LogbackConfiguration.main(new String[]{});
-            assertTrue("Exception logging should work", true);
-        } catch (Exception e) {
-            fail("Exception logging should work: " + e.getMessage());
-        }
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        ByteArrayOutputStream err = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        PrintStream oldErr = System.err;
+        System.setOut(new PrintStream(out));
+        System.setErr(new PrintStream(err));
+        LogbackConfiguration.main(new String[]{});
+        System.setOut(oldOut);
+        System.setErr(oldErr);
+        String allOutput = out.toString() + err.toString();
+        assertTrue("Should produce some output", allOutput.length() > 0);
     }
 }
 
-// Test6: Verify console appender configuration
+// Test6: output contains demo header
 class Test6 {
     @Test
     public void test() {
-        try {
-            LogbackConfiguration.main(new String[]{});
-            assertTrue("Console appender should work", true);
-        } catch (Exception e) {
-            fail("Console appender should work");
-        }
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        ByteArrayOutputStream err = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        PrintStream oldErr = System.err;
+        System.setOut(new PrintStream(out));
+        System.setErr(new PrintStream(err));
+        LogbackConfiguration.main(new String[]{});
+        System.setOut(oldOut);
+        System.setErr(oldErr);
+        String allOutput = out.toString() + err.toString();
+        assertTrue("Should contain demo header or log messages",
+            allOutput.contains("Logback") || allOutput.contains("Demo") ||
+            allOutput.contains("Демо") || allOutput.contains("Configuration") ||
+            allOutput.contains("INFO") || allOutput.contains("DEBUG"));
     }
 }
 
-// Test7: Verify file appender configuration
+// Test7: exception handling works
 class Test7 {
     @Test
     public void test() {
+        boolean completed = false;
         try {
             LogbackConfiguration.main(new String[]{});
-            assertTrue("File appender should work", true);
+            // Exception is caught internally, no propagation expected
+            completed = true;
         } catch (Exception e) {
-            fail("File appender should work");
+            fail("Exception should be caught internally: " + e.getMessage());
         }
+        assertTrue("Exception logging should work", completed);
     }
 }
 
-// Test8: Verify pattern formatting
+// Test8: multiple calls work
 class Test8 {
     @Test
     public void test() {
+        int callCount = 0;
         try {
             LogbackConfiguration.main(new String[]{});
-            assertTrue("Pattern formatting should work", true);
+            callCount++;
+            LogbackConfiguration.main(new String[]{});
+            callCount++;
         } catch (Exception e) {
-            fail("Pattern formatting should work");
+            fail("Multiple calls should not throw: " + e.getMessage());
         }
+        assertEquals("Both calls should complete", 2, callCount);
     }
 }
 
-// Test9: Verify log output generation
+// Test9: no NullPointerException
 class Test9 {
     @Test
     public void test() {
+        boolean completed = false;
         try {
             LogbackConfiguration.main(new String[]{});
-            assertTrue("Log output should be generated", true);
-        } catch (Exception e) {
-            fail("Log output generation should work");
+            completed = true;
+        } catch (NullPointerException e) {
+            fail("Should not have null pointer exceptions");
         }
+        assertTrue("Should complete without NullPointerException", completed);
     }
 }
 
-// Test10: Verify complete logging configuration
+// Test10: class can be instantiated multiple times
 class Test10 {
     @Test
     public void test() {
-        try {
-            LogbackConfiguration.main(new String[]{});
-            assertTrue("Complete logging configuration should work", true);
-        } catch (Exception e) {
-            fail("Complete configuration should work: " + e.getMessage());
-        }
+        LogbackConfiguration obj1 = new LogbackConfiguration();
+        LogbackConfiguration obj2 = new LogbackConfiguration();
+        LogbackConfiguration obj3 = new LogbackConfiguration();
+        assertNotNull("First instance should be created", obj1);
+        assertNotNull("Second instance should be created", obj2);
+        assertNotNull("Third instance should be created", obj3);
     }
 }
 `,

@@ -20,6 +20,8 @@ describe('SubmissionsController', () => {
     findOne: jest.fn(),
     findRecentByUser: jest.fn(),
     findByUserAndTask: jest.fn(),
+    submitPrompt: jest.fn(),
+    getRunResult: jest.fn(),
   };
 
   const mockCodeExecutionService = {
@@ -28,7 +30,7 @@ describe('SubmissionsController', () => {
 
   const mockPlaygroundThrottler = {
     canActivate: jest.fn().mockResolvedValue(true),
-    getRateLimitInfo: jest.fn().mockResolvedValue({ interval: 10, isPremium: false }),
+    getRateLimitInfo: jest.fn().mockResolvedValue({ rateLimitSeconds: 10, isPremium: false }),
   };
 
   // Mock request object with IP
@@ -208,7 +210,7 @@ describe('SubmissionsController', () => {
 
     it('should run code successfully', async () => {
       mockSubmissionsService.runCode.mockResolvedValue(mockRunResult);
-      const mockReq = createMockRequest();
+      const mockReq = createMockRequest('user-123');
 
       const result = await controller.runCode(mockReq, runDto);
 
@@ -218,7 +220,7 @@ describe('SubmissionsController', () => {
         'javascript',
         '',
         '127.0.0.1',
-        undefined
+        'user-123'
       );
     });
 
@@ -228,7 +230,7 @@ describe('SubmissionsController', () => {
         stdin: 'input data\n',
       };
       mockSubmissionsService.runCode.mockResolvedValue(mockRunResult);
-      const mockReq = createMockRequest();
+      const mockReq = createMockRequest('user-123');
 
       await controller.runCode(mockReq, dtoWithStdin);
 
@@ -237,7 +239,7 @@ describe('SubmissionsController', () => {
         'javascript',
         'input data\n',
         '127.0.0.1',
-        undefined
+        'user-123'
       );
     });
 
@@ -249,7 +251,7 @@ describe('SubmissionsController', () => {
         status: 'error' as const,
       };
       mockSubmissionsService.runCode.mockResolvedValue(errorResult);
-      const mockReq = createMockRequest();
+      const mockReq = createMockRequest('user-123');
 
       const result = await controller.runCode(mockReq, runDto);
 
@@ -265,7 +267,7 @@ describe('SubmissionsController', () => {
         status: 'error' as const,
       };
       mockSubmissionsService.runCode.mockResolvedValue(runtimeError);
-      const mockReq = createMockRequest();
+      const mockReq = createMockRequest('user-123');
 
       const result = await controller.runCode(mockReq, {
         code: 'go code with panic',
@@ -286,7 +288,7 @@ describe('SubmissionsController', () => {
 
     it('should run quick tests successfully', async () => {
       mockSubmissionsService.runQuickTests.mockResolvedValue(mockTestResult);
-      const mockReq = createMockRequest();
+      const mockReq = createMockRequest('user-123');
 
       const result = await controller.runTests(mockReq, runTestsDto);
 
@@ -296,7 +298,7 @@ describe('SubmissionsController', () => {
         runTestsDto.code,
         'go',
         '127.0.0.1',
-        undefined
+        'user-123'
       );
     });
 
@@ -314,7 +316,7 @@ describe('SubmissionsController', () => {
         ],
       };
       mockSubmissionsService.runQuickTests.mockResolvedValue(partialResult);
-      const mockReq = createMockRequest();
+      const mockReq = createMockRequest('user-123');
 
       const result = await controller.runTests(mockReq, runTestsDto);
 
@@ -332,7 +334,7 @@ describe('SubmissionsController', () => {
         runtime: '0ms',
       };
       mockSubmissionsService.runQuickTests.mockResolvedValue(compileError);
-      const mockReq = createMockRequest();
+      const mockReq = createMockRequest('user-123');
 
       const result = await controller.runTests(mockReq, runTestsDto);
 
@@ -525,7 +527,299 @@ describe('SubmissionsController', () => {
     });
   });
 
+  describe('getClientIp', () => {
+    it('should extract IP from x-forwarded-for header (single IP)', async () => {
+      mockSubmissionsService.create.mockResolvedValue(mockSubmission);
+      const mockReq = {
+        user: { userId: 'user-123' },
+        ip: '127.0.0.1',
+        headers: { 'x-forwarded-for': '203.0.113.195' },
+        socket: { remoteAddress: '127.0.0.1' },
+      };
+
+      await controller.create(mockReq, { taskId: 'task-1', code: 'code', language: 'go' });
+
+      expect(mockSubmissionsService.create).toHaveBeenCalledWith(
+        'user-123',
+        'task-1',
+        'code',
+        'go',
+        '203.0.113.195'
+      );
+    });
+
+    it('should extract first IP from x-forwarded-for header (multiple IPs)', async () => {
+      mockSubmissionsService.create.mockResolvedValue(mockSubmission);
+      const mockReq = {
+        user: { userId: 'user-123' },
+        ip: '127.0.0.1',
+        headers: { 'x-forwarded-for': '203.0.113.195, 70.41.3.18, 150.172.238.178' },
+        socket: { remoteAddress: '127.0.0.1' },
+      };
+
+      await controller.create(mockReq, { taskId: 'task-1', code: 'code', language: 'go' });
+
+      expect(mockSubmissionsService.create).toHaveBeenCalledWith(
+        'user-123',
+        'task-1',
+        'code',
+        'go',
+        '203.0.113.195'
+      );
+    });
+
+    it('should fallback to req.ip when x-forwarded-for is not set', async () => {
+      mockSubmissionsService.create.mockResolvedValue(mockSubmission);
+      const mockReq = {
+        user: { userId: 'user-123' },
+        ip: '192.168.1.1',
+        headers: {},
+        socket: { remoteAddress: '127.0.0.1' },
+      };
+
+      await controller.create(mockReq, { taskId: 'task-1', code: 'code', language: 'go' });
+
+      expect(mockSubmissionsService.create).toHaveBeenCalledWith(
+        'user-123',
+        'task-1',
+        'code',
+        'go',
+        '192.168.1.1'
+      );
+    });
+
+    it('should fallback to socket.remoteAddress when req.ip is undefined', async () => {
+      mockSubmissionsService.create.mockResolvedValue(mockSubmission);
+      const mockReq = {
+        user: { userId: 'user-123' },
+        ip: undefined,
+        headers: {},
+        socket: { remoteAddress: '10.0.0.1' },
+      };
+
+      await controller.create(mockReq, { taskId: 'task-1', code: 'code', language: 'go' });
+
+      expect(mockSubmissionsService.create).toHaveBeenCalledWith(
+        'user-123',
+        'task-1',
+        'code',
+        'go',
+        '10.0.0.1'
+      );
+    });
+
+    it('should return "unknown" when no IP source is available', async () => {
+      mockSubmissionsService.create.mockResolvedValue(mockSubmission);
+      const mockReq = {
+        user: { userId: 'user-123' },
+        ip: undefined,
+        headers: {},
+        socket: undefined,
+      };
+
+      await controller.create(mockReq, { taskId: 'task-1', code: 'code', language: 'go' });
+
+      expect(mockSubmissionsService.create).toHaveBeenCalledWith(
+        'user-123',
+        'task-1',
+        'code',
+        'go',
+        'unknown'
+      );
+    });
+  });
+
+  describe('submitPrompt', () => {
+    const promptDto = {
+      taskId: 'prompt-task-1',
+      prompt: 'Write a poem about coding',
+    };
+
+    it('should submit prompt successfully', async () => {
+      const mockPromptResult = {
+        id: 'submission-456',
+        status: 'passed',
+        score: 85,
+        feedback: 'Good prompt structure',
+        createdAt: new Date().toISOString(),
+      };
+      mockSubmissionsService.submitPrompt.mockResolvedValue(mockPromptResult);
+      const mockReq = { user: { userId: 'user-123' } };
+
+      const result = await controller.submitPrompt(mockReq, promptDto);
+
+      expect(result).toEqual(mockPromptResult);
+      expect(mockSubmissionsService.submitPrompt).toHaveBeenCalledWith(
+        'user-123',
+        'prompt-task-1',
+        'Write a poem about coding'
+      );
+    });
+
+    it('should handle failing prompt submission', async () => {
+      const failedResult = {
+        id: 'submission-456',
+        status: 'failed',
+        score: 40,
+        feedback: 'Prompt lacks specificity',
+      };
+      mockSubmissionsService.submitPrompt.mockResolvedValue(failedResult);
+      const mockReq = { user: { userId: 'user-123' } };
+
+      const result = await controller.submitPrompt(mockReq, promptDto);
+
+      expect(result.status).toBe('failed');
+      expect(result.score).toBe(40);
+    });
+
+    it('should handle service errors', async () => {
+      mockSubmissionsService.submitPrompt.mockRejectedValue(
+        new Error('AI service unavailable')
+      );
+      const mockReq = { user: { userId: 'user-123' } };
+
+      await expect(
+        controller.submitPrompt(mockReq, promptDto)
+      ).rejects.toThrow('AI service unavailable');
+    });
+  });
+
+  describe('getRateLimitInfo', () => {
+    it('should return rate limit info for authenticated user', async () => {
+      mockPlaygroundThrottler.getRateLimitInfo.mockResolvedValue({
+        rateLimitSeconds: 5,
+        isPremium: true,
+      });
+      const mockReq = { user: { userId: 'user-123' } };
+
+      const result = await controller.getRateLimitInfo(mockReq);
+
+      expect(result.rateLimitSeconds).toBe(5);
+      expect(result.isPremium).toBe(true);
+      expect(mockPlaygroundThrottler.getRateLimitInfo).toHaveBeenCalledWith('user-123');
+    });
+
+    it('should return rate limit info for unauthenticated user', async () => {
+      mockPlaygroundThrottler.getRateLimitInfo.mockResolvedValue({
+        rateLimitSeconds: 10,
+        isPremium: false,
+      });
+      const mockReq = { user: undefined };
+
+      const result = await controller.getRateLimitInfo(mockReq);
+
+      expect(result.rateLimitSeconds).toBe(10);
+      expect(result.isPremium).toBe(false);
+      expect(mockPlaygroundThrottler.getRateLimitInfo).toHaveBeenCalledWith(undefined);
+    });
+
+    it('should handle null user object', async () => {
+      mockPlaygroundThrottler.getRateLimitInfo.mockResolvedValue({
+        rateLimitSeconds: 10,
+        isPremium: false,
+      });
+      const mockReq = { user: null };
+
+      const result = await controller.getRateLimitInfo(mockReq);
+
+      expect(mockPlaygroundThrottler.getRateLimitInfo).toHaveBeenCalledWith(undefined);
+    });
+  });
+
+  describe('getRunResult', () => {
+    it('should return run result wrapped in data object', async () => {
+      const runResult = {
+        status: 'passed',
+        testsPassed: 5,
+        testsTotal: 5,
+        testCases: [],
+        runtime: '100ms',
+      };
+      mockSubmissionsService.getRunResult.mockResolvedValue(runResult);
+      const mockReq = { user: { userId: 'user-123' } };
+
+      const result = await controller.getRunResult(mockReq, 'task-1');
+
+      expect(result).toEqual({ data: runResult });
+      expect(mockSubmissionsService.getRunResult).toHaveBeenCalledWith('user-123', 'task-1');
+    });
+
+    it('should return null wrapped in data object when no result exists', async () => {
+      mockSubmissionsService.getRunResult.mockResolvedValue(null);
+      const mockReq = { user: { userId: 'user-123' } };
+
+      const result = await controller.getRunResult(mockReq, 'task-1');
+
+      expect(result).toEqual({ data: null });
+    });
+
+    it('should handle different task IDs', async () => {
+      mockSubmissionsService.getRunResult.mockResolvedValue(null);
+      const mockReq = { user: { userId: 'user-123' } };
+
+      await controller.getRunResult(mockReq, 'complex-task-slug-123');
+
+      expect(mockSubmissionsService.getRunResult).toHaveBeenCalledWith(
+        'user-123',
+        'complex-task-slug-123'
+      );
+    });
+  });
+
+  describe('playgroundThrottler integration', () => {
+    it('should call playgroundThrottler.canActivate for runCode', async () => {
+      mockSubmissionsService.runCode.mockResolvedValue(mockRunResult);
+      mockPlaygroundThrottler.canActivate.mockResolvedValue(true);
+      const mockReq = createMockRequest('user-123');
+
+      await controller.runCode(mockReq, { code: 'code', language: 'go', stdin: '' });
+
+      expect(mockPlaygroundThrottler.canActivate).toHaveBeenCalled();
+    });
+
+    it('should call playgroundThrottler.canActivate for runTests', async () => {
+      mockSubmissionsService.runQuickTests.mockResolvedValue(mockTestResult);
+      mockPlaygroundThrottler.canActivate.mockResolvedValue(true);
+      const mockReq = createMockRequest('user-123');
+
+      await controller.runTests(mockReq, { taskId: 'task-1', code: 'code', language: 'go' });
+
+      expect(mockPlaygroundThrottler.canActivate).toHaveBeenCalled();
+    });
+
+    it('should reject runCode when throttler blocks', async () => {
+      mockPlaygroundThrottler.canActivate.mockRejectedValue(
+        new ForbiddenException('Rate limit exceeded')
+      );
+      const mockReq = createMockRequest('user-123');
+
+      await expect(
+        controller.runCode(mockReq, { code: 'code', language: 'go', stdin: '' })
+      ).rejects.toThrow(ForbiddenException);
+
+      expect(mockSubmissionsService.runCode).not.toHaveBeenCalled();
+    });
+
+    it('should reject runTests when throttler blocks', async () => {
+      mockPlaygroundThrottler.canActivate.mockRejectedValue(
+        new ForbiddenException('Rate limit exceeded')
+      );
+      const mockReq = createMockRequest('user-123');
+
+      await expect(
+        controller.runTests(mockReq, { taskId: 'task-1', code: 'code', language: 'go' })
+      ).rejects.toThrow(ForbiddenException);
+
+      expect(mockSubmissionsService.runQuickTests).not.toHaveBeenCalled();
+    });
+  });
+
   describe('edge cases', () => {
+    beforeEach(() => {
+      // Reset throttler mock for edge case tests
+      mockPlaygroundThrottler.canActivate.mockResolvedValue(true);
+    });
+
     it('should handle very long code submissions', async () => {
       const longCode = 'x'.repeat(100000);
       mockSubmissionsService.create.mockResolvedValue(mockSubmission);
@@ -545,7 +839,7 @@ describe('SubmissionsController', () => {
     it('should handle unicode in code', async () => {
       const unicodeCode = 'fmt.Println("Привет мир! 你好世界!")';
       mockSubmissionsService.runCode.mockResolvedValue(mockRunResult);
-      const mockReq = createMockRequest();
+      const mockReq = createMockRequest('user-123');
 
       await controller.runCode(mockReq, {
         code: unicodeCode,
@@ -558,14 +852,14 @@ describe('SubmissionsController', () => {
         'go',
         '',
         '127.0.0.1',
-        undefined
+        'user-123'
       );
     });
 
     it('should handle special characters in stdin', async () => {
       const specialStdin = 'line1\nline2\tspaced\r\nwindows';
       mockSubmissionsService.runCode.mockResolvedValue(mockRunResult);
-      const mockReq = createMockRequest();
+      const mockReq = createMockRequest('user-123');
 
       await controller.runCode(mockReq, {
         code: 'scanner.Scan()',
@@ -578,7 +872,7 @@ describe('SubmissionsController', () => {
         'go',
         specialStdin,
         '127.0.0.1',
-        undefined
+        'user-123'
       );
     });
 

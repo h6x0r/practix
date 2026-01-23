@@ -325,142 +325,152 @@ User activeUser = userRepository.findById(userId)
 - Type-safe navigation prevents ClassCastException
 - Self-documenting - chain shows possible absence points`,
     order: 4,
-    testCode: `import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.*;
-import java.util.Optional;
+    testCode: `import static org.junit.Assert.*;
+import org.junit.Test;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 
-// Test 1: Basic chaining with map works
+// Test1: main method should produce output
 class Test1 {
     @Test
-    void testBasicChainingWithMap() {
-        Optional<String> opt = Optional.of("John Doe");
-        String result = opt
-            .map(String::toUpperCase)
-            .orElse("Unknown");
-        assertEquals("JOHN DOE", result);
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        OptionalChaining.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show Optional chaining demo",
+            output.contains("Optional") || output.contains("Chaining") ||
+            output.contains("User") || output.contains("Пользователь"));
     }
 }
 
-// Test 2: Chaining through nested objects
+// Test2: should show basic chaining with user name
 class Test2 {
     @Test
-    void testChainingNestedObjects() {
-        User user = new User("John", "john@example.com");
-        String email = Optional.of(user)
-            .map(User::getEmail)
-            .orElse("No email");
-        assertEquals("john@example.com", email);
-    }
-    static class User {
-        private String name, email;
-        User(String n, String e) { name = n; email = e; }
-        String getName() { return name; }
-        String getEmail() { return email; }
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        OptionalChaining.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show user name", output.contains("User name:") || output.contains("name") || output.contains("John"));
     }
 }
 
-// Test 3: flatMap avoids nested Optional
+// Test3: should show user email
 class Test3 {
     @Test
-    void testFlatMapAvoidsNesting() {
-        Optional<String> opt = Optional.of("test");
-        Optional<String> result = opt.flatMap(s -> Optional.of(s.toUpperCase()));
-        assertEquals("TEST", result.get());
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        OptionalChaining.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show user email", output.contains("email") || output.contains("pochta") || output.contains("@"));
     }
 }
 
-// Test 4: Chain with filter condition
+// Test4: should demonstrate flatMap usage
 class Test4 {
     @Test
-    void testChainWithFilter() {
-        Optional<String> opt = Optional.of("john@example.com");
-        String domain = opt
-            .filter(e -> e.contains("@"))
-            .map(e -> e.substring(e.indexOf("@") + 1))
-            .orElse("N/A");
-        assertEquals("example.com", domain);
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        OptionalChaining.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show flatMap usage", output.contains("flatMap") || output.contains("Nested") || output.contains("NEW YORK"));
     }
 }
 
-// Test 5: Chain returns empty when filter fails
+// Test5: should show nested Optional problem
 class Test5 {
     @Test
-    void testChainReturnsEmptyOnFilterFail() {
-        Optional<String> opt = Optional.of("noemail");
-        Optional<String> result = opt
-            .filter(e -> e.contains("@"))
-            .map(String::toUpperCase);
-        assertTrue(result.isEmpty());
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        OptionalChaining.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show nested Optional", output.contains("Without") || output.contains("Optional[Optional") || output.contains("без"));
     }
 }
 
-// Test 6: Complex chain with multiple operations
+// Test6: should show complex chaining
 class Test6 {
     @Test
-    void testComplexChain() {
-        Optional<String> opt = Optional.of("  hello world  ");
-        String result = opt
-            .map(String::trim)
-            .filter(s -> s.length() > 5)
-            .map(String::toUpperCase)
-            .orElse("too short");
-        assertEquals("HELLO WORLD", result);
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        OptionalChaining.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show complex chaining", output.contains("Complex") || output.contains("domain") || output.contains("Сложн") || output.contains("Murakkab"));
     }
 }
 
-// Test 7: Chain short-circuits on empty
+// Test7: should show conditional navigation
 class Test7 {
     @Test
-    void testChainShortCircuitsOnEmpty() {
-        Optional<String> opt = Optional.empty();
-        String result = opt
-            .map(String::toUpperCase)
-            .map(s -> s + "!")
-            .orElse("default");
-        assertEquals("default", result);
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        OptionalChaining.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show conditional navigation", output.contains("Conditional") || output.contains("discount") || output.contains("Условн") || output.contains("Shartli"));
     }
 }
 
-// Test 8: Chain with type transformation
+// Test8: should show premium vs regular user
 class Test8 {
     @Test
-    void testChainTypeTransformation() {
-        Optional<String> opt = Optional.of("123");
-        Integer result = opt
-            .map(Integer::parseInt)
-            .filter(n -> n > 100)
-            .map(n -> n * 2)
-            .orElse(0);
-        assertEquals(246, result);
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        OptionalChaining.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show premium and regular", output.contains("Premium") || output.contains("Regular") || output.contains("20%") || output.contains("eligible"));
     }
 }
 
-// Test 9: Chain handles null in middle
+// Test9: should show collection navigation
 class Test9 {
     @Test
-    void testChainHandlesNullInMiddle() {
-        Optional<String> opt = Optional.ofNullable("test");
-        String result = opt
-            .map(s -> (String) null)
-            .map(String::toUpperCase)
-            .orElse("was null");
-        assertEquals("was null", result);
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        OptionalChaining.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show collection navigation", output.contains("Collection") || output.contains("order") || output.contains("$") || output.contains("kolleksiya"));
     }
 }
 
-// Test 10: Multiple flatMap in chain
+// Test10: should have section headers
 class Test10 {
     @Test
-    void testMultipleFlatMapChain() {
-        Optional<String> opt = Optional.of("42");
-        Integer result = opt
-            .flatMap(s -> {
-                try { return Optional.of(Integer.parseInt(s)); }
-                catch (NumberFormatException e) { return Optional.empty(); }
-            })
-            .flatMap(n -> n > 0 ? Optional.of(n * 2) : Optional.empty())
-            .orElse(0);
-        assertEquals(84, result);
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        OptionalChaining.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        boolean hasHeaders = output.contains("===") ||
+                             output.contains("Basic") || output.contains("Базов") || output.contains("Asosiy");
+        assertTrue("Should have section headers", hasHeaders);
     }
 }`,
     translations: {

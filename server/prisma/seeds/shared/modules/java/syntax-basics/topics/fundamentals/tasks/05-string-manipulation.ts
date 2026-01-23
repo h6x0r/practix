@@ -83,34 +83,40 @@ Split words: [Hello, Java, World]
         // String immutability
         String original = "Java";
         String modified = original.concat(" Programming");
-        System.out.println("\nImmutability example:");
+        System.out.println("");
+        System.out.println("Immutability example:");
         System.out.println("Original: " + original); // Still "Java"
         System.out.println("Modified: " + modified); // "Java Programming"
 
         // Case-insensitive comparison
         String lower = "hello";
         String upper = "HELLO";
-        System.out.println("\nCase comparison:");
+        System.out.println("");
+        System.out.println("Case comparison:");
         System.out.println("equals: " + lower.equals(upper)); // false
         System.out.println("equalsIgnoreCase: " + lower.equalsIgnoreCase(upper)); // true
     }
 
     public static void stringMethods(String text) {
-        System.out.println("\n=== String Methods ===");
+        System.out.println("");
+        System.out.println("=== String Methods ===");
         System.out.println("Original text: \"" + text + "\"");
 
         // Length and character access
-        System.out.println("\nLength: " + text.length());
+        System.out.println("");
+        System.out.println("Length: " + text.length());
         System.out.println("First character: " + text.charAt(0));
         System.out.println("Last character: " + text.charAt(text.length() - 1));
 
         // Substring operations
-        System.out.println("\nSubstring operations:");
+        System.out.println("");
+        System.out.println("Substring operations:");
         System.out.println("substring(0, 5): \"" + text.substring(0, 5) + "\"");
         System.out.println("substring(6): \"" + text.substring(6) + "\"");
 
         // Searching
-        System.out.println("\nSearching:");
+        System.out.println("");
+        System.out.println("Searching:");
         System.out.println("indexOf('Java'): " + text.indexOf("Java"));
         System.out.println("lastIndexOf('o'): " + text.lastIndexOf('o'));
         System.out.println("contains('Java'): " + text.contains("Java"));
@@ -118,7 +124,8 @@ Split words: [Hello, Java, World]
         System.out.println("endsWith('World'): " + text.endsWith("World"));
 
         // Splitting and joining
-        System.out.println("\nSplitting:");
+        System.out.println("");
+        System.out.println("Splitting:");
         String[] words = text.split(" ");
         System.out.print("Split by space: [");
         for (int i = 0; i < words.length; i++) {
@@ -132,22 +139,26 @@ Split words: [Hello, Java, World]
 
         // Trimming and replacing
         String padded = "  Java  ";
-        System.out.println("\nTrimming:");
+        System.out.println("");
+        System.out.println("Trimming:");
         System.out.println("Before trim: \"" + padded + "\" (length: " + padded.length() + ")");
         System.out.println("After trim: \"" + padded.trim() + "\" (length: " + padded.trim().length() + ")");
 
-        System.out.println("\nReplacing:");
+        System.out.println("");
+        System.out.println("Replacing:");
         System.out.println("replace('Java', 'Python'): " + text.replace("Java", "Python"));
         System.out.println("replaceAll('\\\\s+', '-'): " + text.replaceAll("\\s+", "-"));
 
         // Case conversion
-        System.out.println("\nCase conversion:");
+        System.out.println("");
+        System.out.println("Case conversion:");
         System.out.println("toUpperCase(): " + text.toUpperCase());
         System.out.println("toLowerCase(): " + text.toLowerCase());
     }
 
     public static void stringBuilderDemo() {
-        System.out.println("\n=== StringBuilder Demo ===");
+        System.out.println("");
+        System.out.println("=== StringBuilder Demo ===");
 
         // StringBuilder for efficient string building
         StringBuilder sb = new StringBuilder();
@@ -157,7 +168,8 @@ Split words: [Hello, Java, World]
         System.out.println("Built string: " + sb.toString());
 
         // StringBuilder methods
-        System.out.println("\nStringBuilder operations:");
+        System.out.println("");
+        System.out.println("StringBuilder operations:");
         StringBuilder builder = new StringBuilder("Hello");
         System.out.println("Initial: " + builder);
 
@@ -178,7 +190,8 @@ Split words: [Hello, Java, World]
         System.out.println("After replace: " + builder);
 
         // Performance comparison
-        System.out.println("\nPerformance example:");
+        System.out.println("");
+        System.out.println("Performance example:");
         long startTime, endTime;
 
         // Using String concatenation (slower for many operations)
@@ -202,7 +215,8 @@ Split words: [Hello, Java, World]
     }
 
     public static void stringFormatting() {
-        System.out.println("\n=== String Formatting ===");
+        System.out.println("");
+        System.out.println("=== String Formatting ===");
 
         String name = "Alice";
         int age = 25;
@@ -217,19 +231,22 @@ Split words: [Hello, Java, World]
         System.out.printf("Name: %s, Age: %d, Salary: $%.2f%n", name, age, salary);
 
         // Formatting numbers
-        System.out.println("\nNumber formatting:");
+        System.out.println("");
+        System.out.println("Number formatting:");
         System.out.printf("Integer with leading zeros: %05d%n", 42);
         System.out.printf("Float with 3 decimals: %.3f%n", 3.14159);
         System.out.printf("Scientific notation: %e%n", 123456.789);
         System.out.printf("Percentage: %.1f%%%n", 85.5);
 
         // Alignment
-        System.out.println("\nAlignment:");
+        System.out.println("");
+        System.out.println("Alignment:");
         System.out.printf("Left-aligned: %-10s|%n", "Java");
         System.out.printf("Right-aligned: %10s|%n", "Java");
 
         // Text blocks (Java 15+)
-        System.out.println("\nText blocks:");
+        System.out.println("");
+        System.out.println("Text blocks:");
         String json = """
                 {
                     "name": "Alice",
@@ -285,107 +302,158 @@ public String buildUserQuery(List<String> userIds) {
     order: 4,
     testCode: `import static org.junit.Assert.*;
 import org.junit.Test;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 
-// Test1: Test string equality
+// Test1: stringBasics should show string comparison
 class Test1 {
     @Test
     public void test() {
-        String str1 = "Hello";
-        String str2 = "Hello";
-        assertTrue(str1.equals(str2));
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        StringManipulationDemo.stringBasics();
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should mention equals", output.contains("equals"));
     }
 }
 
-// Test2: Test string length
+// Test2: stringBasics should show immutability
 class Test2 {
     @Test
     public void test() {
-        String text = "Hello Java World";
-        assertEquals(16, text.length());
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        StringManipulationDemo.stringBasics();
+        System.setOut(oldOut);
+        String output = out.toString().toLowerCase();
+        assertTrue("Should mention immutability or original/modified",
+            output.contains("immutab") || output.contains("original") ||
+            output.contains("неизменяем") || output.contains("o'zgarmas") ||
+            output.contains("оригинал") || output.contains("asl"));
     }
 }
 
-// Test3: Test substring operation
+// Test3: stringMethods should show length
 class Test3 {
     @Test
     public void test() {
-        String text = "Hello Java World";
-        assertEquals("Hello", text.substring(0, 5));
-        assertEquals("Java World", text.substring(6));
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        StringManipulationDemo.stringMethods("Hello Java World");
+        System.setOut(oldOut);
+        String output = out.toString().toLowerCase();
+        assertTrue("Should show length", output.contains("length") || output.contains("длина") || output.contains("uzunlik"));
     }
 }
 
-// Test4: Test indexOf and contains
+// Test4: stringMethods should show substring
 class Test4 {
     @Test
     public void test() {
-        String text = "Hello Java World";
-        assertEquals(6, text.indexOf("Java"));
-        assertTrue(text.contains("Java"));
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        StringManipulationDemo.stringMethods("Hello Java World");
+        System.setOut(oldOut);
+        String output = out.toString().toLowerCase();
+        assertTrue("Should show substring", output.contains("substring") || output.contains("подстрока") || output.contains("hello"));
     }
 }
 
-// Test5: Test string splitting
+// Test5: stringMethods should show indexOf or contains
 class Test5 {
     @Test
     public void test() {
-        String text = "Hello Java World";
-        String[] words = text.split(" ");
-        assertEquals(3, words.length);
-        assertEquals("Hello", words[0]);
-        assertEquals("Java", words[1]);
-        assertEquals("World", words[2]);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        StringManipulationDemo.stringMethods("Hello Java World");
+        System.setOut(oldOut);
+        String output = out.toString().toLowerCase();
+        assertTrue("Should show search functionality",
+            output.contains("indexof") || output.contains("contains") ||
+            output.contains("search") || output.contains("поиск") || output.contains("qidirish"));
     }
 }
 
-// Test6: Test string joining
+// Test6: stringMethods should process the input text
 class Test6 {
     @Test
     public void test() {
-        String[] words = {"Hello", "Java", "World"};
-        String joined = String.join("-", words);
-        assertEquals("Hello-Java-World", joined);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        StringManipulationDemo.stringMethods("TestInput");
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should contain or process the input text", output.contains("Test") || output.contains("9"));
     }
 }
 
-// Test7: Test string trim
+// Test7: stringBuilderDemo should demonstrate StringBuilder
 class Test7 {
     @Test
     public void test() {
-        String padded = "  Java  ";
-        assertEquals("Java", padded.trim());
-        assertEquals(8, padded.length());
-        assertEquals(4, padded.trim().length());
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        StringManipulationDemo.stringBuilderDemo();
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should mention StringBuilder", output.contains("StringBuilder") || output.contains("append"));
     }
 }
 
-// Test8: Test string replace
+// Test8: stringBuilderDemo should show StringBuilder usage
 class Test8 {
     @Test
     public void test() {
-        String text = "Hello Java World";
-        assertEquals("Hello Python World", text.replace("Java", "Python"));
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        StringManipulationDemo.stringBuilderDemo();
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show StringBuilder usage",
+            output.contains("StringBuilder") || output.contains("append") ||
+            output.contains("Build") || output.contains("Строитель"));
     }
 }
 
-// Test9: Test StringBuilder append
+// Test9: stringFormatting should show formatted output
 class Test9 {
     @Test
     public void test() {
-        StringBuilder sb = new StringBuilder();
-        sb.append("Java");
-        sb.append(" is");
-        sb.append(" awesome");
-        assertEquals("Java is awesome", sb.toString());
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        StringManipulationDemo.stringFormatting();
+        System.setOut(oldOut);
+        String output = out.toString().toLowerCase();
+        assertTrue("Should demonstrate formatting",
+            output.contains("format") || output.contains("%") ||
+            output.contains("форматиров") || output.contains("formatlash"));
     }
 }
 
-// Test10: Test string formatting
+// Test10: All methods should produce output
 class Test10 {
     @Test
     public void test() {
-        String formatted = String.format("Name: %s, Age: %d", "Alice", 25);
-        assertEquals("Name: Alice, Age: 25", formatted);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        StringManipulationDemo.stringBasics();
+        StringManipulationDemo.stringMethods("Test");
+        StringManipulationDemo.stringBuilderDemo();
+        StringManipulationDemo.stringFormatting();
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("All methods should produce substantial output", output.length() > 100);
     }
 }
 `,
@@ -410,34 +478,40 @@ class Test10 {
         // Неизменяемость строк
         String original = "Java";
         String modified = original.concat(" Programming");
-        System.out.println("\nПример неизменяемости:");
+        System.out.println("");
+        System.out.println("Пример неизменяемости:");
         System.out.println("Оригинал: " + original); // Все еще "Java"
         System.out.println("Измененная: " + modified); // "Java Programming"
 
         // Сравнение без учета регистра
         String lower = "hello";
         String upper = "HELLO";
-        System.out.println("\nСравнение регистра:");
+        System.out.println("");
+        System.out.println("Сравнение регистра:");
         System.out.println("equals: " + lower.equals(upper)); // false
         System.out.println("equalsIgnoreCase: " + lower.equalsIgnoreCase(upper)); // true
     }
 
     public static void stringMethods(String text) {
-        System.out.println("\n=== Методы строк ===");
+        System.out.println("");
+        System.out.println("=== Методы строк ===");
         System.out.println("Исходный текст: \"" + text + "\"");
 
         // Длина и доступ к символам
-        System.out.println("\nДлина: " + text.length());
+        System.out.println("");
+        System.out.println("Длина: " + text.length());
         System.out.println("Первый символ: " + text.charAt(0));
         System.out.println("Последний символ: " + text.charAt(text.length() - 1));
 
         // Операции с подстроками
-        System.out.println("\nОперации с подстроками:");
+        System.out.println("");
+        System.out.println("Операции с подстроками:");
         System.out.println("substring(0, 5): \"" + text.substring(0, 5) + "\"");
         System.out.println("substring(6): \"" + text.substring(6) + "\"");
 
         // Поиск
-        System.out.println("\nПоиск:");
+        System.out.println("");
+        System.out.println("Поиск:");
         System.out.println("indexOf('Java'): " + text.indexOf("Java"));
         System.out.println("lastIndexOf('o'): " + text.lastIndexOf('o'));
         System.out.println("contains('Java'): " + text.contains("Java"));
@@ -445,7 +519,8 @@ class Test10 {
         System.out.println("endsWith('World'): " + text.endsWith("World"));
 
         // Разделение и объединение
-        System.out.println("\nРазделение:");
+        System.out.println("");
+        System.out.println("Разделение:");
         String[] words = text.split(" ");
         System.out.print("Разделено по пробелу: [");
         for (int i = 0; i < words.length; i++) {
@@ -459,22 +534,26 @@ class Test10 {
 
         // Обрезка и замена
         String padded = "  Java  ";
-        System.out.println("\nОбрезка:");
+        System.out.println("");
+        System.out.println("Обрезка:");
         System.out.println("До trim: \"" + padded + "\" (длина: " + padded.length() + ")");
         System.out.println("После trim: \"" + padded.trim() + "\" (длина: " + padded.trim().length() + ")");
 
-        System.out.println("\nЗамена:");
+        System.out.println("");
+        System.out.println("Замена:");
         System.out.println("replace('Java', 'Python'): " + text.replace("Java", "Python"));
         System.out.println("replaceAll('\\\\s+', '-'): " + text.replaceAll("\\s+", "-"));
 
         // Преобразование регистра
-        System.out.println("\nПреобразование регистра:");
+        System.out.println("");
+        System.out.println("Преобразование регистра:");
         System.out.println("toUpperCase(): " + text.toUpperCase());
         System.out.println("toLowerCase(): " + text.toLowerCase());
     }
 
     public static void stringBuilderDemo() {
-        System.out.println("\n=== Демонстрация StringBuilder ===");
+        System.out.println("");
+        System.out.println("=== Демонстрация StringBuilder ===");
 
         // StringBuilder для эффективного построения строк
         StringBuilder sb = new StringBuilder();
@@ -484,7 +563,8 @@ class Test10 {
         System.out.println("Построенная строка: " + sb.toString());
 
         // Методы StringBuilder
-        System.out.println("\nОперации StringBuilder:");
+        System.out.println("");
+        System.out.println("Операции StringBuilder:");
         StringBuilder builder = new StringBuilder("Hello");
         System.out.println("Начальное: " + builder);
 
@@ -505,7 +585,8 @@ class Test10 {
         System.out.println("После replace: " + builder);
 
         // Сравнение производительности
-        System.out.println("\nПример производительности:");
+        System.out.println("");
+        System.out.println("Пример производительности:");
         long startTime, endTime;
 
         // Использование конкатенации String (медленнее для многих операций)
@@ -529,7 +610,8 @@ class Test10 {
     }
 
     public static void stringFormatting() {
-        System.out.println("\n=== Форматирование строк ===");
+        System.out.println("");
+        System.out.println("=== Форматирование строк ===");
 
         String name = "Алиса";
         int age = 25;
@@ -544,19 +626,22 @@ class Test10 {
         System.out.printf("Имя: %s, Возраст: %d, Зарплата: $%.2f%n", name, age, salary);
 
         // Форматирование чисел
-        System.out.println("\nФорматирование чисел:");
+        System.out.println("");
+        System.out.println("Форматирование чисел:");
         System.out.printf("Целое с ведущими нулями: %05d%n", 42);
         System.out.printf("Число с 3 десятичными знаками: %.3f%n", 3.14159);
         System.out.printf("Научная нотация: %e%n", 123456.789);
         System.out.printf("Процент: %.1f%%%n", 85.5);
 
         // Выравнивание
-        System.out.println("\nВыравнивание:");
+        System.out.println("");
+        System.out.println("Выравнивание:");
         System.out.printf("По левому краю: %-10s|%n", "Java");
         System.out.printf("По правому краю: %10s|%n", "Java");
 
         // Текстовые блоки (Java 15+)
-        System.out.println("\nТекстовые блоки:");
+        System.out.println("");
+        System.out.println("Текстовые блоки:");
         String json = """
                 {
                     "name": "Алиса",
@@ -654,34 +739,40 @@ public String buildUserQuery(List<String> userIds) {
         // String o'zgarmasligi
         String original = "Java";
         String modified = original.concat(" Programming");
-        System.out.println("\nO'zgarmaslik misoli:");
+        System.out.println("");
+        System.out.println("O'zgarmaslik misoli:");
         System.out.println("Asl: " + original); // Hali ham "Java"
         System.out.println("O'zgartirilgan: " + modified); // "Java Programming"
 
         // Katta-kichik harfga sezgir bo'lmagan taqqoslash
         String lower = "hello";
         String upper = "HELLO";
-        System.out.println("\nRegistr taqqoslash:");
+        System.out.println("");
+        System.out.println("Registr taqqoslash:");
         System.out.println("equals: " + lower.equals(upper)); // false
         System.out.println("equalsIgnoreCase: " + lower.equalsIgnoreCase(upper)); // true
     }
 
     public static void stringMethods(String text) {
-        System.out.println("\n=== String metodlari ===");
+        System.out.println("");
+        System.out.println("=== String metodlari ===");
         System.out.println("Asl matn: \"" + text + "\"");
 
         // Uzunlik va belgiga kirish
-        System.out.println("\nUzunlik: " + text.length());
+        System.out.println("");
+        System.out.println("Uzunlik: " + text.length());
         System.out.println("Birinchi belgi: " + text.charAt(0));
         System.out.println("Oxirgi belgi: " + text.charAt(text.length() - 1));
 
         // Substring operatsiyalari
-        System.out.println("\nSubstring operatsiyalari:");
+        System.out.println("");
+        System.out.println("Substring operatsiyalari:");
         System.out.println("substring(0, 5): \"" + text.substring(0, 5) + "\"");
         System.out.println("substring(6): \"" + text.substring(6) + "\"");
 
         // Qidirish
-        System.out.println("\nQidirish:");
+        System.out.println("");
+        System.out.println("Qidirish:");
         System.out.println("indexOf('Java'): " + text.indexOf("Java"));
         System.out.println("lastIndexOf('o'): " + text.lastIndexOf('o'));
         System.out.println("contains('Java'): " + text.contains("Java"));
@@ -689,7 +780,8 @@ public String buildUserQuery(List<String> userIds) {
         System.out.println("endsWith('World'): " + text.endsWith("World"));
 
         // Bo'lish va birlashtirish
-        System.out.println("\nBo'lish:");
+        System.out.println("");
+        System.out.println("Bo'lish:");
         String[] words = text.split(" ");
         System.out.print("Bo'sh joy bo'yicha bo'lish: [");
         for (int i = 0; i < words.length; i++) {
@@ -703,22 +795,26 @@ public String buildUserQuery(List<String> userIds) {
 
         // Kesish va almashtirish
         String padded = "  Java  ";
-        System.out.println("\nKesish:");
+        System.out.println("");
+        System.out.println("Kesish:");
         System.out.println("trim dan oldin: \"" + padded + "\" (uzunlik: " + padded.length() + ")");
         System.out.println("trim dan keyin: \"" + padded.trim() + "\" (uzunlik: " + padded.trim().length() + ")");
 
-        System.out.println("\nAlmashtirish:");
+        System.out.println("");
+        System.out.println("Almashtirish:");
         System.out.println("replace('Java', 'Python'): " + text.replace("Java", "Python"));
         System.out.println("replaceAll('\\\\s+', '-'): " + text.replaceAll("\\s+", "-"));
 
         // Registrni o'zgartirish
-        System.out.println("\nRegistrni o'zgartirish:");
+        System.out.println("");
+        System.out.println("Registrni o'zgartirish:");
         System.out.println("toUpperCase(): " + text.toUpperCase());
         System.out.println("toLowerCase(): " + text.toLowerCase());
     }
 
     public static void stringBuilderDemo() {
-        System.out.println("\n=== StringBuilder namoyishi ===");
+        System.out.println("");
+        System.out.println("=== StringBuilder namoyishi ===");
 
         // Samarali string qurish uchun StringBuilder
         StringBuilder sb = new StringBuilder();
@@ -728,7 +824,8 @@ public String buildUserQuery(List<String> userIds) {
         System.out.println("Qurilgan string: " + sb.toString());
 
         // StringBuilder metodlari
-        System.out.println("\nStringBuilder operatsiyalari:");
+        System.out.println("");
+        System.out.println("StringBuilder operatsiyalari:");
         StringBuilder builder = new StringBuilder("Hello");
         System.out.println("Boshlang'ich: " + builder);
 
@@ -749,7 +846,8 @@ public String buildUserQuery(List<String> userIds) {
         System.out.println("replace dan keyin: " + builder);
 
         // Ishlash taqqoslash
-        System.out.println("\nIshlash misoli:");
+        System.out.println("");
+        System.out.println("Ishlash misoli:");
         long startTime, endTime;
 
         // String biriktirishdan foydalanish (ko'p operatsiyalar uchun sekinroq)
@@ -773,7 +871,8 @@ public String buildUserQuery(List<String> userIds) {
     }
 
     public static void stringFormatting() {
-        System.out.println("\n=== String formatlash ===");
+        System.out.println("");
+        System.out.println("=== String formatlash ===");
 
         String name = "Olim";
         int age = 25;
@@ -788,19 +887,22 @@ public String buildUserQuery(List<String> userIds) {
         System.out.printf("Ism: %s, Yosh: %d, Maosh: $%.2f%n", name, age, salary);
 
         // Raqamlarni formatlash
-        System.out.println("\nRaqamlarni formatlash:");
+        System.out.println("");
+        System.out.println("Raqamlarni formatlash:");
         System.out.printf("Boshidagi nollar bilan butun son: %05d%n", 42);
         System.out.printf("3 o'nlik bilan float: %.3f%n", 3.14159);
         System.out.printf("Ilmiy notatsiya: %e%n", 123456.789);
         System.out.printf("Foiz: %.1f%%%n", 85.5);
 
         // Tekislash
-        System.out.println("\nTekislash:");
+        System.out.println("");
+        System.out.println("Tekislash:");
         System.out.printf("Chapga tekislangan: %-10s|%n", "Java");
         System.out.printf("O'ngga tekislangan: %10s|%n", "Java");
 
         // Matn bloklari (Java 15+)
-        System.out.println("\nMatn bloklari:");
+        System.out.println("");
+        System.out.println("Matn bloklari:");
         String json = """
                 {
                     "name": "Olim",

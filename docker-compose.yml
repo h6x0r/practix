@@ -37,9 +37,8 @@ services:
     command: >
       redis-server
       --maxmemory 1gb
-      --maxmemory-policy volatile-lru
+      --maxmemory-policy noeviction
       --appendonly yes
-      --requirepass ${REDIS_PASSWORD:-kodla_redis_secure_password_2025}
     # NOTE: Remove port exposure in production - only internal access
     # For local development, you can uncomment this:
     # ports:
@@ -50,7 +49,7 @@ services:
     mem_limit: 1200m  # Slightly more than maxmemory to allow for overhead
     memswap_limit: 1200m
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-kodla_redis_secure_password_2025}", "ping"]
+      test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -77,13 +76,15 @@ services:
     mem_limit: 2g
     memswap_limit: 2g  # No swap, strict limit
     environment:
-      - PISTON_RUN_TIMEOUT=30000     # 30s for ML training tasks
+      - PISTON_RUN_TIMEOUT=30000       # 30s wall-time for ML training tasks
       - PISTON_COMPILE_TIMEOUT=30000
+      - PISTON_RUN_CPU_TIME=30000      # 30s CPU-time (important for numpy imports!)
+      - PISTON_COMPILE_CPU_TIME=30000
       - PISTON_OUTPUT_MAX_SIZE=131072  # 128KB for chart JSON output
-      - PISTON_MAX_PROCESS_COUNT=64  # Reduced for memory efficiency
-      - PISTON_MAX_OPEN_FILES=2048   # Reduced for memory efficiency
+      - PISTON_MAX_PROCESS_COUNT=64    # Reduced for memory efficiency
+      - PISTON_MAX_OPEN_FILES=2048     # Reduced for memory efficiency
       - PISTON_MAX_FILE_SIZE=10485760
-      - PISTON_PROCESS_LIMIT=64      # Reduced for memory efficiency
+      - PISTON_PROCESS_LIMIT=64        # Reduced for memory efficiency
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:2000/api/v2/runtimes', (r) => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
       interval: 30s
@@ -108,10 +109,9 @@ services:
       NODE_ENV: ${NODE_ENV:-production}
       # Piston Configuration
       PISTON_URL: http://piston:2000
-      # Redis Configuration (with password)
+      # Redis Configuration
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-kodla_redis_secure_password_2025}
       # Security Configuration
       ENABLE_IP_BAN: ${ENABLE_IP_BAN:-true}
       SUSPICIOUS_ACTIVITY_LOG: ${SUSPICIOUS_ACTIVITY_LOG:-true}

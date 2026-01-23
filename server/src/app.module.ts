@@ -14,6 +14,7 @@ import { UserCoursesModule } from './user-courses/user-courses.module';
 import { RoadmapsModule } from './roadmaps/roadmaps.module';
 import { BugReportsModule } from './bugreports/bugreports.module';
 import { SubscriptionsModule } from './subscriptions/subscriptions.module';
+import { PaymentsModule } from './payments/payments.module';
 import { GamificationModule } from './gamification/gamification.module';
 import { SessionsModule } from './sessions/sessions.module';
 import { AdminModule } from './admin/admin.module';
@@ -60,6 +61,7 @@ import { HealthModule } from './health/health.module';
     RoadmapsModule,
     BugReportsModule,
     SubscriptionsModule,
+    PaymentsModule,
     GamificationModule,
     SessionsModule,
     AdminModule,

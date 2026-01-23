@@ -93,7 +93,8 @@ Type: Integer with value 42
     }
 
     public static String modernSwitchExpression(String day) {
-        System.out.println("\n=== Modern Switch Expression ===");
+        System.out.println("");
+        System.out.println("=== Modern Switch Expression ===");
 
         // Modern switch expression with arrow syntax (no break needed)
         String dayType = switch (day) {
@@ -107,7 +108,8 @@ Type: Integer with value 42
     }
 
     public static String switchWithYield(int month) {
-        System.out.println("\n=== Switch with Yield Keyword ===");
+        System.out.println("");
+        System.out.println("=== Switch with Yield Keyword ===");
 
         // Using yield for complex logic within switch
         String season = switch (month) {
@@ -138,7 +140,8 @@ Type: Integer with value 42
     }
 
     public static void switchPatternMatching(Object obj) {
-        System.out.println("\n=== Pattern Matching with Switch ===");
+        System.out.println("");
+        System.out.println("=== Pattern Matching with Switch ===");
 
         // Pattern matching in switch (Java 17+ preview, Java 21 final)
         String result = switch (obj) {
@@ -154,7 +157,8 @@ Type: Integer with value 42
 
     // Additional example: Calculator using switch expressions
     public static double calculator(double a, double b, String operator) {
-        System.out.println("\n=== Calculator Example ===");
+        System.out.println("");
+        System.out.println("=== Calculator Example ===");
 
         double result = switch (operator) {
             case "+" -> a + b;
@@ -216,6 +220,8 @@ public String processEvent(Event event) {
     order: 3,
     testCode: `import static org.junit.Assert.*;
 import org.junit.Test;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 
 // Test1: Test modern switch with weekday
 class Test1 {
@@ -275,8 +281,15 @@ class Test6 {
 class Test7 {
     @Test
     public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
         SwitchExpressionsDemo.switchPatternMatching(42);
-        assertTrue("Integer pattern matching should work", true);
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Output should contain 'Integer' or 'Целое' or 'Butun'",
+            output.contains("Integer") || output.contains("Целое") || output.contains("Butun"));
+        assertTrue("Output should contain '42'", output.contains("42"));
     }
 }
 
@@ -284,8 +297,15 @@ class Test7 {
 class Test8 {
     @Test
     public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
         SwitchExpressionsDemo.switchPatternMatching("Hello");
-        assertTrue("String pattern matching should work", true);
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Output should contain 'String' or 'Строка' or 'String'",
+            output.contains("String") || output.contains("Строка"));
+        assertTrue("Output should contain 'Hello'", output.contains("Hello"));
     }
 }
 
@@ -338,7 +358,8 @@ class Test10 {
     }
 
     public static String modernSwitchExpression(String day) {
-        System.out.println("\n=== Современное switch-выражение ===");
+        System.out.println("");
+        System.out.println("=== Современное switch-выражение ===");
 
         // Современное switch-выражение со стрелочным синтаксисом (break не нужен)
         String dayType = switch (day) {
@@ -352,7 +373,8 @@ class Test10 {
     }
 
     public static String switchWithYield(int month) {
-        System.out.println("\n=== Switch с ключевым словом Yield ===");
+        System.out.println("");
+        System.out.println("=== Switch с ключевым словом Yield ===");
 
         // Использование yield для сложной логики внутри switch
         String season = switch (month) {
@@ -383,7 +405,8 @@ class Test10 {
     }
 
     public static void switchPatternMatching(Object obj) {
-        System.out.println("\n=== Сопоставление с образцом в Switch ===");
+        System.out.println("");
+        System.out.println("=== Сопоставление с образцом в Switch ===");
 
         // Сопоставление с образцом в switch (Java 17+ preview, Java 21 final)
         String result = switch (obj) {
@@ -399,7 +422,8 @@ class Test10 {
 
     // Дополнительный пример: Калькулятор используя switch-выражения
     public static double calculator(double a, double b, String operator) {
-        System.out.println("\n=== Пример калькулятора ===");
+        System.out.println("");
+        System.out.println("=== Пример калькулятора ===");
 
         double result = switch (operator) {
             case "+" -> a + b;
@@ -511,7 +535,8 @@ public String processEvent(Event event) {
     }
 
     public static String modernSwitchExpression(String day) {
-        System.out.println("\n=== Zamonaviy switch ifodasi ===");
+        System.out.println("");
+        System.out.println("=== Zamonaviy switch ifodasi ===");
 
         // Zamonaviy switch ifodasi o'q sintaksisi bilan (break kerak emas)
         String dayType = switch (day) {
@@ -525,7 +550,8 @@ public String processEvent(Event event) {
     }
 
     public static String switchWithYield(int month) {
-        System.out.println("\n=== Yield kalit so'zi bilan Switch ===");
+        System.out.println("");
+        System.out.println("=== Yield kalit so'zi bilan Switch ===");
 
         // Switch ichida murakkab mantiq uchun yield dan foydalanish
         String season = switch (month) {
@@ -556,7 +582,8 @@ public String processEvent(Event event) {
     }
 
     public static void switchPatternMatching(Object obj) {
-        System.out.println("\n=== Switch da naqsh moslashtirish ===");
+        System.out.println("");
+        System.out.println("=== Switch da naqsh moslashtirish ===");
 
         // Switch da naqsh moslashtirish (Java 17+ preview, Java 21 final)
         String result = switch (obj) {
@@ -572,7 +599,8 @@ public String processEvent(Event event) {
 
     // Qo'shimcha misol: Switch ifodalari yordamida kalkulyator
     public static double calculator(double a, double b, String operator) {
-        System.out.println("\n=== Kalkulyator misoli ===");
+        System.out.println("");
+        System.out.println("=== Kalkulyator misoli ===");
 
         double result = switch (operator) {
             case "+" -> a + b;

@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { Prisma } from '@prisma/client';
+import { Prisma, TaskType } from '@prisma/client';
 import { SubmissionsService } from './submissions.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CodeExecutionService } from '../queue/code-execution.service';
@@ -9,7 +9,8 @@ import { GamificationService } from '../gamification/gamification.service';
 import { SecurityValidationService } from '../security/security-validation.service';
 import { TestParserService } from './test-parser.service';
 import { ResultFormatterService } from './result-formatter.service';
-import { NotFoundException, BadRequestException } from '@nestjs/common';
+import { AiService } from '../ai/ai.service';
+import { NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 
 // Helper to create Prisma errors for testing
 function createPrismaError(code: string): Prisma.PrismaClientKnownRequestError {
@@ -106,6 +107,10 @@ describe('SubmissionsService', () => {
     taskCompletion: {
       create: jest.fn(),
     },
+    runResult: {
+      upsert: jest.fn(),
+      findUnique: jest.fn(),
+    },
   };
 
   const mockCodeExecutionService = {
@@ -119,10 +124,15 @@ describe('SubmissionsService', () => {
     getExecutionResult: jest.fn(),
     setExecutionResult: jest.fn(),
     getStats: jest.fn(),
+    getRunValidation: jest.fn().mockResolvedValue({ passed: true, testsPassed: 5 }),
+    setRunValidation: jest.fn(),
+    setRunValidated: jest.fn(),
+    clearRunValidation: jest.fn().mockResolvedValue(undefined),
   };
 
   const mockAccessControlService = {
     getQueuePriority: jest.fn(),
+    getTaskAccess: jest.fn().mockResolvedValue({ canSubmit: true, reason: null }),
   };
 
   const mockGamificationService = {
@@ -152,6 +162,11 @@ describe('SubmissionsService', () => {
     getStatusLabel: jest.fn().mockReturnValue('PASSED'),
   };
 
+  const mockAiService = {
+    evaluatePrompt: jest.fn(),
+    getPromptEvaluationCost: jest.fn().mockReturnValue(2),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -164,6 +179,7 @@ describe('SubmissionsService', () => {
         { provide: SecurityValidationService, useValue: mockSecurityValidationService },
         { provide: TestParserService, useValue: mockTestParserService },
         { provide: ResultFormatterService, useValue: mockResultFormatterService },
+        { provide: AiService, useValue: mockAiService },
       ],
     }).compile();
 
@@ -936,6 +952,342 @@ describe('SubmissionsService', () => {
 
       expect(result.available).toBe(false);
       expect(result.cache.connected).toBe(false);
+    });
+  });
+
+  // ============================================
+  // Access Control Tests - Premium/Subscription
+  // ============================================
+  describe('Access Control', () => {
+    describe('create() - canSubmit access', () => {
+      it('should throw ForbiddenException when canSubmit is false', async () => {
+        mockPrismaService.task.findFirst.mockResolvedValue(mockTask);
+        mockAccessControlService.getTaskAccess.mockResolvedValue({
+          canSubmit: false,
+          canRun: true,
+          reason: 'Premium required',
+        });
+
+        await expect(
+          service.create('user-123', 'task-123', 'code', 'go')
+        ).rejects.toThrow(ForbiddenException);
+      });
+    });
+
+    describe('create() - run validation', () => {
+      it('should throw ForbiddenException when no run validation exists', async () => {
+        mockPrismaService.task.findFirst.mockResolvedValue(mockTask);
+        mockAccessControlService.getTaskAccess.mockResolvedValue({ canSubmit: true });
+        mockCacheService.getRunValidation.mockResolvedValue(null);
+
+        await expect(
+          service.create('user-123', 'task-123', 'code', 'go')
+        ).rejects.toThrow(ForbiddenException);
+      });
+    });
+
+    describe('runQuickTests() - canRun access', () => {
+      it('should throw ForbiddenException when canRun is false', async () => {
+        mockPrismaService.task.findFirst.mockResolvedValue(mockTask);
+        mockAccessControlService.getTaskAccess.mockResolvedValue({
+          canSubmit: true,
+          canRun: false,
+          reason: 'Premium required',
+        });
+
+        await expect(
+          service.runQuickTests('task-123', 'code', 'go', undefined, 'user-123')
+        ).rejects.toThrow(ForbiddenException);
+      });
+    });
+  });
+
+  // ============================================
+  // runQuickTests() - Run validation and persistence
+  // ============================================
+  describe('runQuickTests() - validation and persistence', () => {
+    it('should mark task as validated when user passes 5 tests', async () => {
+      mockPrismaService.task.findFirst.mockResolvedValue(mockTask);
+      mockAccessControlService.getTaskAccess.mockResolvedValue({ canRun: true });
+      mockCodeExecutionService.executeSyncWithTests.mockResolvedValue(mockExecutionResult);
+      mockTestParserService.parseTestOutput.mockReturnValue({
+        testCases: Array(5).fill({ name: 'Test', passed: true }),
+        passed: 5,
+        total: 5,
+      });
+      mockPrismaService.runResult.upsert.mockResolvedValue({});
+
+      const result = await service.runQuickTests('task-123', 'code', 'go', undefined, 'user-123');
+
+      expect(result.runValidated).toBe(true);
+      expect(mockCacheService.setRunValidated).toHaveBeenCalledWith('user-123', 'task-123', 5);
+    });
+
+    it('should not mark as validated when fewer than 5 tests pass', async () => {
+      mockPrismaService.task.findFirst.mockResolvedValue(mockTask);
+      mockAccessControlService.getTaskAccess.mockResolvedValue({ canRun: true });
+      mockCodeExecutionService.executeSyncWithTests.mockResolvedValue(mockExecutionResult);
+      mockTestParserService.parseTestOutput.mockReturnValue({
+        testCases: Array(4).fill({ name: 'Test', passed: true }),
+        passed: 4,
+        total: 5,
+      });
+
+      const result = await service.runQuickTests('task-123', 'code', 'go', undefined, 'user-123');
+
+      expect(result.runValidated).toBe(false);
+      expect(mockCacheService.setRunValidated).not.toHaveBeenCalled();
+    });
+
+    it('should save run result to database', async () => {
+      mockPrismaService.task.findFirst.mockResolvedValue(mockTask);
+      mockAccessControlService.getTaskAccess.mockResolvedValue({ canRun: true });
+      mockCodeExecutionService.executeSyncWithTests.mockResolvedValue(mockExecutionResult);
+      mockPrismaService.runResult.upsert.mockResolvedValue({});
+
+      await service.runQuickTests('task-123', 'code', 'go', undefined, 'user-123');
+
+      expect(mockPrismaService.runResult.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            userId_taskId: {
+              userId: 'user-123',
+              taskId: 'task-123',
+            },
+          },
+        })
+      );
+    });
+
+    it('should continue even if run result save fails', async () => {
+      mockPrismaService.task.findFirst.mockResolvedValue(mockTask);
+      mockAccessControlService.getTaskAccess.mockResolvedValue({ canRun: true });
+      mockCodeExecutionService.executeSyncWithTests.mockResolvedValue(mockExecutionResult);
+      mockPrismaService.runResult.upsert.mockRejectedValue(new Error('DB error'));
+
+      const result = await service.runQuickTests('task-123', 'code', 'go', undefined, 'user-123');
+
+      // Should not throw, just continue
+      expect(result.status).toBeDefined();
+    });
+
+    it('should not save run result when no userId provided', async () => {
+      mockPrismaService.task.findFirst.mockResolvedValue(mockTask);
+      mockCodeExecutionService.executeSyncWithTests.mockResolvedValue(mockExecutionResult);
+
+      await service.runQuickTests('task-123', 'code', 'go');
+
+      expect(mockPrismaService.runResult.upsert).not.toHaveBeenCalled();
+    });
+  });
+
+  // ============================================
+  // getRunResult() - Get saved run results
+  // ============================================
+  describe('getRunResult()', () => {
+    const mockRunResult = {
+      status: 'passed',
+      testsPassed: 5,
+      testsTotal: 5,
+      testCases: [{ name: 'Test1', passed: true }],
+      runtime: '10ms',
+      message: '',
+      code: 'test code',
+      updatedAt: new Date(),
+    };
+
+    it('should return run result for valid task', async () => {
+      mockPrismaService.task.findFirst.mockResolvedValue({ id: 'task-123' });
+      mockPrismaService.runResult.findUnique.mockResolvedValue(mockRunResult);
+
+      const result = await service.getRunResult('user-123', 'task-123');
+
+      expect(result).toEqual(mockRunResult);
+    });
+
+    it('should return null when task not found', async () => {
+      mockPrismaService.task.findFirst.mockResolvedValue(null);
+
+      const result = await service.getRunResult('user-123', 'nonexistent');
+
+      expect(result).toBeNull();
+    });
+
+    it('should return null when no run result exists', async () => {
+      mockPrismaService.task.findFirst.mockResolvedValue({ id: 'task-123' });
+      mockPrismaService.runResult.findUnique.mockResolvedValue(null);
+
+      const result = await service.getRunResult('user-123', 'task-123');
+
+      expect(result).toBeNull();
+    });
+
+    it('should resolve task by slug', async () => {
+      mockPrismaService.task.findFirst.mockResolvedValue({ id: 'task-123' });
+      mockPrismaService.runResult.findUnique.mockResolvedValue(mockRunResult);
+
+      await service.getRunResult('user-123', 'hello-world');
+
+      expect(mockPrismaService.task.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            OR: [{ id: 'hello-world' }, { slug: 'hello-world' }],
+          },
+        })
+      );
+    });
+  });
+
+  // ============================================
+  // submitPrompt() - Prompt engineering submissions
+  // ============================================
+  describe('submitPrompt()', () => {
+    const mockPromptTask = {
+      id: 'prompt-task-123',
+      slug: 'prompt-basics',
+      title: 'Prompt Basics',
+      difficulty: 'easy',
+      taskType: TaskType.PROMPT,
+      promptConfig: {
+        testScenarios: [
+          { input: 'test input', expectedCriteria: ['criterion1'], rubric: 'test rubric' },
+        ],
+        judgePrompt: 'evaluate this',
+        passingScore: 70,
+      },
+      topic: { module: { courseId: 'course-123' } },
+    };
+
+    const mockEvaluation = {
+      passed: true,
+      score: 8.5,
+      summary: 'Good prompt!',
+      scenarioResults: [
+        { scenarioIndex: 0, input: 'test input', passed: true, score: 8, feedback: 'Good' },
+      ],
+    };
+
+    it('should evaluate and save prompt submission', async () => {
+      mockPrismaService.task.findFirst.mockResolvedValue(mockPromptTask);
+      mockAccessControlService.getTaskAccess.mockResolvedValue({ canSubmit: true });
+      mockAiService.evaluatePrompt.mockResolvedValue(mockEvaluation);
+      mockPrismaService.submission.create.mockResolvedValue({
+        id: 'submission-123',
+        createdAt: new Date(),
+      });
+      mockPrismaService.taskCompletion.create.mockResolvedValue({});
+      mockGamificationService.awardTaskXp.mockResolvedValue({
+        xpEarned: 10,
+        totalXp: 10,
+        level: 1,
+        leveledUp: false,
+        newBadges: [],
+      });
+
+      const result = await service.submitPrompt('user-123', 'prompt-task-123', 'My prompt');
+
+      expect(result.status).toBe('passed');
+      expect(result.score).toBe(85);
+      expect(result.scenarioResults).toBeDefined();
+      expect(mockAiService.evaluatePrompt).toHaveBeenCalledWith(
+        'user-123',
+        'My prompt',
+        mockPromptTask.promptConfig
+      );
+    });
+
+    it('should throw NotFoundException for nonexistent task', async () => {
+      mockPrismaService.task.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.submitPrompt('user-123', 'nonexistent', 'prompt')
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw BadRequestException for non-PROMPT task type', async () => {
+      mockPrismaService.task.findFirst.mockResolvedValue({
+        ...mockPromptTask,
+        taskType: TaskType.CODE,
+      });
+
+      await expect(
+        service.submitPrompt('user-123', 'prompt-task-123', 'prompt')
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw BadRequestException for task without promptConfig', async () => {
+      mockPrismaService.task.findFirst.mockResolvedValue({
+        ...mockPromptTask,
+        promptConfig: null,
+      });
+
+      await expect(
+        service.submitPrompt('user-123', 'prompt-task-123', 'prompt')
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw ForbiddenException when canSubmit is false', async () => {
+      mockPrismaService.task.findFirst.mockResolvedValue(mockPromptTask);
+      mockAccessControlService.getTaskAccess.mockResolvedValue({
+        canSubmit: false,
+        reason: 'Premium required',
+      });
+
+      await expect(
+        service.submitPrompt('user-123', 'prompt-task-123', 'prompt')
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('should handle failed evaluation', async () => {
+      mockPrismaService.task.findFirst.mockResolvedValue(mockPromptTask);
+      mockAccessControlService.getTaskAccess.mockResolvedValue({ canSubmit: true });
+      mockAiService.evaluatePrompt.mockResolvedValue({
+        passed: false,
+        score: 4.0,
+        summary: 'Needs improvement',
+        scenarioResults: [
+          { scenarioIndex: 0, input: 'test', passed: false, score: 4, feedback: 'Bad' },
+        ],
+      });
+      mockPrismaService.submission.create.mockResolvedValue({
+        id: 'submission-123',
+        createdAt: new Date(),
+      });
+
+      const result = await service.submitPrompt('user-123', 'prompt-task-123', 'prompt');
+
+      expect(result.status).toBe('failed');
+      expect(result.score).toBe(40);
+    });
+  });
+
+  // ============================================
+  // awardXpIfFirstCompletion - error handling
+  // ============================================
+  describe('awardXpIfFirstCompletion() - error handling', () => {
+    it('should rethrow non-P2002 errors', async () => {
+      mockPrismaService.task.findFirst.mockResolvedValue(mockTask);
+      mockAccessControlService.getTaskAccess.mockResolvedValue({ canSubmit: true });
+      mockAccessControlService.getQueuePriority.mockResolvedValue(1);
+      mockCacheService.getRunValidation.mockResolvedValue({ passed: true, testsPassed: 5 });
+      mockCodeExecutionService.executeSyncWithTests.mockResolvedValue(mockExecutionResult);
+      mockPrismaService.submission.create.mockResolvedValue(mockSubmission);
+      // Reset the test mocks to return passed status
+      mockTestParserService.parseTestOutput.mockReturnValue({
+        testCases: [{ name: 'TestHelloWorld', passed: true }],
+        passed: 1,
+        total: 1,
+      });
+      mockTestParserService.determineStatus.mockReturnValue('passed');
+      mockTestParserService.calculateScore.mockReturnValue(100);
+      // Simulate a different Prisma error (not P2002)
+      mockPrismaService.taskCompletion.create.mockRejectedValue(
+        new Error('Connection error')
+      );
+
+      await expect(
+        service.create('user-123', 'task-123', 'code', 'go')
+      ).rejects.toThrow('Connection error');
     });
   });
 });

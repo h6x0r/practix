@@ -69,7 +69,8 @@ export const task: Task = {
 
         // Increment and decrement operators
         int counter = 10;
-        System.out.println("\nIncrement/Decrement:");
+        System.out.println("");
+        System.out.println("Increment/Decrement:");
         System.out.println("counter = " + counter);
         System.out.println("counter++ = " + (counter++)); // Post-increment
         System.out.println("After post-increment: " + counter);
@@ -79,7 +80,8 @@ export const task: Task = {
 
         // Compound assignment operators
         int value = 100;
-        System.out.println("\nCompound Assignment:");
+        System.out.println("");
+        System.out.println("Compound Assignment:");
         System.out.println("value = " + value);
         value += 20; // value = value + 20
         System.out.println("After value += 20: " + value);
@@ -88,7 +90,8 @@ export const task: Task = {
     }
 
     public static void logicalOperations(boolean x, boolean y) {
-        System.out.println("\n=== Logical Operators ===");
+        System.out.println("");
+        System.out.println("=== Logical Operators ===");
         System.out.println("x = " + x + ", y = " + y);
         System.out.println("x && y (AND) = " + (x && y));
         System.out.println("x || y (OR) = " + (x || y));
@@ -96,14 +99,16 @@ export const task: Task = {
         System.out.println("!y (NOT) = " + (!y));
 
         // Short-circuit evaluation
-        System.out.println("\nShort-circuit evaluation:");
+        System.out.println("");
+        System.out.println("Short-circuit evaluation:");
         int num = 10;
         boolean result = (num > 5) || (++num > 15);
         System.out.println("(num > 5) || (++num > 15) = " + result);
         System.out.println("num after short-circuit: " + num); // num stays 10
 
         // Comparison operators
-        System.out.println("\nComparison Operators:");
+        System.out.println("");
+        System.out.println("Comparison Operators:");
         int a = 10, b = 20;
         System.out.println(a + " == " + b + " : " + (a == b));
         System.out.println(a + " != " + b + " : " + (a != b));
@@ -114,21 +119,20 @@ export const task: Task = {
     }
 
     public static void bitwiseOperations(int a, int b) {
-        System.out.println("\n=== Bitwise Operators ===");
+        System.out.println("");
+        System.out.println("=== Bitwise Operators ===");
         System.out.println("a = " + a + " (binary: " + Integer.toBinaryString(a) + ")");
         System.out.println("b = " + b + " (binary: " + Integer.toBinaryString(b) + ")");
 
-        System.out.println("\nBitwise AND (&): " + (a & b) +
-                          " (binary: " + Integer.toBinaryString(a & b) + ")");
-        System.out.println("Bitwise OR (|): " + (a | b) +
-                          " (binary: " + Integer.toBinaryString(a | b) + ")");
-        System.out.println("Bitwise XOR (^): " + (a ^ b) +
-                          " (binary: " + Integer.toBinaryString(a ^ b) + ")");
-        System.out.println("Bitwise NOT (~a): " + (~a) +
-                          " (binary: " + Integer.toBinaryString(~a) + ")");
+        System.out.println("");
+        System.out.println("Bitwise AND (&): " + (a & b) + " (binary: " + Integer.toBinaryString(a & b) + ")");
+        System.out.println("Bitwise OR (|): " + (a | b) + " (binary: " + Integer.toBinaryString(a | b) + ")");
+        System.out.println("Bitwise XOR (^): " + (a ^ b) + " (binary: " + Integer.toBinaryString(a ^ b) + ")");
+        System.out.println("Bitwise NOT (~a): " + (~a) + " (binary: " + Integer.toBinaryString(~a) + ")");
 
         // Bit shift operators
-        System.out.println("\nBit Shift Operators:");
+        System.out.println("");
+        System.out.println("Bit Shift Operators:");
         System.out.println("a << 2 (left shift): " + (a << 2) +
                           " (binary: " + Integer.toBinaryString(a << 2) + ")");
         System.out.println("a >> 2 (right shift): " + (a >> 2) +
@@ -137,7 +141,8 @@ export const task: Task = {
                           " (binary: " + Integer.toBinaryString(a >>> 2) + ")");
 
         // Operator precedence example
-        System.out.println("\n=== Operator Precedence ===");
+        System.out.println("");
+        System.out.println("=== Operator Precedence ===");
         int result = 10 + 5 * 2 - 8 / 4;
         System.out.println("10 + 5 * 2 - 8 / 4 = " + result);
         System.out.println("Evaluation: 10 + (5 * 2) - (8 / 4) = 10 + 10 - 2 = " + result);
@@ -174,108 +179,153 @@ public class PermissionManager {
     order: 1,
     testCode: `import static org.junit.Assert.*;
 import org.junit.Test;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 
-// Test1: Test basic arithmetic operations
+// Test1: Calculator method should show arithmetic operations
 class Test1 {
     @Test
     public void test() {
-        assertEquals(15, 10 + 5);
-        assertEquals(5, 10 - 5);
-        assertEquals(50, 10 * 5);
-        assertEquals(2, 10 / 5);
-        assertEquals(0, 10 % 5);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        OperatorsDemo.calculator(10, 5);
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Calculator should show arithmetic operations",
+            output.contains("+") || output.contains("10") ||
+            output.contains("Addition") || output.contains("Сложение"));
     }
 }
 
-// Test2: Test increment operators
+// Test2: Calculator should show addition result
 class Test2 {
     @Test
     public void test() {
-        int counter = 10;
-        assertEquals(10, counter++);
-        assertEquals(11, counter);
-        assertEquals(12, ++counter);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        OperatorsDemo.calculator(10, 5);
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Output should contain '15' (10+5)", output.contains("15"));
     }
 }
 
-// Test3: Test decrement operators
+// Test3: Calculator should show subtraction result
 class Test3 {
     @Test
     public void test() {
-        int counter = 10;
-        assertEquals(10, counter--);
-        assertEquals(9, counter);
-        assertEquals(8, --counter);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        OperatorsDemo.calculator(10, 5);
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Output should contain subtraction operator '-'", output.contains(" - "));
     }
 }
 
-// Test4: Test logical AND and OR
+// Test4: Calculator should show multiplication result
 class Test4 {
     @Test
     public void test() {
-        assertTrue(true && true);
-        assertFalse(true && false);
-        assertTrue(true || false);
-        assertFalse(false || false);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        OperatorsDemo.calculator(10, 5);
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Output should contain '50' (10*5)", output.contains("50"));
     }
 }
 
-// Test5: Test logical NOT
+// Test5: Logical operations should show boolean operators
 class Test5 {
     @Test
     public void test() {
-        assertFalse(!true);
-        assertTrue(!false);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        OperatorsDemo.logicalOperations(true, false);
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Logical operations should show boolean operators",
+            output.contains("&&") || output.contains("||") ||
+            output.contains("AND") || output.contains("OR"));
     }
 }
 
-// Test6: Test comparison operators
+// Test6: Logical operations should show AND result
 class Test6 {
     @Test
     public void test() {
-        assertTrue(10 < 20);
-        assertTrue(20 > 10);
-        assertTrue(10 <= 10);
-        assertTrue(10 >= 10);
-        assertTrue(10 == 10);
-        assertTrue(10 != 20);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        OperatorsDemo.logicalOperations(true, false);
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Output should contain '&&' operator", output.contains("&&"));
     }
 }
 
-// Test7: Test bitwise AND
+// Test7: Logical operations should show OR result
 class Test7 {
     @Test
     public void test() {
-        int result = 12 & 5; // 1100 & 0101 = 0100
-        assertEquals(4, result);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        OperatorsDemo.logicalOperations(true, false);
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Output should contain '||' operator", output.contains("||"));
     }
 }
 
-// Test8: Test bitwise OR
+// Test8: Bitwise operations should show bitwise operators
 class Test8 {
     @Test
     public void test() {
-        int result = 12 | 5; // 1100 | 0101 = 1101
-        assertEquals(13, result);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        OperatorsDemo.bitwiseOperations(12, 5);
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Bitwise operations should show bitwise operators",
+            output.contains("&") || output.contains("|") ||
+            output.contains("Bitwise") || output.contains("Побитовый"));
     }
 }
 
-// Test9: Test bitwise XOR
+// Test9: Bitwise operations should show AND result
 class Test9 {
     @Test
     public void test() {
-        int result = 12 ^ 5; // 1100 ^ 0101 = 1001
-        assertEquals(9, result);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        OperatorsDemo.bitwiseOperations(12, 5);
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Bitwise AND (12 & 5 = 4) should appear", output.contains("4"));
     }
 }
 
-// Test10: Test bit shift operators
+// Test10: Bitwise operations should show shift operators
 class Test10 {
     @Test
     public void test() {
-        assertEquals(48, 12 << 2); // Left shift by 2
-        assertEquals(3, 12 >> 2);  // Right shift by 2
-        assertEquals(3, 12 >>> 2); // Unsigned right shift by 2
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        OperatorsDemo.bitwiseOperations(12, 5);
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Output should contain '<<' operator", output.contains("<<"));
+        assertTrue("Output should contain '>>' operator", output.contains(">>"));
     }
 }
 `,
@@ -294,7 +344,8 @@ class Test10 {
 
         // Операторы инкремента и декремента
         int counter = 10;
-        System.out.println("\nИнкремент/Декремент:");
+        System.out.println("");
+        System.out.println("Инкремент/Декремент:");
         System.out.println("counter = " + counter);
         System.out.println("counter++ = " + (counter++)); // Постфиксный инкремент
         System.out.println("После постфиксного инкремента: " + counter);
@@ -304,7 +355,8 @@ class Test10 {
 
         // Составные операторы присваивания
         int value = 100;
-        System.out.println("\nСоставное присваивание:");
+        System.out.println("");
+        System.out.println("Составное присваивание:");
         System.out.println("value = " + value);
         value += 20; // value = value + 20
         System.out.println("После value += 20: " + value);
@@ -313,7 +365,8 @@ class Test10 {
     }
 
     public static void logicalOperations(boolean x, boolean y) {
-        System.out.println("\n=== Логические операторы ===");
+        System.out.println("");
+        System.out.println("=== Логические операторы ===");
         System.out.println("x = " + x + ", y = " + y);
         System.out.println("x && y (И) = " + (x && y));
         System.out.println("x || y (ИЛИ) = " + (x || y));
@@ -321,14 +374,16 @@ class Test10 {
         System.out.println("!y (НЕ) = " + (!y));
 
         // Ленивые вычисления
-        System.out.println("\nЛенивые вычисления:");
+        System.out.println("");
+        System.out.println("Ленивые вычисления:");
         int num = 10;
         boolean result = (num > 5) || (++num > 15);
         System.out.println("(num > 5) || (++num > 15) = " + result);
         System.out.println("num после ленивого вычисления: " + num); // num остается 10
 
         // Операторы сравнения
-        System.out.println("\nОператоры сравнения:");
+        System.out.println("");
+        System.out.println("Операторы сравнения:");
         int a = 10, b = 20;
         System.out.println(a + " == " + b + " : " + (a == b));
         System.out.println(a + " != " + b + " : " + (a != b));
@@ -339,21 +394,20 @@ class Test10 {
     }
 
     public static void bitwiseOperations(int a, int b) {
-        System.out.println("\n=== Побитовые операторы ===");
+        System.out.println("");
+        System.out.println("=== Побитовые операторы ===");
         System.out.println("a = " + a + " (двоичное: " + Integer.toBinaryString(a) + ")");
         System.out.println("b = " + b + " (двоичное: " + Integer.toBinaryString(b) + ")");
 
-        System.out.println("\nПобитовое И (&): " + (a & b) +
-                          " (двоичное: " + Integer.toBinaryString(a & b) + ")");
-        System.out.println("Побитовое ИЛИ (|): " + (a | b) +
-                          " (двоичное: " + Integer.toBinaryString(a | b) + ")");
-        System.out.println("Побитовое исключающее ИЛИ (^): " + (a ^ b) +
-                          " (двоичное: " + Integer.toBinaryString(a ^ b) + ")");
-        System.out.println("Побитовое НЕ (~a): " + (~a) +
-                          " (двоичное: " + Integer.toBinaryString(~a) + ")");
+        System.out.println("");
+        System.out.println("Побитовое И (&): " + (a & b) + " (двоичное: " + Integer.toBinaryString(a & b) + ")");
+        System.out.println("Побитовое ИЛИ (|): " + (a | b) + " (двоичное: " + Integer.toBinaryString(a | b) + ")");
+        System.out.println("Побитовое исключающее ИЛИ (^): " + (a ^ b) + " (двоичное: " + Integer.toBinaryString(a ^ b) + ")");
+        System.out.println("Побитовое НЕ (~a): " + (~a) + " (двоичное: " + Integer.toBinaryString(~a) + ")");
 
         // Операторы битового сдвига
-        System.out.println("\nОператоры битового сдвига:");
+        System.out.println("");
+        System.out.println("Операторы битового сдвига:");
         System.out.println("a << 2 (сдвиг влево): " + (a << 2) +
                           " (двоичное: " + Integer.toBinaryString(a << 2) + ")");
         System.out.println("a >> 2 (сдвиг вправо): " + (a >> 2) +
@@ -362,7 +416,8 @@ class Test10 {
                           " (двоичное: " + Integer.toBinaryString(a >>> 2) + ")");
 
         // Пример приоритета операторов
-        System.out.println("\n=== Приоритет операторов ===");
+        System.out.println("");
+        System.out.println("=== Приоритет операторов ===");
         int result = 10 + 5 * 2 - 8 / 4;
         System.out.println("10 + 5 * 2 - 8 / 4 = " + result);
         System.out.println("Вычисление: 10 + (5 * 2) - (8 / 4) = 10 + 10 - 2 = " + result);
@@ -433,7 +488,8 @@ public class PermissionManager {
 
         // Inkrement va dekrement operatorlari
         int counter = 10;
-        System.out.println("\nInkrement/Dekrement:");
+        System.out.println("");
+        System.out.println("Inkrement/Dekrement:");
         System.out.println("counter = " + counter);
         System.out.println("counter++ = " + (counter++)); // Post-inkrement
         System.out.println("Post-inkrement dan keyin: " + counter);
@@ -443,7 +499,8 @@ public class PermissionManager {
 
         // Murakkab tayinlash operatorlari
         int value = 100;
-        System.out.println("\nMurakkab tayinlash:");
+        System.out.println("");
+        System.out.println("Murakkab tayinlash:");
         System.out.println("value = " + value);
         value += 20; // value = value + 20
         System.out.println("value += 20 dan keyin: " + value);
@@ -452,7 +509,8 @@ public class PermissionManager {
     }
 
     public static void logicalOperations(boolean x, boolean y) {
-        System.out.println("\n=== Mantiqiy operatorlar ===");
+        System.out.println("");
+        System.out.println("=== Mantiqiy operatorlar ===");
         System.out.println("x = " + x + ", y = " + y);
         System.out.println("x && y (VA) = " + (x && y));
         System.out.println("x || y (YOKI) = " + (x || y));
@@ -460,14 +518,16 @@ public class PermissionManager {
         System.out.println("!y (INKOR) = " + (!y));
 
         // Qisqa tutashuv baholash
-        System.out.println("\nQisqa tutashuv baholash:");
+        System.out.println("");
+        System.out.println("Qisqa tutashuv baholash:");
         int num = 10;
         boolean result = (num > 5) || (++num > 15);
         System.out.println("(num > 5) || (++num > 15) = " + result);
         System.out.println("Qisqa tutashuvdan keyin num: " + num); // num 10 bo'lib qoladi
 
         // Taqqoslash operatorlari
-        System.out.println("\nTaqqoslash operatorlari:");
+        System.out.println("");
+        System.out.println("Taqqoslash operatorlari:");
         int a = 10, b = 20;
         System.out.println(a + " == " + b + " : " + (a == b));
         System.out.println(a + " != " + b + " : " + (a != b));
@@ -478,21 +538,20 @@ public class PermissionManager {
     }
 
     public static void bitwiseOperations(int a, int b) {
-        System.out.println("\n=== Bitli operatorlar ===");
+        System.out.println("");
+        System.out.println("=== Bitli operatorlar ===");
         System.out.println("a = " + a + " (ikkilik: " + Integer.toBinaryString(a) + ")");
         System.out.println("b = " + b + " (ikkilik: " + Integer.toBinaryString(b) + ")");
 
-        System.out.println("\nBitli VA (&): " + (a & b) +
-                          " (ikkilik: " + Integer.toBinaryString(a & b) + ")");
-        System.out.println("Bitli YOKI (|): " + (a | b) +
-                          " (ikkilik: " + Integer.toBinaryString(a | b) + ")");
-        System.out.println("Bitli XOR (^): " + (a ^ b) +
-                          " (ikkilik: " + Integer.toBinaryString(a ^ b) + ")");
-        System.out.println("Bitli INKOR (~a): " + (~a) +
-                          " (ikkilik: " + Integer.toBinaryString(~a) + ")");
+        System.out.println("");
+        System.out.println("Bitli VA (&): " + (a & b) + " (ikkilik: " + Integer.toBinaryString(a & b) + ")");
+        System.out.println("Bitli YOKI (|): " + (a | b) + " (ikkilik: " + Integer.toBinaryString(a | b) + ")");
+        System.out.println("Bitli XOR (^): " + (a ^ b) + " (ikkilik: " + Integer.toBinaryString(a ^ b) + ")");
+        System.out.println("Bitli INKOR (~a): " + (~a) + " (ikkilik: " + Integer.toBinaryString(~a) + ")");
 
         // Bit siljitish operatorlari
-        System.out.println("\nBit siljitish operatorlari:");
+        System.out.println("");
+        System.out.println("Bit siljitish operatorlari:");
         System.out.println("a << 2 (chapga siljitish): " + (a << 2) +
                           " (ikkilik: " + Integer.toBinaryString(a << 2) + ")");
         System.out.println("a >> 2 (o'ngga siljitish): " + (a >> 2) +
@@ -501,7 +560,8 @@ public class PermissionManager {
                           " (ikkilik: " + Integer.toBinaryString(a >>> 2) + ")");
 
         // Operatorlar ustunligi misoli
-        System.out.println("\n=== Operatorlar ustunligi ===");
+        System.out.println("");
+        System.out.println("=== Operatorlar ustunligi ===");
         int result = 10 + 5 * 2 - 8 / 4;
         System.out.println("10 + 5 * 2 - 8 / 4 = " + result);
         System.out.println("Baholash: 10 + (5 * 2) - (8 / 4) = 10 + 10 - 2 = " + result);

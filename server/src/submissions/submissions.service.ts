@@ -1,5 +1,5 @@
-import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException, Logger } from '@nestjs/common';
+import { Prisma, TaskType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CodeExecutionService } from '../queue/code-execution.service';
 import { CacheService } from '../cache/cache.service';
@@ -9,6 +9,7 @@ import { GamificationService } from '../gamification/gamification.service';
 import { SecurityValidationService } from '../security/security-validation.service';
 import { TestParserService, TestCaseResult } from './test-parser.service';
 import { ResultFormatterService } from './result-formatter.service';
+import { AiService, PromptEvaluationResult, PromptTestResult } from '../ai/ai.service';
 
 // Re-export TestCaseResult for backward compatibility
 export { TestCaseResult };
@@ -44,6 +45,26 @@ export interface SubmissionResult {
 }
 
 /**
+ * Result for prompt engineering submissions
+ */
+export interface PromptSubmissionResult {
+  id: string;
+  status: string;
+  score: number;
+  message: string;
+  createdAt: string;
+  // Prompt-specific results
+  scenarioResults: PromptTestResult[];
+  summary: string;
+  // Gamification rewards
+  xpEarned?: number;
+  totalXp?: number;
+  level?: number;
+  leveledUp?: boolean;
+  newBadges?: Array<{ slug: string; name: string; icon: string }>;
+}
+
+/**
  * SubmissionsService
  *
  * Orchestrates code submission and execution flow.
@@ -65,10 +86,12 @@ export class SubmissionsService {
     private readonly securityValidation: SecurityValidationService,
     private readonly testParser: TestParserService,
     private readonly resultFormatter: ResultFormatterService,
+    private readonly aiService: AiService,
   ) {}
 
   /**
    * Create a new code submission and execute it
+   * Requires user to have passed 5 tests via Run first (run validation)
    */
   async create(
     userId: string,
@@ -83,26 +106,42 @@ export class SubmissionsService {
     // 2. Resolve Task with topic/module/course info for priority
     const task = await this.findTaskByIdentifier(taskIdentifier);
 
-    // 3. Validate language
+    // 3. Check task access - premium tasks require subscription
+    const taskAccess = await this.accessControlService.getTaskAccess(userId, task.id);
+    if (!taskAccess.canSubmit) {
+      throw new ForbiddenException(
+        'This task requires an active subscription. Upgrade to access premium content.',
+      );
+    }
+
+    // 4. Check run validation - user must pass 5 tests via Run first
+    const runValidation = await this.cacheService.getRunValidation(userId, task.id);
+    if (!runValidation) {
+      throw new ForbiddenException(
+        'Please run your code first and pass at least 5 tests before submitting.',
+      );
+    }
+
+    // 5. Validate language
     this.validateLanguage(language);
 
-    // 4. Get queue priority based on user's subscription
+    // 6. Get queue priority based on user's subscription
     const courseId = task.topic?.module?.courseId;
     const queuePriority = courseId
       ? await this.accessControlService.getQueuePriority(userId, courseId)
       : 10;
 
     this.logger.log(
-      `Submission: user=${userId}, task=${task.slug}, lang=${language}, hasTests=${!!task.testCode}, priority=${queuePriority}`,
+      `Submission: user=${userId}, task=${task.slug}, lang=${language}, hasTests=${!!task.testCode}, priority=${queuePriority}, runValidated=${runValidation.testsPassed}`,
     );
 
-    // 5. Execute code
+    // 7. Execute code
     const result = await this.executeCode(code, language, task.testCode);
 
-    // 6. Parse test output
+    // 8. Parse test output
     const testOutput = this.testParser.parseTestOutput(result.stdout, result.stderr);
 
-    // 7. Determine final status and score
+    // 9. Determine final status and score
     const finalStatus = this.testParser.determineStatus(
       result.status,
       testOutput.passed,
@@ -114,11 +153,11 @@ export class SubmissionsService {
       finalStatus,
     );
 
-    // 8. Format output metrics
+    // 10. Format output metrics
     const { runtime, memory } = this.resultFormatter.formatMetrics(result);
     const message = this.resultFormatter.formatMessage(result);
 
-    // 9. Save submission to database
+    // 11. Save submission to database
     const submission = await this.prisma.submission.create({
       data: {
         userId,
@@ -137,7 +176,7 @@ export class SubmissionsService {
       },
     });
 
-    // 10. Award XP for first completion
+    // 12. Award XP for first completion (only if all tests passed)
     const gamificationResult = await this.awardXpIfFirstCompletion(
       userId,
       task.id,
@@ -145,6 +184,11 @@ export class SubmissionsService {
       task.difficulty,
       finalStatus,
     );
+
+    // 13. Clear run validation after successful submission
+    if (finalStatus === 'passed') {
+      await this.cacheService.clearRunValidation(userId, task.id);
+    }
 
     return {
       id: submission.id,
@@ -211,6 +255,7 @@ export class SubmissionsService {
   /**
    * Run quick tests (5 tests) without saving to database
    * Used for "Run Code" button - fast feedback
+   * If user passes all 5 tests, marks task as validated for submission
    */
   async runQuickTests(
     taskIdentifier: string,
@@ -225,12 +270,24 @@ export class SubmissionsService {
     testCases: TestCaseResult[];
     runtime: string;
     message: string;
+    runValidated?: boolean;
   }> {
     // Security: Validate code
     await this.securityValidation.validateCode(code, language, { ip, userId });
 
     // Resolve Task
     const task = await this.findTaskByIdentifier(taskIdentifier, false);
+
+    // Check task access - premium tasks require subscription
+    // userId is now always defined since authentication is required
+    if (userId) {
+      const taskAccess = await this.accessControlService.getTaskAccess(userId, task.id);
+      if (!taskAccess.canRun) {
+        throw new ForbiddenException(
+          'This task requires an active subscription. Upgrade to access premium content.',
+        );
+      }
+    }
 
     // Validate language
     this.validateLanguage(language);
@@ -250,13 +307,176 @@ export class SubmissionsService {
       testOutput.total,
     );
 
-    return {
+    // If user passed all 5 tests, mark as validated for submission
+    let runValidated = false;
+    if (userId && testOutput.passed >= 5) {
+      await this.cacheService.setRunValidated(userId, task.id, testOutput.passed);
+      runValidated = true;
+      this.logger.log(`Run validated: user=${userId}, task=${task.slug}, tests=${testOutput.passed}/5`);
+    }
+
+    const runResult = {
       status,
       testsPassed: testOutput.passed,
       testsTotal: testOutput.total,
       testCases: testOutput.testCases,
       runtime: this.resultFormatter.formatRuntime(result.time),
       message: this.resultFormatter.formatMessage(result),
+      runValidated,
+    };
+
+    // Save run result to database (upsert - only keep latest per user+task)
+    if (userId) {
+      try {
+        await this.prisma.runResult.upsert({
+          where: {
+            userId_taskId: {
+              userId,
+              taskId: task.id,
+            },
+          },
+          update: {
+            status: runResult.status,
+            testsPassed: runResult.testsPassed,
+            testsTotal: runResult.testsTotal,
+            runtime: runResult.runtime,
+            message: runResult.message || '',
+            testCases: runResult.testCases as any,
+            code,
+          },
+          create: {
+            userId,
+            taskId: task.id,
+            status: runResult.status,
+            testsPassed: runResult.testsPassed,
+            testsTotal: runResult.testsTotal,
+            runtime: runResult.runtime,
+            message: runResult.message || '',
+            testCases: runResult.testCases as any,
+            code,
+          },
+        });
+        this.logger.log(`RunResult saved: user=${userId}, task=${task.slug}`);
+      } catch (error) {
+        // Don't fail the request if saving run result fails
+        this.logger.warn(`Failed to save RunResult: ${error.message}`);
+      }
+    }
+
+    return runResult;
+  }
+
+  /**
+   * Submit a prompt engineering task
+   * Uses AI-as-Judge for evaluation
+   */
+  async submitPrompt(
+    userId: string,
+    taskIdentifier: string,
+    prompt: string,
+  ): Promise<PromptSubmissionResult> {
+    // 1. Get task and validate it's a PROMPT type
+    const task = await this.prisma.task.findFirst({
+      where: {
+        OR: [{ id: taskIdentifier }, { slug: taskIdentifier }],
+      },
+      include: {
+        topic: {
+          include: {
+            module: { select: { courseId: true } },
+          },
+        },
+      },
+    });
+
+    if (!task) {
+      throw new NotFoundException(`Task not found: ${taskIdentifier}`);
+    }
+
+    if (task.taskType !== TaskType.PROMPT) {
+      throw new BadRequestException(`Task ${task.slug} is not a prompt engineering task`);
+    }
+
+    if (!task.promptConfig) {
+      throw new BadRequestException(`Task ${task.slug} has no prompt configuration`);
+    }
+
+    // 2. Check task access - premium tasks require subscription
+    const taskAccess = await this.accessControlService.getTaskAccess(userId, task.id);
+    if (!taskAccess.canSubmit) {
+      throw new ForbiddenException(
+        'This task requires an active subscription. Upgrade to access premium content.',
+      );
+    }
+
+    this.logger.log(`Prompt submission: user=${userId}, task=${task.slug}`);
+
+    // 3. Parse promptConfig (it's stored as JSON)
+    const promptConfig = task.promptConfig as {
+      testScenarios: Array<{
+        input: string;
+        expectedCriteria: string[];
+        rubric?: string;
+      }>;
+      judgePrompt: string;
+      passingScore: number;
+    };
+
+    // 4. Evaluate prompt using AI
+    const evaluation = await this.aiService.evaluatePrompt(
+      userId,
+      prompt,
+      promptConfig,
+    );
+
+    // 5. Determine status
+    const status = evaluation.passed ? 'passed' : 'failed';
+    const score = Math.round(evaluation.score * 10); // Convert to 0-100
+
+    // 6. Save submission to database
+    const submission = await this.prisma.submission.create({
+      data: {
+        userId,
+        taskId: task.id,
+        code: prompt, // Store prompt in code field
+        status,
+        score,
+        runtime: '0ms', // No runtime for prompt tasks
+        memory: null,
+        message: evaluation.summary,
+        testsPassed: evaluation.scenarioResults.filter(r => r.passed).length,
+        testsTotal: evaluation.scenarioResults.length,
+        testCases: evaluation.scenarioResults.map(r => ({
+          name: `Scenario ${r.scenarioIndex + 1}`,
+          passed: r.passed,
+          expected: r.input.substring(0, 100),
+          actual: r.feedback,
+        })),
+      },
+    });
+
+    // 7. Award XP for first completion
+    const gamificationResult = await this.awardXpIfFirstCompletion(
+      userId,
+      task.id,
+      task.slug,
+      task.difficulty,
+      status,
+    );
+
+    return {
+      id: submission.id,
+      status,
+      score,
+      message: evaluation.summary,
+      createdAt: submission.createdAt.toISOString(),
+      scenarioResults: evaluation.scenarioResults,
+      summary: evaluation.summary,
+      xpEarned: gamificationResult?.xpEarned,
+      totalXp: gamificationResult?.totalXp,
+      level: gamificationResult?.level,
+      leveledUp: gamificationResult?.leveledUp,
+      newBadges: gamificationResult?.newBadges,
     };
   }
 
@@ -298,6 +518,58 @@ export class SubmissionsService {
         code: true,
       },
     });
+  }
+
+  /**
+   * Get the latest run result for a user+task pair
+   * Accepts task slug or UUID as taskIdentifier
+   * Returns null if no run result exists
+   */
+  async getRunResult(userId: string, taskIdentifier: string): Promise<{
+    status: string;
+    testsPassed: number;
+    testsTotal: number;
+    testCases: any;
+    runtime: string;
+    message: string;
+    code: string;
+    updatedAt: Date;
+  } | null> {
+    // Resolve task by slug or UUID
+    const task = await this.prisma.task.findFirst({
+      where: {
+        OR: [
+          { id: taskIdentifier },
+          { slug: taskIdentifier },
+        ],
+      },
+      select: { id: true },
+    });
+
+    if (!task) {
+      return null;
+    }
+
+    const runResult = await this.prisma.runResult.findUnique({
+      where: {
+        userId_taskId: {
+          userId,
+          taskId: task.id,
+        },
+      },
+      select: {
+        status: true,
+        testsPassed: true,
+        testsTotal: true,
+        testCases: true,
+        runtime: true,
+        message: true,
+        code: true,
+        updatedAt: true,
+      },
+    });
+
+    return runResult;
   }
 
   /**

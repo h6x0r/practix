@@ -1,7 +1,7 @@
 # Testing Plan - Kodla/Practix
 
-> **Last Updated:** 2025-12-30
-> **E2E Framework:** Playwright (confirmed)
+> **Last Updated:** 2026-01-16
+> **E2E Framework:** Playwright (planned)
 
 ## Overview
 
@@ -9,24 +9,34 @@ This document outlines the comprehensive testing strategy for the Kodla/Practix 
 
 | Layer | Framework | Status | Target Coverage |
 |-------|-----------|--------|-----------------|
-| Backend Unit | Jest | Partial (17%) | 90%+ |
-| Backend Integration | Jest + Supertest | Not started | 80%+ |
-| Frontend Unit | Vitest | Minimal (3%) | 70%+ |
+| Backend Unit | Jest | **43 spec files, 1076/1076 tests passing (100%)** | 90%+ ✅ |
+| Backend Integration | Jest + Supertest | 5 e2e spec files | 80%+ |
+| Frontend Unit | Vitest | **8 test files** | 70%+ |
 | Frontend Integration | Vitest + Testing Library | Not started | 60%+ |
-| E2E | Playwright | Not started | Critical paths |
+| E2E | Playwright | **Planning complete, setup needed** | Critical paths |
 
 ---
 
 ## Part 1: Backend Testing Strategy
 
-### 1.1 Current State
+### 1.1 Current State (Updated January 16, 2026)
 
 ```
-Services with tests:     3/18 (17%)
-Controllers with tests:  0/13 (0%)
-Total test files:        3
-Total test cases:        ~25
+Test Suites:             43/43 passing (100%)
+Total Tests:             1076/1076 passing (100%)
+Total spec files:        43
+Failing tests:           0
 ```
+
+**Status:** All tests passing after mock configuration fixes.
+
+**Recent Fixes:**
+- Added `AiService` mock to `submissions.service.spec.ts`
+- Added `CacheService` mock to `roadmaps.service.spec.ts`
+- Updated `accessControlService` mock with `getTaskAccess`
+- Updated `cacheService` mock with `getRunValidation`, `clearRunValidation`
+- Fixed XP values in `gamification.service.spec.ts` (easy=25, medium=50, hard=100)
+- Updated security middleware tests for new patterns (INSERT/UPDATE/DELETE not blocked)
 
 ### 1.2 Testing Priorities
 

@@ -55,4 +55,20 @@ export class UserCoursesController {
       dto.progress
     );
   }
+
+  /**
+   * PATCH /users/me/courses/:courseSlug/access
+   * Update last accessed time for a course (moves it to top of My Tasks)
+   */
+  @Patch(':courseSlug/access')
+  @HttpCode(HttpStatus.OK)
+  async updateLastAccessed(
+    @Request() req,
+    @Param('courseSlug') courseSlug: string
+  ) {
+    return this.userCoursesService.updateLastAccessed(
+      req.user.userId,
+      courseSlug
+    );
+  }
 }

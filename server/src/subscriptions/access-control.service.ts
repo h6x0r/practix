@@ -144,6 +144,10 @@ export class AccessControlService {
 
   /**
    * Get comprehensive access info for a task
+   * Access rules:
+   * - Free tasks (isPremium: false): All authenticated users can view, run, and submit
+   * - Premium tasks (isPremium: true): Only subscribed users can view, run, and submit
+   * - Solution visibility and AI Tutor follow subscription rules
    */
   async getTaskAccess(userId: string, taskId: string): Promise<TaskAccessDto> {
     const task = await this.prisma.task.findUnique({
@@ -169,16 +173,20 @@ export class AccessControlService {
     }
 
     const courseId = task.topic.module.courseId;
-    const hasAccess = await this.hasCourseAccess(userId, courseId);
+    const hasSubscription = await this.hasCourseAccess(userId, courseId);
     const canSeeSolution = await this.canSeeSolution(userId, taskId);
 
+    // Free tasks are accessible to all authenticated users
+    // Premium tasks require active subscription
+    const canAccessTask = !task.isPremium || hasSubscription;
+
     return {
-      canView: true, // Everyone can view tasks
-      canRun: true, // Everyone can run code
-      canSubmit: true, // Everyone can submit
-      canSeeSolution,
-      canUseAiTutor: hasAccess, // Only premium
-      queuePriority: hasAccess ? PRIORITY_HIGH : PRIORITY_LOW,
+      canView: canAccessTask,
+      canRun: canAccessTask,
+      canSubmit: canAccessTask,
+      canSeeSolution: canAccessTask && canSeeSolution,
+      canUseAiTutor: hasSubscription, // Only subscribed users
+      queuePriority: hasSubscription ? PRIORITY_HIGH : PRIORITY_LOW,
     };
   }
 

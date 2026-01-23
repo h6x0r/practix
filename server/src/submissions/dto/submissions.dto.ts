@@ -49,3 +49,17 @@ export class RunTestsDto {
   @IsNotEmpty()
   language: string;
 }
+
+// 10KB limit for prompts (they're typically smaller than code)
+const PROMPT_MAX_LENGTH = 10000;
+
+export class SubmitPromptDto {
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(PROMPT_MAX_LENGTH, { message: 'Prompt exceeds maximum size of 10KB' })
+  prompt: string;
+
+  @IsString()
+  @IsNotEmpty()
+  taskId: string;
+}

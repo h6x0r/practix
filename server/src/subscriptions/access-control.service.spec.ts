@@ -493,4 +493,63 @@ describe('AccessControlService', () => {
       expect(result).toEqual([]);
     });
   });
+
+  // ============================================
+  // verifyAccessAtExecutionTime()
+  // ============================================
+  describe('verifyAccessAtExecutionTime()', () => {
+    it('should return hasAccess true with high priority for subscribed user', async () => {
+      mockPrismaService.subscription.findFirst.mockResolvedValue(mockGlobalSubscription);
+
+      const result = await service.verifyAccessAtExecutionTime('user-premium', 'course-go');
+
+      expect(result.hasAccess).toBe(true);
+      expect(result.priority).toBe(1); // PRIORITY_HIGH
+    });
+
+    it('should return hasAccess false with low priority for non-subscribed user', async () => {
+      mockPrismaService.subscription.findFirst.mockResolvedValue(null);
+
+      const result = await service.verifyAccessAtExecutionTime('user-free', 'course-go');
+
+      expect(result.hasAccess).toBe(false);
+      expect(result.priority).toBe(10); // PRIORITY_LOW
+    });
+
+    it('should verify course-specific subscription', async () => {
+      mockPrismaService.subscription.findFirst.mockResolvedValue(mockCourseSubscription);
+
+      const result = await service.verifyAccessAtExecutionTime('user-course', 'course-go');
+
+      expect(result.hasAccess).toBe(true);
+      expect(result.priority).toBe(1);
+      expect(mockPrismaService.subscription.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            userId: 'user-course',
+            status: 'active',
+            OR: expect.arrayContaining([
+              { plan: { type: 'global' } },
+              { plan: { type: 'course', courseId: 'course-go' } },
+            ]),
+          }),
+        })
+      );
+    });
+
+    it('should apply grace period during verification', async () => {
+      // Expired 1 day ago but within grace period
+      const expiredYesterday = new Date();
+      expiredYesterday.setDate(expiredYesterday.getDate() - 1);
+
+      mockPrismaService.subscription.findFirst.mockResolvedValue({
+        ...mockGlobalSubscription,
+        endDate: expiredYesterday,
+      });
+
+      const result = await service.verifyAccessAtExecutionTime('user-premium', 'course-go');
+
+      expect(result.hasAccess).toBe(true);
+    });
+  });
 });

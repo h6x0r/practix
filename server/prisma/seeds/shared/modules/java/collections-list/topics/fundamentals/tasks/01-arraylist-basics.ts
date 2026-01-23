@@ -108,139 +108,157 @@ for (Order order : allOrders) {
 - O(1) index access for fast reading
 - Pre-allocating memory reduces the number of copies`,
     order: 0,
-    testCode: `import java.util.ArrayList;
-import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.*;
+    testCode: `import static org.junit.Assert.*;
+import org.junit.Test;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 
-// Test1: ArrayList can be created and starts empty
+// Test1: main method should show ArrayList demo
 class Test1 {
     @Test
-    void testArrayListCreation() {
-        ArrayList<String> list = new ArrayList<>();
-        assertTrue(list.isEmpty());
-        assertEquals(0, list.size());
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        ArrayListBasics.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show ArrayList demo",
+            output.contains("ArrayList") || output.contains("List") ||
+            output.contains("Apple") || output.contains("Initial"));
     }
 }
 
-// Test2: add() method appends elements
+// Test2: Output should show initial list with Apple, Banana, Cherry
 class Test2 {
     @Test
-    void testAddElements() {
-        ArrayList<String> fruits = new ArrayList<>();
-        fruits.add("Apple");
-        fruits.add("Banana");
-        fruits.add("Cherry");
-        assertEquals(3, fruits.size());
-        assertEquals("Apple", fruits.get(0));
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        ArrayListBasics.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should contain Apple", output.contains("Apple"));
+        assertTrue("Should contain Banana initially", output.contains("Banana"));
+        assertTrue("Should contain Cherry", output.contains("Cherry"));
     }
 }
 
-// Test3: get() returns correct element at index
+// Test3: Output should show element at index 1
 class Test3 {
     @Test
-    void testGetElement() {
-        ArrayList<String> fruits = new ArrayList<>();
-        fruits.add("Apple");
-        fruits.add("Banana");
-        fruits.add("Cherry");
-        assertEquals("Banana", fruits.get(1));
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        ArrayListBasics.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString().toLowerCase();
+        assertTrue("Should mention index 1", output.contains("index 1") || output.contains("индекс 1") || output.contains("1-indeks"));
     }
 }
 
-// Test4: remove() by object removes element
+// Test4: Output should show removing Banana
 class Test4 {
     @Test
-    void testRemoveByObject() {
-        ArrayList<String> fruits = new ArrayList<>();
-        fruits.add("Apple");
-        fruits.add("Banana");
-        fruits.add("Cherry");
-        fruits.remove("Banana");
-        assertEquals(2, fruits.size());
-        assertFalse(fruits.contains("Banana"));
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        ArrayListBasics.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString().toLowerCase();
+        assertTrue("Should mention removing", output.contains("remov") || output.contains("удален") || output.contains("o'chir"));
     }
 }
 
-// Test5: contains() returns true for existing element
+// Test5: Output should show contains check for Cherry
 class Test5 {
     @Test
-    void testContains() {
-        ArrayList<String> fruits = new ArrayList<>();
-        fruits.add("Apple");
-        fruits.add("Cherry");
-        assertTrue(fruits.contains("Cherry"));
-        assertFalse(fruits.contains("Banana"));
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        ArrayListBasics.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString().toLowerCase();
+        assertTrue("Should show contains check", output.contains("contains") || output.contains("содержит") || output.contains("bor"));
     }
 }
 
-// Test6: size() returns correct count
+// Test6: Output should show size
 class Test6 {
     @Test
-    void testSize() {
-        ArrayList<String> fruits = new ArrayList<>();
-        assertEquals(0, fruits.size());
-        fruits.add("Apple");
-        assertEquals(1, fruits.size());
-        fruits.add("Banana");
-        assertEquals(2, fruits.size());
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        ArrayListBasics.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString().toLowerCase();
+        assertTrue("Should show size", output.contains("size") || output.contains("размер") || output.contains("o'lcham"));
     }
 }
 
-// Test7: isEmpty() returns correct value
+// Test7: Output should show isEmpty check
 class Test7 {
     @Test
-    void testIsEmpty() {
-        ArrayList<String> fruits = new ArrayList<>();
-        assertTrue(fruits.isEmpty());
-        fruits.add("Apple");
-        assertFalse(fruits.isEmpty());
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        ArrayListBasics.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString().toLowerCase();
+        assertTrue("Should show empty check", output.contains("empty") || output.contains("пуст") || output.contains("bo'sh"));
     }
 }
 
-// Test8: add(index, element) inserts at position
+// Test8: Output should show adding Date at index 1
 class Test8 {
     @Test
-    void testAddAtIndex() {
-        ArrayList<String> fruits = new ArrayList<>();
-        fruits.add("Apple");
-        fruits.add("Cherry");
-        fruits.add(1, "Banana");
-        assertEquals("Banana", fruits.get(1));
-        assertEquals("Cherry", fruits.get(2));
-        assertEquals(3, fruits.size());
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        ArrayListBasics.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should contain Date", output.contains("Date"));
     }
 }
 
-// Test9: for-each iteration works correctly
+// Test9: Output should show final list with all elements
 class Test9 {
     @Test
-    void testIteration() {
-        ArrayList<String> fruits = new ArrayList<>();
-        fruits.add("Apple");
-        fruits.add("Banana");
-        int count = 0;
-        for (String fruit : fruits) {
-            assertNotNull(fruit);
-            count++;
-        }
-        assertEquals(2, count);
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        ArrayListBasics.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString().toLowerCase();
+        assertTrue("Should mention 'final' or 'all elements'",
+            output.contains("final") || output.contains("all") ||
+            output.contains("итог") || output.contains("yakuniy") ||
+            output.contains("финальн"));
     }
 }
 
-// Test10: combined operations work correctly
+// Test10: Output should show list iteration (elements printed separately)
 class Test10 {
     @Test
-    void testCombinedOperations() {
-        ArrayList<String> fruits = new ArrayList<>();
-        fruits.add("Apple");
-        fruits.add("Banana");
-        fruits.add("Cherry");
-        fruits.remove("Banana");
-        fruits.add(1, "Date");
-        assertEquals(3, fruits.size());
-        assertEquals("Apple", fruits.get(0));
-        assertEquals("Date", fruits.get(1));
-        assertEquals("Cherry", fruits.get(2));
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        ArrayListBasics.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        // After operations: Apple, Date, Cherry (Banana removed, Date inserted)
+        assertTrue("Should show Apple in final output", output.contains("Apple"));
+        assertTrue("Should show Cherry in final output", output.contains("Cherry"));
     }
 }
 `,

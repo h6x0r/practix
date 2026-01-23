@@ -62,7 +62,8 @@ public class ListIteration {
         System.out.println();
 
         // Iterate using Iterator
-        System.out.println("\nUsing Iterator:");
+        System.out.println("");
+        System.out.println("Using Iterator:");
         Iterator<Integer> iterator = numbers.iterator();
         while (iterator.hasNext()) {
             Integer num = iterator.next();
@@ -71,7 +72,8 @@ public class ListIteration {
         System.out.println();
 
         // Iterate using ListIterator with index
-        System.out.println("\nUsing ListIterator with index:");
+        System.out.println("");
+        System.out.println("Using ListIterator with index:");
         ListIterator<Integer> listIterator = numbers.listIterator();
         while (listIterator.hasNext()) {
             int index = listIterator.nextIndex();
@@ -80,7 +82,8 @@ public class ListIteration {
         }
 
         // Remove even numbers using Iterator (SAFE way)
-        System.out.println("\nRemoving even numbers using Iterator:");
+        System.out.println("");
+        System.out.println("Removing even numbers using Iterator:");
         Iterator<Integer> removeIterator = numbers.iterator();
         while (removeIterator.hasNext()) {
             Integer num = removeIterator.next();
@@ -91,7 +94,8 @@ public class ListIteration {
         System.out.println("After removal: " + numbers);
 
         // Show why removing during for-each fails
-        System.out.println("\nDemonstrating ConcurrentModificationException:");
+        System.out.println("");
+        System.out.println("Demonstrating ConcurrentModificationException:");
         List<Integer> testList = new ArrayList<>(List.of(1, 2, 3, 4, 5));
         try {
             for (Integer num : testList) {
@@ -105,7 +109,8 @@ public class ListIteration {
         }
 
         // Iterate backwards with ListIterator
-        System.out.println("\nIterating backwards:");
+        System.out.println("");
+        System.out.println("Iterating backwards:");
         ListIterator<Integer> backwardIterator = numbers.listIterator(numbers.size());
         while (backwardIterator.hasPrevious()) {
             Integer num = backwardIterator.previous();
@@ -143,142 +148,161 @@ while (lit.hasPrevious()) {
 - Safe modification of collections during traversal
 - Supports bidirectional iteration for complex algorithms`,
     order: 2,
-    testCode: `import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.ListIterator;
-import java.util.List;
-import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.*;
+    testCode: `import static org.junit.Assert.*;
+import org.junit.Test;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 
-// Test1: Enhanced for-each loop iterates all elements
+// Test1: main method should show List iteration demo
 class Test1 {
     @Test
-    void testForEachIteration() {
-        List<Integer> numbers = new ArrayList<>(List.of(1, 2, 3, 4, 5));
-        int sum = 0;
-        for (Integer num : numbers) {
-            sum += num;
-        }
-        assertEquals(15, sum);
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        ListIteration.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show List iteration demo",
+            output.contains("Iteration") || output.contains("for-each") ||
+            output.contains("Iterator") || output.contains("loop"));
     }
 }
 
-// Test2: Iterator hasNext() and next() work correctly
+// Test2: Output should show enhanced for-each loop
 class Test2 {
     @Test
-    void testIteratorBasics() {
-        List<Integer> numbers = new ArrayList<>(List.of(1, 2, 3));
-        Iterator<Integer> it = numbers.iterator();
-        assertTrue(it.hasNext());
-        assertEquals(1, it.next());
-        assertEquals(2, it.next());
-        assertEquals(3, it.next());
-        assertFalse(it.hasNext());
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        ListIteration.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString().toLowerCase();
+        assertTrue("Should mention for-each",
+            output.contains("for-each") || output.contains("foreach") || output.contains("enhanced") ||
+            output.contains("расширенн") || output.contains("kengaytirilgan"));
     }
 }
 
-// Test3: Iterator.remove() safely removes elements
+// Test3: Output should show numbers 1-5
 class Test3 {
     @Test
-    void testIteratorRemove() {
-        List<Integer> numbers = new ArrayList<>(List.of(1, 2, 3, 4, 5));
-        Iterator<Integer> it = numbers.iterator();
-        while (it.hasNext()) {
-            if (it.next() % 2 == 0) {
-                it.remove();
-            }
-        }
-        assertEquals(3, numbers.size());
-        assertFalse(numbers.contains(2));
-        assertFalse(numbers.contains(4));
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        ListIteration.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should contain 1", output.contains("1"));
+        assertTrue("Should contain 5", output.contains("5"));
     }
 }
 
-// Test4: ListIterator provides index access
+// Test4: Output should show Iterator usage
 class Test4 {
     @Test
-    void testListIteratorIndex() {
-        List<String> items = new ArrayList<>(List.of("a", "b", "c"));
-        ListIterator<String> lit = items.listIterator();
-        assertEquals(0, lit.nextIndex());
-        lit.next();
-        assertEquals(1, lit.nextIndex());
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        ListIteration.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should mention Iterator", output.contains("Iterator") || output.contains("iterator"));
     }
 }
 
-// Test5: ListIterator can iterate backwards
+// Test5: Output should show ListIterator with index
 class Test5 {
     @Test
-    void testListIteratorBackwards() {
-        List<Integer> numbers = new ArrayList<>(List.of(1, 2, 3));
-        ListIterator<Integer> lit = numbers.listIterator(numbers.size());
-        assertTrue(lit.hasPrevious());
-        assertEquals(3, lit.previous());
-        assertEquals(2, lit.previous());
-        assertEquals(1, lit.previous());
-        assertFalse(lit.hasPrevious());
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        ListIteration.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should mention ListIterator", output.contains("ListIterator"));
     }
 }
 
-// Test6: ListIterator previousIndex works correctly
+// Test6: Output should show removing even numbers
 class Test6 {
     @Test
-    void testPreviousIndex() {
-        List<String> items = new ArrayList<>(List.of("a", "b", "c"));
-        ListIterator<String> lit = items.listIterator(items.size());
-        assertEquals(2, lit.previousIndex());
-        lit.previous();
-        assertEquals(1, lit.previousIndex());
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        ListIteration.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString().toLowerCase();
+        assertTrue("Should mention removing even numbers",
+            output.contains("remov") || output.contains("even") ||
+            output.contains("удален") || output.contains("чётн") || output.contains("juft"));
     }
 }
 
-// Test7: Empty list iterator has no elements
+// Test7: Output should mention ConcurrentModificationException or for-each fail
 class Test7 {
     @Test
-    void testEmptyListIterator() {
-        List<Integer> empty = new ArrayList<>();
-        Iterator<Integer> it = empty.iterator();
-        assertFalse(it.hasNext());
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        ListIteration.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString().toLowerCase();
+        assertTrue("Should explain for-each modification issue",
+            output.contains("concurrent") || output.contains("fail") || output.contains("exception") ||
+            output.contains("cannot") || output.contains("нельзя") || output.contains("ошибк"));
     }
 }
 
-// Test8: Multiple removals with Iterator
+// Test8: Output should show backwards iteration
 class Test8 {
     @Test
-    void testMultipleRemovals() {
-        List<Integer> numbers = new ArrayList<>(List.of(1, 2, 3, 4, 5, 6));
-        Iterator<Integer> it = numbers.iterator();
-        while (it.hasNext()) {
-            if (it.next() % 2 == 0) {
-                it.remove();
-            }
-        }
-        assertEquals(List.of(1, 3, 5), numbers);
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        ListIteration.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString().toLowerCase();
+        assertTrue("Should mention backwards iteration",
+            output.contains("backward") || output.contains("reverse") || output.contains("previous") ||
+            output.contains("обратн") || output.contains("teskari"));
     }
 }
 
-// Test9: ListIterator can start from any position
+// Test9: Output should show index during iteration
 class Test9 {
     @Test
-    void testListIteratorStartPosition() {
-        List<Integer> numbers = new ArrayList<>(List.of(1, 2, 3, 4, 5));
-        ListIterator<Integer> lit = numbers.listIterator(2);
-        assertEquals(3, lit.next());
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        ListIteration.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString().toLowerCase();
+        assertTrue("Should mention index",
+            output.contains("index") || output.contains("[0]") || output.contains("индекс"));
     }
 }
 
-// Test10: Iterator traversal count matches list size
+// Test10: After removing evens, should show only odds
 class Test10 {
     @Test
-    void testIteratorTraversalCount() {
-        List<Integer> numbers = new ArrayList<>(List.of(1, 2, 3, 4, 5));
-        Iterator<Integer> it = numbers.iterator();
-        int count = 0;
-        while (it.hasNext()) {
-            it.next();
-            count++;
-        }
-        assertEquals(numbers.size(), count);
+    public void test() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        PrintStream oldOut = System.out;
+        System.setOut(new PrintStream(out));
+        ListIteration.main(new String[]{});
+        System.setOut(oldOut);
+        String output = out.toString();
+        assertTrue("Should show result with odd numbers [1, 3, 5]",
+            output.contains("1") && output.contains("3") && output.contains("5"));
     }
 }
 `,
@@ -306,7 +330,8 @@ public class ListIteration {
         System.out.println();
 
         // Итерируем используя Iterator
-        System.out.println("\nИспользование Iterator:");
+        System.out.println("");
+        System.out.println("Использование Iterator:");
         Iterator<Integer> iterator = numbers.iterator();
         while (iterator.hasNext()) {
             Integer num = iterator.next();
@@ -315,7 +340,8 @@ public class ListIteration {
         System.out.println();
 
         // Итерируем используя ListIterator с индексом
-        System.out.println("\nИспользование ListIterator с индексом:");
+        System.out.println("");
+        System.out.println("Использование ListIterator с индексом:");
         ListIterator<Integer> listIterator = numbers.listIterator();
         while (listIterator.hasNext()) {
             int index = listIterator.nextIndex();
@@ -324,7 +350,8 @@ public class ListIteration {
         }
 
         // Удаляем четные числа используя Iterator (БЕЗОПАСНЫЙ способ)
-        System.out.println("\nУдаление четных чисел через Iterator:");
+        System.out.println("");
+        System.out.println("Удаление четных чисел через Iterator:");
         Iterator<Integer> removeIterator = numbers.iterator();
         while (removeIterator.hasNext()) {
             Integer num = removeIterator.next();
@@ -335,7 +362,8 @@ public class ListIteration {
         System.out.println("После удаления: " + numbers);
 
         // Показываем почему удаление в for-each не работает
-        System.out.println("\nДемонстрация ConcurrentModificationException:");
+        System.out.println("");
+        System.out.println("Демонстрация ConcurrentModificationException:");
         List<Integer> testList = new ArrayList<>(List.of(1, 2, 3, 4, 5));
         try {
             for (Integer num : testList) {
@@ -349,7 +377,8 @@ public class ListIteration {
         }
 
         // Итерируем в обратном порядке с ListIterator
-        System.out.println("\nИтерация в обратном порядке:");
+        System.out.println("");
+        System.out.println("Итерация в обратном порядке:");
         ListIterator<Integer> backwardIterator = numbers.listIterator(numbers.size());
         while (backwardIterator.hasPrevious()) {
             Integer num = backwardIterator.previous();
@@ -422,7 +451,8 @@ public class ListIteration {
         System.out.println();
 
         // Iterator yordamida iteratsiya
-        System.out.println("\nIterator dan foydalanish:");
+        System.out.println("");
+        System.out.println("Iterator dan foydalanish:");
         Iterator<Integer> iterator = numbers.iterator();
         while (iterator.hasNext()) {
             Integer num = iterator.next();
@@ -431,7 +461,8 @@ public class ListIteration {
         System.out.println();
 
         // ListIterator yordamida indeks bilan iteratsiya
-        System.out.println("\nListIterator indeks bilan:");
+        System.out.println("");
+        System.out.println("ListIterator indeks bilan:");
         ListIterator<Integer> listIterator = numbers.listIterator();
         while (listIterator.hasNext()) {
             int index = listIterator.nextIndex();
@@ -440,7 +471,8 @@ public class ListIteration {
         }
 
         // Iterator yordamida juft sonlarni o'chirish (XAVFSIZ usul)
-        System.out.println("\nIterator yordamida juft sonlarni o'chirish:");
+        System.out.println("");
+        System.out.println("Iterator yordamida juft sonlarni o'chirish:");
         Iterator<Integer> removeIterator = numbers.iterator();
         while (removeIterator.hasNext()) {
             Integer num = removeIterator.next();
@@ -451,7 +483,8 @@ public class ListIteration {
         System.out.println("O'chirilgandan keyin: " + numbers);
 
         // for-each da o'chirish nima uchun ishlamasligini ko'rsatamiz
-        System.out.println("\nConcurrentModificationException namoyishi:");
+        System.out.println("");
+        System.out.println("ConcurrentModificationException namoyishi:");
         List<Integer> testList = new ArrayList<>(List.of(1, 2, 3, 4, 5));
         try {
             for (Integer num : testList) {
@@ -465,7 +498,8 @@ public class ListIteration {
         }
 
         // ListIterator bilan teskari iteratsiya
-        System.out.println("\nTeskari iteratsiya:");
+        System.out.println("");
+        System.out.println("Teskari iteratsiya:");
         ListIterator<Integer> backwardIterator = numbers.listIterator(numbers.size());
         while (backwardIterator.hasPrevious()) {
             Integer num = backwardIterator.previous();
