@@ -107,14 +107,16 @@ async function bootstrap() {
 
   app.enableCors({
     origin: (origin, callback) => {
-      // In production: require Origin header for security
-      // In development: allow requests without Origin (curl, Postman)
+      // Allow requests without Origin header for:
+      // - Health checks (from load balancers, monitoring tools)
+      // - Development environment (curl, Postman)
       if (!origin) {
-        if (isProduction) {
-          logger.warn('CORS blocked request without Origin header', 'CORS');
-          return callback(new Error('Origin header required'));
+        // Development: allow all no-origin requests
+        if (!isProduction) {
+          return callback(null, true);
         }
-        // Development: allow no-origin requests
+        // Production: allow no-origin (for health checks, server-to-server)
+        // Browser requests always send Origin header
         return callback(null, true);
       }
 
