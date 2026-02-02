@@ -3,114 +3,206 @@ import { Task } from '../../../../types';
 export const task: Task = {
 	slug: 'go-testing-http-handler',
 	title: 'HTTP Handler Testing',
-	difficulty: 'medium',	tags: ['go', 'testing', 'http', 'httptest'],
+	difficulty: 'medium',	tags: ['go', 'testing', 'http', 'mocking'],
 	estimatedTime: '25m',	isPremium: false,
 	youtubeUrl: '',
-	description: `Test HTTP handlers using **httptest.NewRecorder** and **httptest.NewRequest**.
+	description: `Test HTTP handlers using **mock ResponseWriter** - understand how httptest works under the hood!
 
 **Requirements:**
-1. Implement \`HealthHandler\` that returns JSON: \`{"status": "ok"}\`
-2. Write \`TestHealthHandler\` using httptest package
+1. Implement \`HealthHandler\` that writes JSON response
+2. Use \`MockResponseWriter\` to capture handler output
 3. Assert status code is 200
 4. Assert Content-Type is "application/json"
 5. Assert response body matches expected JSON
 
 **Example:**
 \`\`\`go
-req := httptest.NewRequest("GET", "/health", nil)
-rec := httptest.NewRecorder()
-handler.ServeHTTP(rec, req)
+// Create mock request and response
+req := &Request{Method: "GET", URL: "/health"}
+rec := &MockResponseWriter{Headers: make(map[string]string)}
 
-if rec.Code != http.StatusOK {
-    t.Errorf("status = %d; want 200", rec.Code)
+// Call handler
+HealthHandler(rec, req)
+
+// Assert results
+if rec.StatusCode != 200 {
+    t.Errorf("status = %d; want 200", rec.StatusCode)
 }
 \`\`\`
 
+**Why This Matters:**
+This is exactly how \`httptest.NewRecorder()\` works internally - it implements
+ResponseWriter interface to capture what handler writes!
+
 **Constraints:**
-- Must use httptest package, not real HTTP server
-- Test both status code and response body
-- Set correct Content-Type header`,
+- Use the provided mock types (no external packages)
+- Test status code, headers, and body
+- Handler must set Content-Type header`,
 	initialCode: `package httphandler_test
 
-import (
-	"net/http"
-	"net/http/httptest"
-)
+// Mock HTTP types (simplified version of net/http)
+const StatusOK = 200
 
-// TODO: Implement HealthHandler that returns {"status": "ok"}
-func HealthHandler(w http.ResponseWriter, r *http.Request) {
-	// TODO: Implement
+// Request represents HTTP request
+type Request struct {
+	Method string
+	URL    string
+	Body   string
 }
 
-// TODO: Test HealthHandler using httptest
+// ResponseWriter interface (like http.ResponseWriter)
+type ResponseWriter interface {
+	Header() map[string]string
+	Write([]byte) (int, error)
+	WriteHeader(statusCode int)
+}
+
+// MockResponseWriter captures handler output (like httptest.Recorder)
+type MockResponseWriter struct {
+	StatusCode int
+	Headers    map[string]string
+	Body       []byte
+}
+
+func (w *MockResponseWriter) Header() map[string]string {
+	if w.Headers == nil {
+		w.Headers = make(map[string]string)
+	}
+	return w.Headers
+}
+
+func (w *MockResponseWriter) Write(b []byte) (int, error) {
+	if w.StatusCode == 0 {
+		w.StatusCode = StatusOK // Default status
+	}
+	w.Body = append(w.Body, b...)
+	return len(b), nil
+}
+
+func (w *MockResponseWriter) WriteHeader(statusCode int) {
+	w.StatusCode = statusCode
+}
+
+func (w *MockResponseWriter) BodyString() string {
+	return string(w.Body)
+}
+
+// TODO: Implement HealthHandler that returns {"status": "ok"}
+func HealthHandler(w ResponseWriter, r *Request) {
+	// TODO: Set Content-Type header
+	// TODO: Write status code
+	// TODO: Write JSON response body
+}
+
+// TODO: Test HealthHandler using mock types
 func TestHealthHandler(t *T) {
-	// TODO: Implement
+	// TODO: Create mock request and response
+	// TODO: Call handler
+	// TODO: Assert status code, headers, and body
 }`,
 	solutionCode: `package httphandler_test
 
-import (
-	"net/http"
-	"net/http/httptest"
-)
+// Mock HTTP types (simplified version of net/http)
+const StatusOK = 200
 
-func HealthHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")  // Set content type
-	w.WriteHeader(http.StatusOK)                        // Set status code
-	w.Write([]byte("{\"status\": \"ok\"}"))             // Write JSON response
+// Request represents HTTP request
+type Request struct {
+	Method string
+	URL    string
+	Body   string
+}
+
+// ResponseWriter interface (like http.ResponseWriter)
+type ResponseWriter interface {
+	Header() map[string]string
+	Write([]byte) (int, error)
+	WriteHeader(statusCode int)
+}
+
+// MockResponseWriter captures handler output (like httptest.Recorder)
+type MockResponseWriter struct {
+	StatusCode int
+	Headers    map[string]string
+	Body       []byte
+}
+
+func (w *MockResponseWriter) Header() map[string]string {
+	if w.Headers == nil {
+		w.Headers = make(map[string]string)
+	}
+	return w.Headers
+}
+
+func (w *MockResponseWriter) Write(b []byte) (int, error) {
+	if w.StatusCode == 0 {
+		w.StatusCode = StatusOK // Default status
+	}
+	w.Body = append(w.Body, b...)
+	return len(b), nil
+}
+
+func (w *MockResponseWriter) WriteHeader(statusCode int) {
+	w.StatusCode = statusCode
+}
+
+func (w *MockResponseWriter) BodyString() string {
+	return string(w.Body)
+}
+
+// HealthHandler returns {"status": "ok"} with proper headers
+func HealthHandler(w ResponseWriter, r *Request) {
+	w.Header()["Content-Type"] = "application/json"  // Set content type
+	w.WriteHeader(StatusOK)                          // Set status code
+	w.Write([]byte("{\\"status\\": \\"ok\\"}"))          // Write JSON response
 }
 
 func TestHealthHandler(t *T) {
-	// Create test request
-	req := httptest.NewRequest("GET", "/health", nil)
+	// Create mock request
+	req := &Request{Method: "GET", URL: "/health"}
 
-	// Create response recorder
-	rec := httptest.NewRecorder()
+	// Create mock response recorder
+	rec := &MockResponseWriter{Headers: make(map[string]string)}
 
 	// Call handler
 	HealthHandler(rec, req)
 
 	// Assert status code
-	if rec.Code != http.StatusOK {
-		t.Errorf("status code = %d; want %d", rec.Code, http.StatusOK)
+	if rec.StatusCode != StatusOK {
+		t.Errorf("status code = %d; want %d", rec.StatusCode, StatusOK)
 	}
 
 	// Assert Content-Type header
-	contentType := rec.Header().Get("Content-Type")
+	contentType := rec.Headers["Content-Type"]
 	if contentType != "application/json" {
 		t.Errorf("Content-Type = %q; want %q", contentType, "application/json")
 	}
 
 	// Assert response body
-	expected := "{\"status\": \"ok\"}"
-	if rec.Body.String() != expected {
-		t.Errorf("body = %q; want %q", rec.Body.String(), expected)
+	expected := "{\\"status\\": \\"ok\\"}"
+	if rec.BodyString() != expected {
+		t.Errorf("body = %q; want %q", rec.BodyString(), expected)
 	}
 }`,
-			hint1: `Use httptest.NewRequest to create a fake HTTP request without starting a server.`,
-			hint2: `httptest.NewRecorder captures the response for assertions. Access rec.Code, rec.Header(), rec.Body.`,
-			testCode: `package httphandler_test
-
-import (
-	"net/http"
-	"net/http/httptest"
-)
+		hint1: `Set headers BEFORE calling WriteHeader or Write. Use: w.Header()["Content-Type"] = "application/json"`,
+		hint2: `MockResponseWriter captures everything the handler writes. Access rec.StatusCode, rec.Headers, rec.BodyString()`,
+		testCode: `package httphandler_test
 
 // Test1: Handler returns 200 OK
 func Test1(t *T) {
-	req := httptest.NewRequest("GET", "/health", nil)
-	rec := httptest.NewRecorder()
+	req := &Request{Method: "GET", URL: "/health"}
+	rec := &MockResponseWriter{Headers: make(map[string]string)}
 	HealthHandler(rec, req)
-	if rec.Code != http.StatusOK {
-		t.Errorf("status code = %d; want %d", rec.Code, http.StatusOK)
+	if rec.StatusCode != StatusOK {
+		t.Errorf("status code = %d; want %d", rec.StatusCode, StatusOK)
 	}
 }
 
 // Test2: Handler returns JSON content type
 func Test2(t *T) {
-	req := httptest.NewRequest("GET", "/health", nil)
-	rec := httptest.NewRecorder()
+	req := &Request{Method: "GET", URL: "/health"}
+	rec := &MockResponseWriter{Headers: make(map[string]string)}
 	HealthHandler(rec, req)
-	contentType := rec.Header().Get("Content-Type")
+	contentType := rec.Headers["Content-Type"]
 	if contentType != "application/json" {
 		t.Errorf("Content-Type = %q; want %q", contentType, "application/json")
 	}
@@ -118,41 +210,41 @@ func Test2(t *T) {
 
 // Test3: Handler returns correct body
 func Test3(t *T) {
-	req := httptest.NewRequest("GET", "/health", nil)
-	rec := httptest.NewRecorder()
+	req := &Request{Method: "GET", URL: "/health"}
+	rec := &MockResponseWriter{Headers: make(map[string]string)}
 	HealthHandler(rec, req)
-	expected := "{\"status\": \"ok\"}"
-	if rec.Body.String() != expected {
-		t.Errorf("body = %q; want %q", rec.Body.String(), expected)
+	expected := "{\\"status\\": \\"ok\\"}"
+	if rec.BodyString() != expected {
+		t.Errorf("body = %q; want %q", rec.BodyString(), expected)
 	}
 }
 
 // Test4: Handler works with POST method
 func Test4(t *T) {
-	req := httptest.NewRequest("POST", "/health", nil)
-	rec := httptest.NewRecorder()
+	req := &Request{Method: "POST", URL: "/health"}
+	rec := &MockResponseWriter{Headers: make(map[string]string)}
 	HealthHandler(rec, req)
-	if rec.Code != http.StatusOK {
-		t.Errorf("POST request: status code = %d; want %d", rec.Code, http.StatusOK)
+	if rec.StatusCode != StatusOK {
+		t.Errorf("POST request: status code = %d; want %d", rec.StatusCode, StatusOK)
 	}
 }
 
 // Test5: Body is not empty
 func Test5(t *T) {
-	req := httptest.NewRequest("GET", "/health", nil)
-	rec := httptest.NewRecorder()
+	req := &Request{Method: "GET", URL: "/health"}
+	rec := &MockResponseWriter{Headers: make(map[string]string)}
 	HealthHandler(rec, req)
-	if rec.Body.Len() == 0 {
+	if len(rec.Body) == 0 {
 		t.Error("response body should not be empty")
 	}
 }
 
 // Test6: Response contains status field
 func Test6(t *T) {
-	req := httptest.NewRequest("GET", "/health", nil)
-	rec := httptest.NewRecorder()
+	req := &Request{Method: "GET", URL: "/health"}
+	rec := &MockResponseWriter{Headers: make(map[string]string)}
 	HealthHandler(rec, req)
-	body := rec.Body.String()
+	body := rec.BodyString()
 	if body == "" {
 		t.Error("body should not be empty")
 	}
@@ -161,73 +253,76 @@ func Test6(t *T) {
 // Test7: Multiple requests work correctly
 func Test7(t *T) {
 	for i := 0; i < 3; i++ {
-		req := httptest.NewRequest("GET", "/health", nil)
-		rec := httptest.NewRecorder()
+		req := &Request{Method: "GET", URL: "/health"}
+		rec := &MockResponseWriter{Headers: make(map[string]string)}
 		HealthHandler(rec, req)
-		if rec.Code != http.StatusOK {
-			t.Errorf("request %d: status code = %d; want %d", i, rec.Code, http.StatusOK)
+		if rec.StatusCode != StatusOK {
+			t.Errorf("request %d: status code = %d; want %d", i, rec.StatusCode, StatusOK)
 		}
 	}
 }
 
-// Test8: Handler with query parameters
+// Test8: Handler with query parameters in URL
 func Test8(t *T) {
-	req := httptest.NewRequest("GET", "/health?debug=true", nil)
-	rec := httptest.NewRecorder()
+	req := &Request{Method: "GET", URL: "/health?debug=true"}
+	rec := &MockResponseWriter{Headers: make(map[string]string)}
 	HealthHandler(rec, req)
-	if rec.Code != http.StatusOK {
-		t.Errorf("status code = %d; want %d", rec.Code, http.StatusOK)
+	if rec.StatusCode != StatusOK {
+		t.Errorf("status code = %d; want %d", rec.StatusCode, StatusOK)
 	}
 }
 
-// Test9: Response headers set correctly
+// Test9: Response headers are set
 func Test9(t *T) {
-	req := httptest.NewRequest("GET", "/health", nil)
-	rec := httptest.NewRecorder()
+	req := &Request{Method: "GET", URL: "/health"}
+	rec := &MockResponseWriter{Headers: make(map[string]string)}
 	HealthHandler(rec, req)
-	if rec.Header().Get("Content-Type") == "" {
+	if rec.Headers["Content-Type"] == "" {
 		t.Error("Content-Type header should be set")
 	}
 }
 
 // Test10: Complete health check validation
 func Test10(t *T) {
-	req := httptest.NewRequest("GET", "/health", nil)
-	rec := httptest.NewRecorder()
+	req := &Request{Method: "GET", URL: "/health"}
+	rec := &MockResponseWriter{Headers: make(map[string]string)}
 	HealthHandler(rec, req)
 
-	if rec.Code != http.StatusOK {
-		t.Errorf("status = %d; want 200", rec.Code)
+	if rec.StatusCode != StatusOK {
+		t.Errorf("status = %d; want 200", rec.StatusCode)
 	}
-	if rec.Header().Get("Content-Type") != "application/json" {
+	if rec.Headers["Content-Type"] != "application/json" {
 		t.Error("wrong content type")
 	}
-	if rec.Body.String() != "{\"status\": \"ok\"}" {
+	if rec.BodyString() != "{\\"status\\": \\"ok\\"}" {
 		t.Error("wrong body")
 	}
 }
 `,
-			whyItMatters: `HTTP handler testing ensures your API endpoints work correctly without the overhead of real servers.
+		whyItMatters: `Understanding HTTP handler testing is crucial for building reliable web APIs.
 
-**Why httptest Matters:**
-- **Fast:** No network calls, tests run in milliseconds
-- **Isolated:** No ports, no conflicts, fully deterministic
-- **Debuggable:** Full access to request/response for assertions
-- **CI-Friendly:** Works in any environment, no setup needed
+**What You're Learning:**
+This task teaches the EXACT pattern that \`net/http/httptest\` uses internally:
+- \`MockResponseWriter\` is a simplified \`httptest.ResponseRecorder\`
+- \`ResponseWriter\` interface is identical to \`http.ResponseWriter\`
+- Same testing approach, but now you understand the mechanics!
 
-**Real Server vs httptest:**
+**Why Mock Types Matter:**
+- **Insight:** See how frameworks implement testing utilities
+- **Portability:** Pattern works in any environment (sandboxes, CI)
+- **Debugging:** Easier to understand test failures
+
+**Real-World httptest Equivalent:**
 \`\`\`go
-// Without httptest (slow, brittle)
-server := httptest.NewServer(handler)
-defer server.Close()
-resp, err := http.Get(server.URL + "/health")
-// Parsing response is messy...
-
-// With httptest (fast, clean)
+// Using net/http/httptest (production code):
 req := httptest.NewRequest("GET", "/health", nil)
 rec := httptest.NewRecorder()
 handler.ServeHTTP(rec, req)
-// Direct access to rec.Code, rec.Body
+
+// Our mock version (same pattern):
+req := &Request{Method: "GET", URL: "/health"}
+rec := &MockResponseWriter{Headers: make(map[string]string)}
+HealthHandler(rec, req)
 \`\`\`
 
 **Production Benefits:**
@@ -237,293 +332,220 @@ Testing handlers catches:
 - **JSON Schema:** Field typos, wrong types
 - **Error Cases:** Panics on invalid input
 
-**Real-World Example:**
-Stripe tests every API endpoint with httptest:
-\`\`\`go
-func TestCreateCharge(t *testing.T) {
-    req := httptest.NewRequest("POST", "/charges", body)
-    req.Header.Set("Authorization", "Bearer sk_test_...")
-
-    rec := httptest.NewRecorder()
-    handler.ServeHTTP(rec, req)
-
-    // Assert response
-    if rec.Code != 201 {
-        t.Errorf("expected 201 Created, got %d", rec.Code)
-    }
-
-    // Parse JSON
-    var charge Charge
-    json.Unmarshal(rec.Body.Bytes(), &charge)
-
-    // Assert fields
-    if charge.Amount != 1000 {
-        t.Errorf("amount = %d, want 1000", charge.Amount)
-    }
-}
-\`\`\`
-
-**Common Patterns:**
-\`\`\`go
-// Test error responses
-req := httptest.NewRequest("GET", "/user/invalid", nil)
-rec := httptest.NewRecorder()
-handler.ServeHTTP(rec, req)
-if rec.Code != 404 {
-    t.Error("expected 404 for invalid user")
-}
-
-// Test authentication
-req = httptest.NewRequest("GET", "/admin", nil)
-req.Header.Set("Authorization", "Bearer invalid")
-rec = httptest.NewRecorder()
-handler.ServeHTTP(rec, req)
-if rec.Code != 401 {
-    t.Error("expected 401 for invalid token")
-}
-\`\`\`
-
-At Google, services have thousands of httptest-based tests, enabling confident deployment of API changes.`,	order: 3,
+At Google, every HTTP handler has tests using this exact pattern - understanding
+it makes you a better engineer.`,
+	order: 3,
 	translations: {
 		ru: {
 			title: 'Тестирование HTTP handler',
-			description: `Тестируйте HTTP обработчики используя **httptest.NewRecorder** и **httptest.NewRequest**.
+			description: `Тестируйте HTTP обработчики используя **mock ResponseWriter** - поймите как httptest работает под капотом!
 
 **Требования:**
-1. Реализуйте \`HealthHandler\` возвращающий JSON: \`{"status": "ok"}\`
-2. Напишите \`TestHealthHandler\` используя httptest
+1. Реализуйте \`HealthHandler\` который пишет JSON ответ
+2. Используйте \`MockResponseWriter\` для захвата вывода handler'а
 3. Проверьте что код статуса 200
 4. Проверьте что Content-Type "application/json"
-5. Проверьте что тело ответа соответствует JSON
+5. Проверьте что тело ответа соответствует ожидаемому JSON
 
 **Пример:**
 \`\`\`go
-req := httptest.NewRequest("GET", "/health", nil)
-rec := httptest.NewRecorder()
-handler.ServeHTTP(rec, req)
-\`\`\`
+// Создать mock запрос и ответ
+req := &Request{Method: "GET", URL: "/health"}
+rec := &MockResponseWriter{Headers: make(map[string]string)}
 
-**Ограничения:**
-- Используйте httptest, не реальный HTTP сервер
-- Тестируйте и код статуса и тело ответа`,
-			hint1: `Используйте httptest.NewRequest для создания фейкового HTTP запроса без запуска сервера.`,
-			hint2: `httptest.NewRecorder захватывает ответ для проверок. Используйте rec.Code, rec.Header(), rec.Body.`,
-			whyItMatters: `Тестирование HTTP обработчиков гарантирует корректную работу API endpoints без накладных расходов реальных серверов.
+// Вызвать handler
+HealthHandler(rec, req)
 
-**Почему httptest важен:**
-- **Быстро:** Нет сетевых вызовов, тесты выполняются за миллисекунды
-- **Изолировано:** Нет портов, нет конфликтов, полностью детерминировано
-- **Отладка:** Полный доступ к request/response для assertions
-- **CI-Friendly:** Работает в любом окружении, настройка не нужна
-
-**Реальный сервер vs httptest:**
-\`\`\`go
-// Без httptest (медленно, хрупко)
-server := httptest.NewServer(handler)
-defer server.Close()
-resp, err := http.Get(server.URL + "/health")
-// Парсинг ответа запутанный...
-
-// С httptest (быстро, чисто)
-req := httptest.NewRequest("GET", "/health", nil)
-rec := httptest.NewRecorder()
-handler.ServeHTTP(rec, req)
-// Прямой доступ к rec.Code, rec.Body
-\`\`\`
-
-**Продакшен паттерн:**
-Тестирование handlers ловит:
-- **Коды статусов:** Возврат 404 вместо 200 для отсутствующих ресурсов
-- **Заголовки:** Отсутствующие CORS, неправильный Content-Type
-- **JSON схема:** Опечатки в полях, неправильные типы
-- **Случаи ошибок:** Паники на невалидном вводе
-
-**Практический пример:**
-Stripe тестирует каждый API endpoint с httptest:
-\`\`\`go
-func TestCreateCharge(t *testing.T) {
-    req := httptest.NewRequest("POST", "/charges", body)
-    req.Header.Set("Authorization", "Bearer sk_test_...")
-
-    rec := httptest.NewRecorder()
-    handler.ServeHTTP(rec, req)
-
-    // Assert response
-    if rec.Code != 201 {
-        t.Errorf("expected 201 Created, got %d", rec.Code)
-    }
-
-    // Parse JSON
-    var charge Charge
-    json.Unmarshal(rec.Body.Bytes(), &charge)
-
-    // Assert fields
-    if charge.Amount != 1000 {
-        t.Errorf("amount = %d, want 1000", charge.Amount)
-    }
+// Проверить результаты
+if rec.StatusCode != 200 {
+    t.Errorf("status = %d; want 200", rec.StatusCode)
 }
 \`\`\`
 
-В Google сервисы имеют тысячи тестов на основе httptest, позволяя уверенно деплоить изменения API.`,
+**Почему это важно:**
+Это именно то, как \`httptest.NewRecorder()\` работает внутри - он реализует
+интерфейс ResponseWriter для захвата того, что пишет handler!`,
+			hint1: `Устанавливайте заголовки ДО вызова WriteHeader или Write. Используйте: w.Header()["Content-Type"] = "application/json"`,
+			hint2: `MockResponseWriter захватывает всё что пишет handler. Используйте rec.StatusCode, rec.Headers, rec.BodyString()`,
+			whyItMatters: `Понимание тестирования HTTP handler'ов критически важно для создания надёжных веб API.
+
+**Что вы изучаете:**
+Эта задача учит ТОЧНЫЙ паттерн который \`net/http/httptest\` использует внутри:
+- \`MockResponseWriter\` - упрощённый \`httptest.ResponseRecorder\`
+- Интерфейс \`ResponseWriter\` идентичен \`http.ResponseWriter\`
+- Тот же подход к тестированию, но теперь вы понимаете механику!
+
+**Почему mock типы важны:**
+- **Понимание:** Видите как фреймворки реализуют утилиты для тестирования
+- **Портативность:** Паттерн работает в любом окружении
+- **Отладка:** Легче понять причины провала тестов
+
+В Google каждый HTTP handler имеет тесты использующие этот паттерн.`,
 			solutionCode: `package httphandler_test
 
-import (
-	"net/http"
-	"net/http/httptest"
-)
+// Mock HTTP типы (упрощённая версия net/http)
+const StatusOK = 200
 
-func HealthHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")  // Установить тип контента
-	w.WriteHeader(http.StatusOK)                        // Установить код статуса
-	w.Write([]byte("{\"status\": \"ok\"}"))             // Записать JSON ответ
+// Request представляет HTTP запрос
+type Request struct {
+	Method string
+	URL    string
+	Body   string
+}
+
+// ResponseWriter интерфейс (как http.ResponseWriter)
+type ResponseWriter interface {
+	Header() map[string]string
+	Write([]byte) (int, error)
+	WriteHeader(statusCode int)
+}
+
+// MockResponseWriter захватывает вывод handler'а
+type MockResponseWriter struct {
+	StatusCode int
+	Headers    map[string]string
+	Body       []byte
+}
+
+func (w *MockResponseWriter) Header() map[string]string {
+	if w.Headers == nil {
+		w.Headers = make(map[string]string)
+	}
+	return w.Headers
+}
+
+func (w *MockResponseWriter) Write(b []byte) (int, error) {
+	if w.StatusCode == 0 {
+		w.StatusCode = StatusOK
+	}
+	w.Body = append(w.Body, b...)
+	return len(b), nil
+}
+
+func (w *MockResponseWriter) WriteHeader(statusCode int) {
+	w.StatusCode = statusCode
+}
+
+func (w *MockResponseWriter) BodyString() string {
+	return string(w.Body)
+}
+
+// HealthHandler возвращает {"status": "ok"} с правильными заголовками
+func HealthHandler(w ResponseWriter, r *Request) {
+	w.Header()["Content-Type"] = "application/json"  // Установить тип контента
+	w.WriteHeader(StatusOK)                          // Установить код статуса
+	w.Write([]byte("{\\"status\\": \\"ok\\"}"))          // Записать JSON ответ
 }
 
 func TestHealthHandler(t *T) {
-	// Создать тестовый запрос
-	req := httptest.NewRequest("GET", "/health", nil)
+	// Создать mock запрос
+	req := &Request{Method: "GET", URL: "/health"}
 
-	// Создать рекордер ответа
-	rec := httptest.NewRecorder()
+	// Создать mock рекордер ответа
+	rec := &MockResponseWriter{Headers: make(map[string]string)}
 
-	// Вызвать обработчик
+	// Вызвать handler
 	HealthHandler(rec, req)
 
 	// Проверить код статуса
-	if rec.Code != http.StatusOK {
-		t.Errorf("код статуса = %d; ожидается %d", rec.Code, http.StatusOK)
+	if rec.StatusCode != StatusOK {
+		t.Errorf("код статуса = %d; ожидается %d", rec.StatusCode, StatusOK)
 	}
 
 	// Проверить заголовок Content-Type
-	contentType := rec.Header().Get("Content-Type")
+	contentType := rec.Headers["Content-Type"]
 	if contentType != "application/json" {
 		t.Errorf("Content-Type = %q; ожидается %q", contentType, "application/json")
 	}
 
 	// Проверить тело ответа
-	expected := "{\"status\": \"ok\"}"
-	if rec.Body.String() != expected {
-		t.Errorf("body = %q; ожидается %q", rec.Body.String(), expected)
+	expected := "{\\"status\\": \\"ok\\"}"
+	if rec.BodyString() != expected {
+		t.Errorf("body = %q; ожидается %q", rec.BodyString(), expected)
 	}
 }`
 		},
 		uz: {
 			title: `HTTP handler testlash`,
-			description: `**httptest.NewRecorder** va **httptest.NewRequest** dan foydalanib HTTP handlerlarni test qiling.
+			description: `**mock ResponseWriter** dan foydalanib HTTP handlerlarni test qiling - httptest ichkaridan qanday ishlashini tushuning!
 
 **Talablar:**
-1. JSON qaytaradigan 'HealthHandler' ni amalga oshiring: '{"status": "ok"}'
-2. httptest paketidan foydalanib 'TestHealthHandler' yozing
+1. JSON javobini yozadigan \`HealthHandler\` ni amalga oshiring
+2. Handler chiqishini olish uchun \`MockResponseWriter\` dan foydalaning
 3. Status kod 200 ekanligini tekshiring
 4. Content-Type "application/json" ekanligini tekshiring
-5. Javob tanasi kutilgan JSON ga mos kelishini tekshiring
+5. Javob tanasi kutilgan JSON ga mos kelishini tekshiring`,
+			hint1: `Headerlarni WriteHeader yoki Write chaqirishdan OLDIN o'rnating. Foydalaning: w.Header()["Content-Type"] = "application/json"`,
+			hint2: `MockResponseWriter handler yozgan hamma narsani yozib oladi. rec.StatusCode, rec.Headers, rec.BodyString() dan foydalaning`,
+			whyItMatters: `HTTP handler testlarini tushunish ishonchli veb API yaratish uchun juda muhim.
 
-**Misol:**
-\`\`\`go
-req := httptest.NewRequest("GET", "/health", nil)
-rec := httptest.NewRecorder()
-handler.ServeHTTP(rec, req)
-\`\`\`
-
-**Cheklovlar:**
-- Haqiqiy HTTP server emas, httptest paketidan foydalaning
-- Ham status kod, ham javob tanasini tekshiring`,
-			hint1: `Server ishga tushirmasdan soxta HTTP so'rov yaratish uchun httptest.NewRequest dan foydalaning.`,
-			hint2: `httptest.NewRecorder javobni tekshirish uchun yozib oladi. rec.Code, rec.Header(), rec.Body dan foydalaning.`,
-			whyItMatters: `HTTP handler testlari haqiqiy serverlar yuklanishisiz API endpointlar to'g'ri ishlashini ta'minlaydi.
-
-**Nima uchun httptest muhim:**
-- **Tez:** Tarmoq chaqiruvlari yo'q, testlar millisekundlarda ishlaydi
-- **Izolyatsiya:** Portlar yo'q, konfliktlar yo'q, to'liq deterministik
-- **Debug:** Assertions uchun request/response ga to'liq kirish
-- **CI-Friendly:** Har qanday muhitda ishlaydi, sozlash kerak emas
-
-**Haqiqiy server vs httptest:**
-\`\`\`go
-// httptest siz (sekin, mo'rt)
-server := httptest.NewServer(handler)
-defer server.Close()
-resp, err := http.Get(server.URL + "/health")
-// Javobni parse qilish chalkash...
-
-// httptest bilan (tez, tozalangan)
-req := httptest.NewRequest("GET", "/health", nil)
-rec := httptest.NewRecorder()
-handler.ServeHTTP(rec, req)
-// rec.Code, rec.Body ga to'g'ridan-to'g'ri kirish
-\`\`\`
-
-**Ishlab chiqarish patterni:**
-Handler testlari quyidagilarni ushlaydi:
-- **Status practixr:** Mavjud bo'lmagan resurslar uchun 200 o'rniga 404 qaytarish
-- **Headerlar:** CORS yo'q, noto'g'ri Content-Type
-- **JSON sxema:** Fieldlarda xatolar, noto'g'ri turlar
-- **Xato holatlari:** Noto'g'ri kirishda panic
-
-**Amaliy misol:**
-Stripe har bir API endpointni httptest bilan test qiladi:
-\`\`\`go
-func TestCreateCharge(t *testing.T) {
-    req := httptest.NewRequest("POST", "/charges", body)
-    req.Header.Set("Authorization", "Bearer sk_test_...")
-
-    rec := httptest.NewRecorder()
-    handler.ServeHTTP(rec, req)
-
-    // Javobni tekshirish
-    if rec.Code != 201 {
-        t.Errorf("201 Created kutilgan, %d olindi", rec.Code)
-    }
-
-    // JSON parse qilish
-    var charge Charge
-    json.Unmarshal(rec.Body.Bytes(), &charge)
-
-    // Fieldlarni tekshirish
-    if charge.Amount != 1000 {
-        t.Errorf("amount = %d, want 1000", charge.Amount)
-    }
-}
-\`\`\`
-
-Google da xizmatlar httptest asosida minglab testlarga ega, bu API o'zgarishlarini ishonch bilan deploy qilish imkonini beradi.`,
+Bu vazifa \`net/http/httptest\` ichkaridan foydalanadigan ANIQ patternni o'rgatadi.`,
 			solutionCode: `package httphandler_test
 
-import (
-	"net/http"
-	"net/http/httptest"
-)
+const StatusOK = 200
 
-func HealthHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")  // Kontent turini o'rnatish
-	w.WriteHeader(http.StatusOK)                        // Status kodini o'rnatish
-	w.Write([]byte("{\"status\": \"ok\"}"))             // JSON javobini yozish
+type Request struct {
+	Method string
+	URL    string
+	Body   string
+}
+
+type ResponseWriter interface {
+	Header() map[string]string
+	Write([]byte) (int, error)
+	WriteHeader(statusCode int)
+}
+
+type MockResponseWriter struct {
+	StatusCode int
+	Headers    map[string]string
+	Body       []byte
+}
+
+func (w *MockResponseWriter) Header() map[string]string {
+	if w.Headers == nil {
+		w.Headers = make(map[string]string)
+	}
+	return w.Headers
+}
+
+func (w *MockResponseWriter) Write(b []byte) (int, error) {
+	if w.StatusCode == 0 {
+		w.StatusCode = StatusOK
+	}
+	w.Body = append(w.Body, b...)
+	return len(b), nil
+}
+
+func (w *MockResponseWriter) WriteHeader(statusCode int) {
+	w.StatusCode = statusCode
+}
+
+func (w *MockResponseWriter) BodyString() string {
+	return string(w.Body)
+}
+
+func HealthHandler(w ResponseWriter, r *Request) {
+	w.Header()["Content-Type"] = "application/json"
+	w.WriteHeader(StatusOK)
+	w.Write([]byte("{\\"status\\": \\"ok\\"}"))
 }
 
 func TestHealthHandler(t *T) {
-	// Test so'rovini yaratish
-	req := httptest.NewRequest("GET", "/health", nil)
-
-	// Javob yozuvchisini yaratish
-	rec := httptest.NewRecorder()
-
-	// Handlerni chaqirish
+	req := &Request{Method: "GET", URL: "/health"}
+	rec := &MockResponseWriter{Headers: make(map[string]string)}
 	HealthHandler(rec, req)
 
-	// Status kodini tekshirish
-	if rec.Code != http.StatusOK {
-		t.Errorf("status kod = %d; kutilgan %d", rec.Code, http.StatusOK)
+	if rec.StatusCode != StatusOK {
+		t.Errorf("status kod = %d; kutilgan %d", rec.StatusCode, StatusOK)
 	}
-
-	// Content-Type headerini tekshirish
-	contentType := rec.Header().Get("Content-Type")
+	contentType := rec.Headers["Content-Type"]
 	if contentType != "application/json" {
 		t.Errorf("Content-Type = %q; kutilgan %q", contentType, "application/json")
 	}
-
-	// Javob tanasini tekshirish
-	expected := "{\"status\": \"ok\"}"
-	if rec.Body.String() != expected {
-		t.Errorf("body = %q; kutilgan %q", rec.Body.String(), expected)
+	expected := "{\\"status\\": \\"ok\\"}"
+	if rec.BodyString() != expected {
+		t.Errorf("body = %q; kutilgan %q", rec.BodyString(), expected)
 	}
 }`
 		}

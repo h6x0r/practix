@@ -301,7 +301,20 @@
       "Bash(cut:*)",
       "Bash(E2E_TIER=FULL cd:*)",
       "Bash(E2E_TIER=QUICK E2E_BASE_URL=http://localhost:3000 npx playwright test:*)",
-      "Bash(E2E_TIER=QUICK DEBUG=pw:* npx playwright test:*)"
+      "Bash(E2E_TIER=QUICK DEBUG=pw:* npx playwright test:*)",
+      "mcp__browsermcp__browser_snapshot",
+      "mcp__playwright__browser_select_option",
+      "Bash(TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFsZXhAZXhhbXBsZS5jb20iLCJzdWIiOiI0Y2NhYTFmOS1mNGFiLTQyZTAtOWY1My0wNGE1ZWNjYTU2NDkiLCJqdGkiOiIwYmQyMTAwNC03MjZhLTQyNDctYTljNi03NGE2YTIyNDlmZmQiLCJpYXQiOjE3NzAwMjQ5NDcsImV4cCI6MTc3MDYyOTc0N30.IsMs6k3iub1fnZsqd0AaMMGv3guGq-BHGWq64rjKdL4\" __NEW_LINE_a506829da9c08b90__ curl -s -X POST 'http://wsggcg0s80cccw044s4k884c.5.189.182.153.sslip.io/submissions/run-tests' -H 'Content-Type: application/json' -H \"Authorization: Bearer $TOKEN\" -d @/tmp/test-run.json)",
+      "Bash(TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFsZXhAZXhhbXBsZS5jb20iLCJzdWIiOiI0Y2NhYTFmOS1mNGFiLTQyZTAtOWY1My0wNGE1ZWNjYTU2NDkiLCJqdGkiOiJjYTRjOWM4OS0wMjQ3LTQwMDItOGQyMC02ODgyODAyMDE2OGYiLCJpYXQiOjE3NzAwMjU0MDgsImV4cCI6MTc3MDYzMDIwOH0.qPu3eqQAId93yn1ESunQHnpuHZeAqcelIUZqw-PIMjw\")",
+      "Bash(__NEW_LINE_eead9da8dd5fbe98__ curl -s -X POST \"http://wsggcg0s80cccw044s4k884c.5.189.182.153.sslip.io/submissions/run\" -H \"Content-Type: application/json\" -H \"Authorization: Bearer $TOKEN\" -d '{\n    \"\"code\"\": \"\"package main\\\\n\\\\nimport \\\\\"\"fmt\\\\\"\"\\\\n\\\\nfunc main\\(\\) {\\\\n    fmt.Println\\(\\\\\"\"Hello, World!\\\\\"\"\\)\\\\n}\"\",\n    \"\"language\"\": \"\"go\"\",\n    \"\"taskId\"\": \"\"01d2f203-4c9a-4ce9-b5e2-e390d0619fe5\"\"\n  }')",
+      "Bash(TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InRlc3R1c2VyMjAyNkB0ZXN0LmNvbSIsInN1YiI6IjVhMzkwOWJiLTYyMzMtNGVhOC05NTc2LTAzNGI3ZjRiYTk5NiIsImp0aSI6IjJmMDQzNTRkLTQ0MzEtNDUxYi05ZGM4LTI5MWFjNTcxMDdiYiIsImlhdCI6MTc3MDAyNjA4MCwiZXhwIjoxNzcwNjMwODgwfQ.3ksbXAgqM8iAaZFGFhs1Okf8msCwYQjN1HkA00487e0\" curl -s -X POST \"http://wsggcg0s80cccw044s4k884c.5.189.182.153.sslip.io/submissions/run-tests\" -H \"Content-Type: application/json\" -H \"Authorization: Bearer $TOKEN\" -d '{\"\"\"\"code\"\"\"\":\"\"\"\"package main\\\\nfunc FlattenUnknown\\(input []any\\) []int { return nil }\"\"\"\",\"\"\"\"taskId\"\"\"\":\"\"\"\"9f28247a-b8a8-44e9-b720-eaac27cc57ee\"\"\"\",\"\"\"\"language\"\"\"\":\"\"\"\"go\"\"\"\"}')",
+      "WebFetch(domain:5.189.182.153)",
+      "WebFetch(domain:nwk0wwo0gw0g0oso0g04gwwc.5.189.182.153.sslip.io)",
+      "mcp__playwright__browser_tabs",
+      "WebFetch(domain:wsggcg0s80cccw044s4k884c.5.189.182.153.sslip.io)",
+      "mcp__acp__Bash",
+      "mcp__acp__Edit",
+      "mcp__acp__Write"
     ],
     "deny": [],
     "ask": []

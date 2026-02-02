@@ -9,215 +9,224 @@ export const task: Task = {
 	description: `Use **TestMain** for test setup and teardown logic.
 
 **Requirements:**
-1. Implement \`TestMain(m *testing.M)\` function
-2. Set up test resources (e.g., temporary directory)
+1. Implement \`TestMain(m *M)\` function
+2. Set up test resources (initialize TestConfig)
 3. Run tests with \`m.Run()\`
 4. Clean up resources after tests
-5. Exit with test result code
+5. Track exit code for verification
 
 **Example:**
 \`\`\`go
-func TestMain(m *testing.M) {
+var testConfig *Config
+var exitCode int
+
+func TestMain(m *M) {
     // Setup
-    tmpDir, _ := os.MkdirTemp("", "test")
-    defer os.RemoveAll(tmpDir)
+    testConfig = &Config{Ready: true}
 
     // Run tests
-    code := m.Run()
+    exitCode = m.Run()
 
-    // Exit with test result
-    os.Exit(code)
+    // Teardown
+    testConfig = nil
 }
 \`\`\`
 
+**Why TestMain:**
+- Runs once per package, before all tests
+- Perfect for expensive setup (DB connections, services)
+- Cleanup guaranteed after all tests finish
+- Exit code tells CI if tests passed
+
 **Constraints:**
 - Must call m.Run() to execute tests
-- Must call os.Exit() with m.Run() result
-- Setup before m.Run(), cleanup after`,
+- Setup before m.Run(), cleanup after
+- Store exit code for verification`,
 	initialCode: `package testmain_test
 
-import (
-	"os"
-)
-
-var testDir string
-
-// TODO: Implement TestMain with setup and teardown
-func TestMain(m *testing.M) {
-	// TODO: Implement
+// TestConfig represents shared test configuration
+type TestConfig struct {
+	DatabaseURL string
+	LogLevel    string
+	Initialized bool
+	Counter     int
 }
 
-// TODO: Write test that uses testDir
-func TestFileOperations(t *T) {
-	// TODO: Implement
+var testConfig *TestConfig
+var exitCode int  // Track exit code from m.Run()
+
+// TODO: Implement TestMain with setup and teardown
+func TestMain(m *M) {
+	// TODO: Setup - initialize testConfig with:
+	//   DatabaseURL: "postgres://test@localhost/testdb"
+	//   LogLevel: "debug"
+	//   Initialized: true
+
+	// TODO: Run all tests and capture exit code
+
+	// TODO: Teardown - set testConfig to nil
+}
+
+// TODO: Write test that uses testConfig
+func TestDatabaseConnection(t *T) {
+	// TODO: Verify testConfig is initialized
+	// TODO: Check DatabaseURL is set
 }`,
 	solutionCode: `package testmain_test
 
-import (
-	"os"
-	"path/filepath"
-)
+// TestConfig represents shared test configuration
+type TestConfig struct {
+	DatabaseURL string
+	LogLevel    string
+	Initialized bool
+	Counter     int
+}
 
-var testDir string
+var testConfig *TestConfig
+var exitCode int  // Track exit code from m.Run()
 
-func TestMain(m *testing.M) {
-	// Setup: Create temporary directory
-	var err error
-	testDir, err = os.MkdirTemp("", "test-*")
-	if err != nil {
-		panic(err)  // Setup failure should panic
+func TestMain(m *M) {
+	// Setup: Initialize test configuration
+	testConfig = &TestConfig{
+		DatabaseURL: "postgres://test@localhost/testdb",
+		LogLevel:    "debug",
+		Initialized: true,
+		Counter:     0,
 	}
 
 	// Run all tests
-	code := m.Run()
+	exitCode = m.Run()
 
-	// Teardown: Remove temporary directory
-	os.RemoveAll(testDir)
-
-	// Exit with test result code
-	os.Exit(code)
+	// Teardown: Clean up resources
+	testConfig = nil
 }
 
-func TestFileOperations(t *T) {
-	// Test can use testDir set by TestMain
-	testFile := filepath.Join(testDir, "test.txt")
-
-	// Write to file
-	err := os.WriteFile(testFile, []byte("test data"), 0644)
-	if err != nil {
-		t.Fatalf("WriteFile failed: %v", err)
+func TestDatabaseConnection(t *T) {
+	// Verify TestMain initialized config
+	if testConfig == nil {
+		t.Fatal("testConfig should be initialized by TestMain")
 	}
 
-	// Read from file
-	data, err := os.ReadFile(testFile)
-	if err != nil {
-		t.Fatalf("ReadFile failed: %v", err)
+	if !testConfig.Initialized {
+		t.Error("testConfig.Initialized should be true")
 	}
 
-	// Assert content
-	expected := "test data"
-	if string(data) != expected {
-		t.Errorf("got %q, want %q", string(data), expected)
+	// Check DatabaseURL is set
+	expected := "postgres://test@localhost/testdb"
+	if testConfig.DatabaseURL != expected {
+		t.Errorf("DatabaseURL = %q, want %q", testConfig.DatabaseURL, expected)
 	}
 }`,
-			hint1: `TestMain runs before all tests. Use it for package-level setup like database connections.`,
-			hint2: `Always call os.Exit(m.Run()) - the exit code tells CI systems if tests passed.`,
-			testCode: `package testmain_test
+		hint1: `TestMain runs before all tests. Use it for package-level setup like database connections.`,
+		hint2: `m.Run() returns exit code (0 = all passed). Store it to verify tests ran correctly.`,
+		testCode: `package testmain_test
 
-import (
-	"os"
-	"path/filepath"
-)
-
-// Test1: testDir is set by TestMain
+// Test1: testConfig is initialized by TestMain
 func Test1(t *T) {
-	if testDir == "" {
-		t.Error("testDir should be set by TestMain")
+	if testConfig == nil {
+		t.Error("testConfig should be set by TestMain")
 	}
 }
 
-// Test2: testDir exists
+// Test2: testConfig.Initialized is true
 func Test2(t *T) {
-	if _, err := os.Stat(testDir); os.IsNotExist(err) {
-		t.Errorf("testDir %q should exist", testDir)
+	if testConfig == nil {
+		t.Fatal("testConfig is nil")
+	}
+	if !testConfig.Initialized {
+		t.Error("testConfig.Initialized should be true")
 	}
 }
 
-// Test3: Can create file in testDir
+// Test3: DatabaseURL is set correctly
 func Test3(t *T) {
-	testFile := filepath.Join(testDir, "test3.txt")
-	err := os.WriteFile(testFile, []byte("test"), 0644)
-	if err != nil {
-		t.Fatalf("WriteFile failed: %v", err)
+	if testConfig == nil {
+		t.Fatal("testConfig is nil")
 	}
-	os.Remove(testFile)
+	expected := "postgres://test@localhost/testdb"
+	if testConfig.DatabaseURL != expected {
+		t.Errorf("DatabaseURL = %q, want %q", testConfig.DatabaseURL, expected)
+	}
 }
 
-// Test4: Can read file from testDir
+// Test4: LogLevel is set
 func Test4(t *T) {
-	testFile := filepath.Join(testDir, "test4.txt")
-	content := []byte("read test")
-	if err := os.WriteFile(testFile, content, 0644); err != nil {
-		t.Fatalf("WriteFile failed: %v", err)
+	if testConfig == nil {
+		t.Fatal("testConfig is nil")
 	}
-	defer os.Remove(testFile)
-
-	data, err := os.ReadFile(testFile)
-	if err != nil {
-		t.Fatalf("ReadFile failed: %v", err)
-	}
-	if string(data) != "read test" {
-		t.Errorf("got %q, want %q", string(data), "read test")
+	if testConfig.LogLevel != "debug" {
+		t.Errorf("LogLevel = %q, want %q", testConfig.LogLevel, "debug")
 	}
 }
 
-// Test5: testDir is a directory
+// Test5: Counter starts at 0
 func Test5(t *T) {
-	info, err := os.Stat(testDir)
-	if err != nil {
-		t.Fatalf("Stat failed: %v", err)
+	if testConfig == nil {
+		t.Fatal("testConfig is nil")
 	}
-	if !info.IsDir() {
-		t.Error("testDir should be a directory")
+	if testConfig.Counter != 0 {
+		t.Errorf("Counter = %d, want 0", testConfig.Counter)
 	}
 }
 
-// Test6: Can create subdirectory
+// Test6: Can modify shared config
 func Test6(t *T) {
-	subDir := filepath.Join(testDir, "subdir")
-	err := os.Mkdir(subDir, 0755)
-	if err != nil {
-		t.Fatalf("Mkdir failed: %v", err)
+	if testConfig == nil {
+		t.Fatal("testConfig is nil")
 	}
-	os.RemoveAll(subDir)
+	testConfig.Counter++
+	if testConfig.Counter < 1 {
+		t.Error("Counter should be incrementable")
+	}
 }
 
-// Test7: Multiple file operations
+// Test7: Config struct has all fields
 func Test7(t *T) {
-	for i := 0; i < 3; i++ {
-		file := filepath.Join(testDir, "multi"+string(rune('0'+i))+".txt")
-		if err := os.WriteFile(file, []byte("data"), 0644); err != nil {
-			t.Fatalf("WriteFile failed for %s: %v", file, err)
-		}
-		os.Remove(file)
+	if testConfig == nil {
+		t.Fatal("testConfig is nil")
 	}
+	// Verify all fields are accessible
+	_ = testConfig.DatabaseURL
+	_ = testConfig.LogLevel
+	_ = testConfig.Initialized
+	_ = testConfig.Counter
 }
 
-// Test8: testDir is writable
+// Test8: m.Run() was called (exitCode is set)
 func Test8(t *T) {
-	testFile := filepath.Join(testDir, "writable.txt")
-	err := os.WriteFile(testFile, []byte("test"), 0644)
-	if err != nil {
-		t.Errorf("testDir should be writable: %v", err)
+	// exitCode should be 0 if we reach this test
+	// (tests only run if m.Run() was called)
+	if testConfig == nil {
+		t.Error("tests only run if m.Run() is called in TestMain")
 	}
-	os.Remove(testFile)
 }
 
-// Test9: File content persists within test
+// Test9: Multiple tests can access same config
 func Test9(t *T) {
-	testFile := filepath.Join(testDir, "persist.txt")
-	content := "persistent data"
-	os.WriteFile(testFile, []byte(content), 0644)
-	defer os.Remove(testFile)
-
-	data, _ := os.ReadFile(testFile)
-	if string(data) != content {
-		t.Errorf("content mismatch: got %q, want %q", string(data), content)
+	if testConfig == nil {
+		t.Fatal("testConfig is nil")
+	}
+	// Config should still be valid
+	if testConfig.DatabaseURL == "" {
+		t.Error("DatabaseURL should persist across tests")
 	}
 }
 
-// Test10: testDir path is absolute
+// Test10: Config is ready for use
 func Test10(t *T) {
-	if !filepath.IsAbs(testDir) {
-		t.Errorf("testDir should be absolute path, got %q", testDir)
+	if testConfig == nil {
+		t.Fatal("testConfig is nil")
+	}
+	if !testConfig.Initialized || testConfig.DatabaseURL == "" {
+		t.Error("config should be fully initialized")
 	}
 }
 `,
-			whyItMatters: `TestMain enables expensive setup once instead of repeating it in every test.
+		whyItMatters: `TestMain enables expensive setup once instead of repeating it in every test.
 
 **Why TestMain Matters:**
 - **Performance:** Setup database once, not per test
-- **Resources:** Share connections, temp directories across tests
+- **Resources:** Share connections, configs across tests
 - **Cleanup:** Guarantee teardown even if tests panic
 - **Environment:** Set env vars, configure logging for all tests
 
@@ -260,67 +269,32 @@ func TestUserUpdate(t *testing.T) {
 
 **Production Benefits:**
 - **Database Tests:** Connect once, rollback transactions per test
-- **File Tests:** Create temp directory once, clean up after
+- **Config Tests:** Initialize config once, share across tests
 - **Mock Services:** Start mock server once, use in all tests
 - **CI Speed:** Faster tests mean faster deployments
 
-**Real-World Example:**
-At Uber, service tests use TestMain to:
-1. Start in-memory Redis
-2. Initialize config
-3. Set up logging
-4. Run tests
-5. Shutdown services
-
-This shared setup saves minutes per test run.
-
 **Common Patterns:**
 \`\`\`go
-// Database tests
+// Config-based setup
+var cfg *Config
+
 func TestMain(m *testing.M) {
-    // Start test database
-    db, err := sql.Open("postgres", testDSN)
-    if err != nil {
-        log.Fatal(err)
+    cfg = &Config{
+        DBHost: "localhost",
+        DBPort: 5432,
+        Debug:  true,
     }
 
-    // Migrate schema
-    migrateDatabase(db)
-
-    // Store in global
-    testDB = db
-
-    // Run tests
     code := m.Run()
 
-    // Cleanup
-    db.Close()
-    os.Exit(code)
-}
-
-// HTTP service tests
-func TestMain(m *testing.M) {
-    // Start mock dependencies
-    mockAuth := httptest.NewServer(authMock)
-    mockDB := httptest.NewServer(dbMock)
-
-    // Set URLs for tests
-    os.Setenv("AUTH_URL", mockAuth.URL)
-    os.Setenv("DB_URL", mockDB.URL)
-
-    // Run tests
-    code := m.Run()
-
-    // Cleanup
-    mockAuth.Close()
-    mockDB.Close()
+    cfg = nil
     os.Exit(code)
 }
 \`\`\`
 
 **Important Notes:**
 - TestMain runs once per package
-- Defer doesn't work (os.Exit bypasses it)
+- Defer doesn't work with os.Exit (bypasses it)
 - Must manually cleanup before os.Exit
 - Setup failures should panic or log.Fatal
 
@@ -331,192 +305,90 @@ The Go standard library uses TestMain extensively - check net/http tests for exa
 			description: `Используйте **TestMain** для настройки и очистки тестов.
 
 **Требования:**
-1. Реализуйте функцию \`TestMain(m *testing.M)\`
-2. Настройте тестовые ресурсы (например, временную директорию)
+1. Реализуйте функцию \`TestMain(m *M)\`
+2. Настройте тестовые ресурсы (инициализируйте TestConfig)
 3. Запустите тесты с \`m.Run()\`
 4. Очистите ресурсы после тестов
-5. Завершите с кодом результата теста
+5. Сохраните код выхода для проверки
 
 **Пример:**
 \`\`\`go
-func TestMain(m *testing.M) {
+var testConfig *Config
+var exitCode int
+
+func TestMain(m *M) {
     // Настройка
-    tmpDir, _ := os.MkdirTemp("", "test")
-    defer os.RemoveAll(tmpDir)
+    testConfig = &Config{Ready: true}
 
     // Запуск тестов
-    code := m.Run()
+    exitCode = m.Run()
 
-    // Завершение с результатом
-    os.Exit(code)
+    // Очистка
+    testConfig = nil
 }
 \`\`\`
+
+**Почему TestMain:**
+- Запускается один раз на пакет, перед всеми тестами
+- Идеален для дорогой настройки (БД, сервисы)
+- Очистка гарантирована после всех тестов
+- Код выхода сообщает CI прошли ли тесты
 
 **Ограничения:**
 - Должен вызвать m.Run() для выполнения тестов
-- Должен вызвать os.Exit() с результатом m.Run()
 - Настройка перед m.Run(), очистка после`,
 			hint1: `TestMain запускается перед всеми тестами. Используйте для настройки уровня пакета.`,
-			hint2: `Всегда вызывайте os.Exit(m.Run()) - код выхода сообщает CI системам прошли ли тесты.`,
+			hint2: `m.Run() возвращает код выхода (0 = все прошли). Сохраните его для проверки.`,
 			whyItMatters: `TestMain позволяет делать дорогую настройку один раз вместо повторения в каждом тесте.
 
 **Почему TestMain важен:**
-- **Производительность:** Настройте базу данных один раз, не на каждый тест
-- **Ресурсы:** Разделяйте соединения, временные директории между тестами
-- **Очистка:** Гарантируйте teardown даже если тесты паникуют
-- **Окружение:** Установите env переменные, configure logging для всех тестов
-
-**Без TestMain (медленно):**
-\`\`\`go
-func TestUserCreate(t *testing.T) {
-    db := setupDatabase()  // Медленно
-    defer db.Close()
-    // test...
-}
-
-func TestUserUpdate(t *testing.T) {
-    db := setupDatabase()  // Медленно (повторяется)
-    defer db.Close()
-    // test...
-}
-// Тесты занимают 5 секунд
-\`\`\`
-
-**С TestMain (быстро):**
-\`\`\`go
-var db *sql.DB
-
-func TestMain(m *testing.M) {
-    db = setupDatabase()  // Один раз
-    code := m.Run()
-    db.Close()
-    os.Exit(code)
-}
-
-func TestUserCreate(t *testing.T) {
-    // Используем общую db
-}
-
-func TestUserUpdate(t *testing.T) {
-    // Используем общую db
-}
-// Тесты занимают 1 секунду
-\`\`\`
-
-**Продакшен паттерн:**
-- **Тесты базы данных:** Подключитесь один раз, откатывайте транзакции на тест
-- **Тесты файлов:** Создайте temp директорию один раз, очистите после
-- **Mock сервисы:** Запустите mock server один раз, используйте во всех тестах
-- **Скорость CI:** Быстрые тесты означают быстрые deployments
-
-**Практический пример:**
-В Uber тесты сервисов используют TestMain для:
-1. Запуска in-memory Redis
-2. Инициализации конфига
-3. Настройки логирования
-4. Запуска тестов
-5. Shutdown сервисов
-
-Эта общая настройка экономит минуты на каждый запуск тестов.
-
-**Распространённые паттерны:**
-\`\`\`go
-// Тесты базы данных
-func TestMain(m *testing.M) {
-    // Запустить тестовую БД
-    db, err := sql.Open("postgres", testDSN)
-    if err != nil {
-        log.Fatal(err)
-    }
-
-    // Мигрировать схему
-    migrateDatabase(db)
-
-    // Сохранить в глобальной переменной
-    testDB = db
-
-    // Запустить тесты
-    code := m.Run()
-
-    // Очистка
-    db.Close()
-    os.Exit(code)
-}
-
-// Тесты HTTP сервиса
-func TestMain(m *testing.M) {
-    // Запустить mock зависимости
-    mockAuth := httptest.NewServer(authMock)
-    mockDB := httptest.NewServer(dbMock)
-
-    // Установить URLs для тестов
-    os.Setenv("AUTH_URL", mockAuth.URL)
-    os.Setenv("DB_URL", mockDB.URL)
-
-    // Запустить тесты
-    code := m.Run()
-
-    // Очистка
-    mockAuth.Close()
-    mockDB.Close()
-    os.Exit(code)
-}
-\`\`\`
-
-**Важные заметки:**
-- TestMain выполняется один раз на пакет
-- Defer не работает (os.Exit обходит его)
-- Необходимо вручную очищать перед os.Exit
-- Сбои настройки должны вызывать panic или log.Fatal
-
-Стандартная библиотека Go широко использует TestMain - проверьте net/http тесты для примеров.`,
+- **Производительность:** Настройте базу данных один раз
+- **Ресурсы:** Разделяйте соединения между тестами
+- **Очистка:** Гарантируйте teardown даже при панике
+- **Окружение:** Установите env переменные для всех тестов`,
 			solutionCode: `package testmain_test
 
-import (
-	"os"
-	"path/filepath"
-)
+// TestConfig представляет общую конфигурацию тестов
+type TestConfig struct {
+	DatabaseURL string
+	LogLevel    string
+	Initialized bool
+	Counter     int
+}
 
-var testDir string
+var testConfig *TestConfig
+var exitCode int  // Отслеживаем код выхода от m.Run()
 
-func TestMain(m *testing.M) {
-	// Настройка: Создать временную директорию
-	var err error
-	testDir, err = os.MkdirTemp("", "test-*")
-	if err != nil {
-		panic(err)  // Сбой настройки должен вызвать панику
+func TestMain(m *M) {
+	// Настройка: Инициализировать конфигурацию
+	testConfig = &TestConfig{
+		DatabaseURL: "postgres://test@localhost/testdb",
+		LogLevel:    "debug",
+		Initialized: true,
+		Counter:     0,
 	}
 
 	// Запустить все тесты
-	code := m.Run()
+	exitCode = m.Run()
 
-	// Очистка: Удалить временную директорию
-	os.RemoveAll(testDir)
-
-	// Выйти с кодом результата теста
-	os.Exit(code)
+	// Очистка: Освободить ресурсы
+	testConfig = nil
 }
 
-func TestFileOperations(t *T) {
-	// Тест может использовать testDir установленный TestMain
-	testFile := filepath.Join(testDir, "test.txt")
-
-	// Записать в файл
-	err := os.WriteFile(testFile, []byte("test data"), 0644)
-	if err != nil {
-		t.Fatalf("WriteFile не удался: %v", err)
+func TestDatabaseConnection(t *T) {
+	// Проверить что TestMain инициализировал конфиг
+	if testConfig == nil {
+		t.Fatal("testConfig должен быть инициализирован TestMain")
 	}
 
-	// Прочитать из файла
-	data, err := os.ReadFile(testFile)
-	if err != nil {
-		t.Fatalf("ReadFile не удался: %v", err)
+	if !testConfig.Initialized {
+		t.Error("testConfig.Initialized должен быть true")
 	}
 
-	// Проверить содержимое
-	expected := "test data"
-	if string(data) != expected {
-		t.Errorf("получено %q, ожидается %q", string(data), expected)
+	// Проверить что DatabaseURL установлен
+	expected := "postgres://test@localhost/testdb"
+	if testConfig.DatabaseURL != expected {
+		t.Errorf("DatabaseURL = %q, ожидается %q", testConfig.DatabaseURL, expected)
 	}
 }`
 		},
@@ -525,139 +397,78 @@ func TestFileOperations(t *T) {
 			description: `Test sozlash va tozalash mantiqasi uchun **TestMain** dan foydalaning.
 
 **Talablar:**
-1. \`TestMain(m *testing.M)\` funksiyasini amalga oshiring
-2. Test resurslarini sozlang (masalan, vaqtinchalik katalog)
+1. \`TestMain(m *M)\` funksiyasini amalga oshiring
+2. Test resurslarini sozlang (TestConfig ni boshlang)
 3. \`m.Run()\` bilan testlarni ishga tushiring
 4. Testlardan keyin resurslarni tozalang
-5. Test natijasi kodi bilan chiqing
+5. Tekshirish uchun chiqish kodini saqlang
 
 **Misol:**
 \`\`\`go
-func TestMain(m *testing.M) {
+var testConfig *Config
+var exitCode int
+
+func TestMain(m *M) {
     // Sozlash
-    tmpDir, _ := os.MkdirTemp("", "test")
-    defer os.RemoveAll(tmpDir)
+    testConfig = &Config{Ready: true}
 
     // Testlarni ishga tushirish
-    code := m.Run()
-    os.Exit(code)
+    exitCode = m.Run()
+
+    // Tozalash
+    testConfig = nil
 }
 \`\`\`
 
 **Cheklovlar:**
 - Testlarni bajarish uchun m.Run() ni chaqirishi kerak
-- m.Run() natijasi bilan os.Exit() ni chaqirishi kerak`,
+- m.Run() dan oldin sozlash, keyin tozalash`,
 			hint1: `TestMain barcha testlardan oldin ishlaydi. Paket darajasidagi sozlash uchun foydalaning.`,
-			hint2: `Har doim os.Exit(m.Run()) ni chaqiring - chiqish kodi CI tizimlariga testlar o'tganligini bildiradi.`,
-			whyItMatters: `TestMain har bir testda takrorlash o'rniga qimmat sozlashni bir marta amalga oshirishga imkon beradi.
-
-**Nima uchun TestMain muhim:**
-- **Ishlash:** Ma'lumotlar bazasini bir marta sozlang, har bir test uchun emas
-- **Resurslar:** Ulanishlar, vaqtinchalik kataloglarni testlar o'rtasida ulashing
-- **Tozalash:** Testlar panic qilsa ham teardown ni kafolatlang
-- **Muhit:** Barcha testlar uchun env o'zgaruvchilarini, configure logging ni o'rnating
-
-**TestMain siz (sekin):**
-\`\`\`go
-func TestUserCreate(t *testing.T) {
-    db := setupDatabase()  // Sekin
-    defer db.Close()
-    // test...
-}
-
-func TestUserUpdate(t *testing.T) {
-    db := setupDatabase()  // Sekin (takrorlanadi)
-    defer db.Close()
-    // test...
-}
-// Testlar 5 soniya davom etadi
-\`\`\`
-
-**TestMain bilan (tez):**
-\`\`\`go
-var db *sql.DB
-
-func TestMain(m *testing.M) {
-    db = setupDatabase()  // Bir marta
-    code := m.Run()
-    db.Close()
-    os.Exit(code)
-}
-
-func TestUserCreate(t *testing.T) {
-    // Umumiy db dan foydalanamiz
-}
-
-func TestUserUpdate(t *testing.T) {
-    // Umumiy db dan foydalanamiz
-}
-// Testlar 1 soniya davom etadi
-\`\`\`
-
-**Ishlab chiqarish patterni:**
-- **Ma'lumotlar bazasi testlari:** Bir marta ulaning, test uchun tranzaksiyalarni qaytaring
-- **Fayl testlari:** Vaqtinchalik katalogni bir marta yarating, keyin tozalang
-- **Mock xizmatlar:** Mock serverni bir marta ishga tushiring, barcha testlarda ishlating
-- **CI tezligi:** Tez testlar tez deploymentlar degani
-
-**Amaliy misol:**
-Uber da xizmat testlari TestMain dan quyidagilar uchun foydalanadi:
-1. In-memory Redis ni ishga tushirish
-2. Konfig ni boshlash
-3. Logging sozlash
-4. Testlarni ishga tushirish
-5. Xizmatlarni to'xtatish
-
-Bu umumiy sozlash har bir test ishga tushirishda daqiqalarni tejaydi.
-
-Go standart kutubxonasi TestMain ni keng foydalanadi - misollar uchun net/http testlarni tekshiring.`,
+			hint2: `m.Run() chiqish kodini qaytaradi (0 = hammasi o'tdi). Tekshirish uchun saqlang.`,
+			whyItMatters: `TestMain har bir testda takrorlash o'rniga qimmat sozlashni bir marta amalga oshirishga imkon beradi.`,
 			solutionCode: `package testmain_test
 
-import (
-	"os"
-	"path/filepath"
-)
+// TestConfig umumiy test konfiguratsiyasini ifodalaydi
+type TestConfig struct {
+	DatabaseURL string
+	LogLevel    string
+	Initialized bool
+	Counter     int
+}
 
-var testDir string
+var testConfig *TestConfig
+var exitCode int  // m.Run() dan chiqish kodini kuzatish
 
-func TestMain(m *testing.M) {
-	// Sozlash: Vaqtinchalik katalog yaratish
-	var err error
-	testDir, err = os.MkdirTemp("", "test-*")
-	if err != nil {
-		panic(err)  // Sozlash xatosi panic bo'lishi kerak
+func TestMain(m *M) {
+	// Sozlash: Test konfiguratsiyasini boshlash
+	testConfig = &TestConfig{
+		DatabaseURL: "postgres://test@localhost/testdb",
+		LogLevel:    "debug",
+		Initialized: true,
+		Counter:     0,
 	}
 
 	// Barcha testlarni ishga tushirish
-	code := m.Run()
+	exitCode = m.Run()
 
-	// Tozalash: Vaqtinchalik katalogni o'chirish
-	os.RemoveAll(testDir)
-
-	// Test natijasi kodi bilan chiqish
-	os.Exit(code)
+	// Tozalash: Resurslarni bo'shatish
+	testConfig = nil
 }
 
-func TestFileOperations(t *T) {
-	// Test TestMain tomonidan o'rnatilgan testDir dan foydalanishi mumkin
-	testFile := filepath.Join(testDir, "test.txt")
-
-	// Faylga yozish
-	err := os.WriteFile(testFile, []byte("test data"), 0644)
-	if err != nil {
-		t.Fatalf("WriteFile muvaffaqiyatsiz: %v", err)
+func TestDatabaseConnection(t *T) {
+	// TestMain konfigni boshladi tekshirish
+	if testConfig == nil {
+		t.Fatal("testConfig TestMain tomonidan boshlanishi kerak")
 	}
 
-	// Fayldan o'qish
-	data, err := os.ReadFile(testFile)
-	if err != nil {
-		t.Fatalf("ReadFile muvaffaqiyatsiz: %v", err)
+	if !testConfig.Initialized {
+		t.Error("testConfig.Initialized true bo'lishi kerak")
 	}
 
-	// Kontentni tekshirish
-	expected := "test data"
-	if string(data) != expected {
-		t.Errorf("olindi %q, kutilgan %q", string(data), expected)
+	// DatabaseURL o'rnatilganligini tekshirish
+	expected := "postgres://test@localhost/testdb"
+	if testConfig.DatabaseURL != expected {
+		t.Errorf("DatabaseURL = %q, kutilgan %q", testConfig.DatabaseURL, expected)
 	}
 }`
 		}

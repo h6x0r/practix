@@ -71,6 +71,12 @@ export async function runCodeAndWaitResults(
 ): Promise<void> {
   const timeout = getLanguageTimeout(language);
 
+  // Get the current result text before running (to detect change)
+  const previousResultText = await page.evaluate(() => {
+    const el = document.querySelector('[data-testid="test-results"]');
+    return el?.textContent || '';
+  });
+
   // Click run button
   await page.click('[data-testid="run-button"]');
 
@@ -83,6 +89,21 @@ export async function runCodeAndWaitResults(
 
   // Wait for "Running..." to disappear (execution finished)
   await page.waitForSelector('text=Running...', { state: 'hidden', timeout });
+
+  // Wait for results to update (content should change from previous)
+  await page.waitForFunction(
+    (prevText) => {
+      const el = document.querySelector('[data-testid="test-results"]');
+      const currentText = el?.textContent || '';
+      // Results must actually change from previous state
+      return currentText !== prevText && currentText.length > 0;
+    },
+    previousResultText,
+    { timeout: 15000 }
+  );
+
+  // Additional delay to ensure React has finished rendering
+  await page.waitForTimeout(1000);
 
   // Ensure test results are visible
   await page.waitForSelector('[data-testid="test-results"]', { timeout: 5000 });

@@ -1332,6 +1332,12 @@ ${testCalls}
     const testClasses = this.extractJavaTestClasses(testCode);
     this.logger.debug(`Java test classes found: ${testClasses.join(", ")}`);
 
+    // Extract additional imports from test code (excluding junit and static imports)
+    const additionalImports = this.extractJavaImports(testCode);
+    this.logger.debug(
+      `Java additional imports: ${additionalImports.join(", ")}`,
+    );
+
     // Clean imports from solution code (we add them in the template)
     const cleanSolution = solutionCode
       .replace(/import\s+java\.util\.\*;/gm, "")
@@ -1349,9 +1355,7 @@ ${testCalls}
     const cleanTests = testCode
       .replace(/import\s+org\.junit.*$/gm, "")
       .replace(/import\s+static\s+org\.junit.*$/gm, "")
-      .replace(/import\s+java\.util\.\*;/gm, "")
-      .replace(/import\s+java\.util\.List;/gm, "")
-      .replace(/import\s+java\.util\.ArrayList;/gm, "")
+      .replace(/import\s+java\.\w+(\.\w+)*;/gm, "") // Remove ALL java imports (we add them back)
       .replace(/class\s+(Test\d+)\s*\{/g, "class $1 implements Testable {")
       .replace(/@Test\s*/g, "")
       // Replace assertion calls with Assert.* (only if not already prefixed)
@@ -1367,10 +1371,14 @@ ${testCalls}
       .map((name) => `        runTest("${name}", new ${name}());`)
       .join("\n");
 
+    // Build imports block
+    const baseImports = ["java.util.ArrayList", "java.util.List"];
+    const allImports = [...new Set([...baseImports, ...additionalImports])];
+    const importBlock = allImports.map((imp) => `import ${imp};`).join("\n");
+
     // IMPORTANT: public class Main MUST be first for Piston to find main() method
     // Simplified test runner with JSON output and expected/output capture
-    const result = `import java.util.ArrayList;
-import java.util.List;
+    const result = `${importBlock}
 
 public class Main {
     static List<String> results = new ArrayList<>();
@@ -1520,6 +1528,25 @@ ${cleanTests}
       classes.push(match[1]);
     }
     return classes;
+  }
+
+  /**
+   * Extract Java imports from test code (excluding junit and static imports)
+   * Returns imports like java.io.ByteArrayOutputStream, java.io.PrintStream, etc.
+   */
+  private extractJavaImports(testCode: string): string[] {
+    const imports: string[] = [];
+    // Match: import java.something.ClassName;
+    const importRegex = /import\s+(java\.\w+(?:\.\w+)*);/g;
+    let match;
+    while ((match = importRegex.exec(testCode)) !== null) {
+      const imp = match[1];
+      // Skip util imports (we add them in base)
+      if (!imp.startsWith("java.util.")) {
+        imports.push(imp);
+      }
+    }
+    return imports;
   }
 
   /**
