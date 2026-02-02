@@ -148,7 +148,7 @@ services:
   frontend:
     build:
       context: .
-      dockerfile: Dockerfile.frontend
+      dockerfile: Dockerfile
       args:
         REACT_APP_API_URL: ${REACT_APP_API_URL:-http://localhost:8080}
         GEMINI_API_KEY: ${GEMINI_API_KEY:-}

@@ -284,7 +284,7 @@ Access your Coolify instance at: http://YOUR_IP:8000
 3. **Build Configuration**:
    - Build Pack: `Dockerfile`
    - Base Directory: `/`
-   - Dockerfile: `Dockerfile.frontend` (создадим ниже)
+   - Dockerfile: `Dockerfile` (создадим ниже)
 
 4. **Environment Variables** (build-time):
    ```env
@@ -531,7 +531,7 @@ EXPOSE 8080
 CMD ["node", "dist/main.js"]
 ```
 
-### Dockerfile.frontend (в корне проекта)
+### Dockerfile (в корне проекта)
 
 ```dockerfile
 # Build stage

@@ -451,7 +451,7 @@ ufw delete allow 8000/tcp
 4. **Build**:
    - Build Pack: `Dockerfile`
    - Base Directory: `/`
-   - Dockerfile Location: `Dockerfile.frontend`
+   - Dockerfile Location: `Dockerfile`
 
 5. **Build Arguments**:
    ```
