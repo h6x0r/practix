@@ -3,8 +3,8 @@
 FROM node:20-bullseye AS builder
 WORKDIR /app
 
-# Build arguments for Vite
-ARG VITE_API_URL=http://localhost:8080
+# Build arguments for Vite (values provided by Coolify or docker build --build-arg)
+ARG VITE_API_URL
 ARG VITE_APP_ENV=production
 
 ENV VITE_API_URL=${VITE_API_URL}
