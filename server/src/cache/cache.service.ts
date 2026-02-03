@@ -1,7 +1,12 @@
-import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import Redis from 'ioredis';
-import * as crypto from 'crypto';
+import {
+  Injectable,
+  Logger,
+  OnModuleInit,
+  OnModuleDestroy,
+} from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import Redis from "ioredis";
+import * as crypto from "crypto";
 
 /**
  * Cache service using Redis for storing execution results
@@ -20,28 +25,45 @@ export class CacheService implements OnModuleInit, OnModuleDestroy {
 
   async onModuleInit() {
     try {
-      const redisPassword = this.config.get('REDIS_PASSWORD');
+      const redisUrl = this.config.get("REDIS_URL");
+      let redisOptions: any;
+
+      if (redisUrl) {
+        // Parse REDIS_URL: redis://[user:password@]host[:port][/db]
+        const url = new URL(redisUrl);
+        redisOptions = {
+          host: url.hostname,
+          port: parseInt(url.port || "6379", 10),
+          password: url.password || undefined,
+          username: url.username || undefined,
+          db: url.pathname ? parseInt(url.pathname.slice(1), 10) : 0,
+        };
+      } else {
+        redisOptions = {
+          host: this.config.get("REDIS_HOST") || "redis",
+          port: parseInt(this.config.get("REDIS_PORT") || "6379", 10),
+          password: this.config.get("REDIS_PASSWORD") || undefined,
+        };
+      }
 
       this.redis = new Redis({
-        host: this.config.get('REDIS_HOST') || 'redis',
-        port: parseInt(this.config.get('REDIS_PORT') || '6379', 10),
-        password: redisPassword || undefined,
+        ...redisOptions,
         maxRetriesPerRequest: 3,
         retryStrategy: (times) => {
           if (times > 3) {
-            this.logger.warn('Redis connection failed, caching disabled');
+            this.logger.warn("Redis connection failed, caching disabled");
             return null;
           }
           return Math.min(times * 200, 2000);
         },
       });
 
-      this.redis.on('connect', () => {
+      this.redis.on("connect", () => {
         this.isConnected = true;
-        this.logger.log('Cache service connected to Redis');
+        this.logger.log("Cache service connected to Redis");
       });
 
-      this.redis.on('error', (err) => {
+      this.redis.on("error", (err) => {
         this.isConnected = false;
         this.logger.warn(`Redis error: ${err.message}`);
       });
@@ -49,7 +71,9 @@ export class CacheService implements OnModuleInit, OnModuleDestroy {
       // Test connection
       await this.redis.ping();
     } catch (error) {
-      this.logger.warn('Failed to connect to Redis for caching, continuing without cache');
+      this.logger.warn(
+        "Failed to connect to Redis for caching, continuing without cache",
+      );
       this.isConnected = false;
     }
   }
@@ -64,17 +88,28 @@ export class CacheService implements OnModuleInit, OnModuleDestroy {
    * Generate hash for cache key
    */
   generateHash(data: string): string {
-    return crypto.createHash('sha256').update(data).digest('hex').substring(0, 16);
+    return crypto
+      .createHash("sha256")
+      .update(data)
+      .digest("hex")
+      .substring(0, 16);
   }
 
   /**
    * Generate cache key for code execution
    * Includes userId to prevent cross-user cache pollution and information leakage
    */
-  getExecutionCacheKey(code: string, language: string, stdin?: string, userId?: string): string {
+  getExecutionCacheKey(
+    code: string,
+    language: string,
+    stdin?: string,
+    userId?: string,
+  ): string {
     // Include userId in hash to isolate cache per user
     // This prevents: 1) cross-user data leakage 2) test cheating via cache
-    const hash = this.generateHash(`${userId || 'anon'}:${code}:${language}:${stdin || ''}`);
+    const hash = this.generateHash(
+      `${userId || "anon"}:${code}:${language}:${stdin || ""}`,
+    );
     return `exec:${language}:${hash}`;
   }
 
@@ -118,11 +153,15 @@ export class CacheService implements OnModuleInit, OnModuleDestroy {
     if (!this.isConnected) return;
 
     // Only cache successful executions
-    if (result.status !== 'passed') return;
+    if (result.status !== "passed") return;
 
     try {
       const key = this.getExecutionCacheKey(code, language, stdin, userId);
-      await this.redis.setex(key, this.EXECUTION_CACHE_TTL, JSON.stringify(result));
+      await this.redis.setex(
+        key,
+        this.EXECUTION_CACHE_TTL,
+        JSON.stringify(result),
+      );
       this.logger.debug(`Cached result for ${key}`);
     } catch (error) {
       this.logger.warn(`Cache set error: ${error.message}`);
@@ -147,7 +186,11 @@ export class CacheService implements OnModuleInit, OnModuleDestroy {
   /**
    * Generic set with TTL
    */
-  async set<T = any>(key: string, value: T, ttl: number = this.DEFAULT_TTL): Promise<void> {
+  async set<T = any>(
+    key: string,
+    value: T,
+    ttl: number = this.DEFAULT_TTL,
+  ): Promise<void> {
     if (!this.isConnected) return;
 
     try {
@@ -179,7 +222,7 @@ export class CacheService implements OnModuleInit, OnModuleDestroy {
 
       // Acquire lock to prevent stampede
       const lockKey = `lock:${key}`;
-      const lockAcquired = await this.redis.set(lockKey, '1', 'EX', 10, 'NX');
+      const lockAcquired = await this.redis.set(lockKey, "1", "EX", 10, "NX");
 
       if (lockAcquired) {
         try {
@@ -202,7 +245,7 @@ export class CacheService implements OnModuleInit, OnModuleDestroy {
       } else {
         // Wait for lock holder to populate cache
         for (let i = 0; i < 10; i++) {
-          await new Promise(resolve => setTimeout(resolve, 100));
+          await new Promise((resolve) => setTimeout(resolve, 100));
           const result = await this.redis.get(key);
           if (result) {
             return JSON.parse(result) as T;
@@ -239,15 +282,15 @@ export class CacheService implements OnModuleInit, OnModuleDestroy {
 
     try {
       let deletedCount = 0;
-      let cursor = '0';
+      let cursor = "0";
 
       // Use SCAN to iterate through keys non-blocking
       do {
         const [nextCursor, keys] = await this.redis.scan(
           cursor,
-          'MATCH',
+          "MATCH",
           pattern,
-          'COUNT',
+          "COUNT",
           100, // Process 100 keys per iteration
         );
         cursor = nextCursor;
@@ -256,10 +299,12 @@ export class CacheService implements OnModuleInit, OnModuleDestroy {
           await this.redis.del(...keys);
           deletedCount += keys.length;
         }
-      } while (cursor !== '0');
+      } while (cursor !== "0");
 
       if (deletedCount > 0) {
-        this.logger.log(`Deleted ${deletedCount} cache entries matching: ${pattern}`);
+        this.logger.log(
+          `Deleted ${deletedCount} cache entries matching: ${pattern}`,
+        );
       }
       return deletedCount;
     } catch (error) {
@@ -300,14 +345,24 @@ export class CacheService implements OnModuleInit, OnModuleDestroy {
   /**
    * Mark task as validated via Run (user passed 5+ tests)
    */
-  async setRunValidated(userId: string, taskId: string, testsPassed: number): Promise<void> {
+  async setRunValidated(
+    userId: string,
+    taskId: string,
+    testsPassed: number,
+  ): Promise<void> {
     if (!this.isConnected) return;
 
     try {
       const key = this.getRunValidationKey(userId, taskId);
       const data = { testsPassed, validatedAt: new Date().toISOString() };
-      await this.redis.setex(key, this.RUN_VALIDATION_TTL, JSON.stringify(data));
-      this.logger.debug(`Run validated: user=${userId}, task=${taskId}, tests=${testsPassed}`);
+      await this.redis.setex(
+        key,
+        this.RUN_VALIDATION_TTL,
+        JSON.stringify(data),
+      );
+      this.logger.debug(
+        `Run validated: user=${userId}, task=${taskId}, tests=${testsPassed}`,
+      );
     } catch (error) {
       this.logger.warn(`Run validation set error: ${error.message}`);
     }
@@ -317,7 +372,10 @@ export class CacheService implements OnModuleInit, OnModuleDestroy {
    * Check if task is validated via Run
    * Returns number of tests passed, or null if not validated
    */
-  async getRunValidation(userId: string, taskId: string): Promise<{ testsPassed: number; validatedAt: string } | null> {
+  async getRunValidation(
+    userId: string,
+    taskId: string,
+  ): Promise<{ testsPassed: number; validatedAt: string } | null> {
     if (!this.isConnected) {
       // If cache is not available, allow submission (fail-open for better UX)
       return { testsPassed: 5, validatedAt: new Date().toISOString() };

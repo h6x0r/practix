@@ -14,13 +14,29 @@ import { CODE_EXECUTION_QUEUE, DEAD_LETTER_QUEUE } from "./constants";
     Judge0Module,
     BullModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        connection: {
-          host: configService.get("REDIS_HOST") || "redis",
-          port: parseInt(configService.get("REDIS_PORT") || "6379", 10),
-          password: configService.get("REDIS_PASSWORD") || undefined,
-        },
-      }),
+      useFactory: (configService: ConfigService) => {
+        const redisUrl = configService.get("REDIS_URL");
+        if (redisUrl) {
+          // Parse REDIS_URL: redis://[user:password@]host[:port][/db]
+          const url = new URL(redisUrl);
+          return {
+            connection: {
+              host: url.hostname,
+              port: parseInt(url.port || "6379", 10),
+              password: url.password || undefined,
+              username: url.username || undefined,
+              db: url.pathname ? parseInt(url.pathname.slice(1), 10) : 0,
+            },
+          };
+        }
+        return {
+          connection: {
+            host: configService.get("REDIS_HOST") || "redis",
+            port: parseInt(configService.get("REDIS_PORT") || "6379", 10),
+            password: configService.get("REDIS_PASSWORD") || undefined,
+          },
+        };
+      },
       inject: [ConfigService],
     }),
     BullModule.registerQueue(

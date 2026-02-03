@@ -35,12 +35,27 @@ export class CodeExecutionService implements OnModuleInit, OnModuleDestroy {
 
   async onModuleInit() {
     // Create QueueEvents for job completion tracking
-    const queueEvents = new QueueEvents(CODE_EXECUTION_QUEUE, {
-      connection: {
+    const redisUrl = this.configService.get("REDIS_URL");
+    let connection: any;
+
+    if (redisUrl) {
+      const url = new URL(redisUrl);
+      connection = {
+        host: url.hostname,
+        port: parseInt(url.port || "6379", 10),
+        password: url.password || undefined,
+        username: url.username || undefined,
+        db: url.pathname ? parseInt(url.pathname.slice(1), 10) : 0,
+      };
+    } else {
+      connection = {
         host: this.configService.get("REDIS_HOST") || "redis",
         port: parseInt(this.configService.get("REDIS_PORT") || "6379", 10),
-      },
-    });
+        password: this.configService.get("REDIS_PASSWORD") || undefined,
+      };
+    }
+
+    const queueEvents = new QueueEvents(CODE_EXECUTION_QUEUE, { connection });
 
     try {
       await queueEvents.waitUntilReady();
