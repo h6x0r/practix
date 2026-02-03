@@ -81,25 +81,26 @@ export interface LanguageConfig {
 
 // Judge0 Language IDs (CE edition)
 // https://ce.judge0.com/languages
+// Note: max_cpu_time_limit=15, max_wall_time_limit=20 in default Judge0 config
 export const LANGUAGES: Record<string, LanguageConfig> = {
   go: {
-    judge0Id: 95, // Go (1.18.5)
+    judge0Id: 60, // Go (1.13.5)
     name: "Go",
     extension: ".go",
     monacoId: "go",
-    timeLimit: 30,
+    timeLimit: 15, // max allowed by Judge0
     memoryLimit: 512000, // 512MB in KB
   },
   java: {
-    judge0Id: 91, // Java (JDK 17.0.6)
+    judge0Id: 62, // Java (OpenJDK 13.0.1)
     name: "Java",
     extension: ".java",
     monacoId: "java",
-    timeLimit: 30,
+    timeLimit: 15, // max allowed by Judge0
     memoryLimit: 512000,
   },
   javascript: {
-    judge0Id: 93, // JavaScript (Node.js 18.15.0)
+    judge0Id: 63, // JavaScript (Node.js 12.14.0)
     name: "JavaScript",
     extension: ".js",
     monacoId: "javascript",
@@ -107,7 +108,7 @@ export const LANGUAGES: Record<string, LanguageConfig> = {
     memoryLimit: 256000,
   },
   typescript: {
-    judge0Id: 94, // TypeScript (5.0.3)
+    judge0Id: 74, // TypeScript (3.7.4)
     name: "TypeScript",
     extension: ".ts",
     monacoId: "typescript",
@@ -340,9 +341,9 @@ export class Judge0Service implements OnModuleInit, OnModuleDestroy {
         source_code: code,
         language_id: langConfig.judge0Id,
         stdin: stdin || "",
-        cpu_time_limit: langConfig.timeLimit,
-        wall_time_limit: langConfig.timeLimit * 2,
-        memory_limit: langConfig.memoryLimit,
+        cpu_time_limit: Math.min(langConfig.timeLimit, 15), // max 15s
+        wall_time_limit: Math.min(langConfig.timeLimit * 2, 20), // max 20s
+        memory_limit: Math.min(langConfig.memoryLimit, 512000), // max 512MB
       };
 
       this.logger.debug(
@@ -432,7 +433,10 @@ export class Judge0Service implements OnModuleInit, OnModuleDestroy {
     }
 
     // Runtime errors (SIGSEGV, SIGFPE, etc.)
-    if (status.id >= STATUS.RUNTIME_ERROR_SIGSEGV && status.id <= STATUS.RUNTIME_ERROR_OTHER) {
+    if (
+      status.id >= STATUS.RUNTIME_ERROR_SIGSEGV &&
+      status.id <= STATUS.RUNTIME_ERROR_OTHER
+    ) {
       return {
         status: "error",
         statusId: status.id,
@@ -467,7 +471,7 @@ export class Judge0Service implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
-   * Build Python test code 
+   * Build Python test code
    */
   private buildPythonTestCode(
     solutionCode: string,
@@ -539,7 +543,7 @@ if __name__ == "__main__":
   }
 
   /**
-   * Build Go test code 
+   * Build Go test code
    */
   private buildGoTestCode(
     solutionCode: string,
@@ -572,7 +576,9 @@ if __name__ == "__main__":
     });
 
     const testFunctions = this.extractGoTestFunctions(testCode);
-    const testsToRun = maxTests ? testFunctions.slice(0, maxTests) : testFunctions;
+    const testsToRun = maxTests
+      ? testFunctions.slice(0, maxTests)
+      : testFunctions;
 
     const testCalls = testsToRun
       .map((name) => `    runTest("${name}", ${name}, "")`)
@@ -732,7 +738,7 @@ ${testCalls}
   }
 
   /**
-   * Build Java test code 
+   * Build Java test code
    */
   private buildJavaTestCode(solutionCode: string, testCode: string): string {
     const testClasses = this.extractJavaTestClasses(testCode);
