@@ -1,14 +1,14 @@
-import { Task } from '../../../../types';
+import { Task } from "../../../../types";
 
 export const task: Task = {
-	slug: 'go-fundamentals-limited-reader',
-	title: 'LimitReader: Cap Reading at N Bytes',
-	difficulty: 'medium',
-	tags: ['go', 'io', 'interfaces', 'security'],
-	estimatedTime: '25m',
-	isPremium: false,
-	youtubeUrl: '',
-	description: `Implement **LimitReader** that returns a Reader that reads from r but stops with EOF after n bytes, similar to io.LimitReader but without using it.
+  slug: "go-fundamentals-limited-reader",
+  title: "LimitReader: Cap Reading at N Bytes",
+  difficulty: "medium",
+  tags: ["go", "io", "interfaces", "security"],
+  estimatedTime: "25m",
+  isPremium: false,
+  youtubeUrl: "",
+  description: `Implement **LimitReader** that returns a Reader that reads from r but stops with EOF after n bytes, similar to io.LimitReader but without using it.
 
 **Requirements:**
 1. Create function \`LimitReader(r io.Reader, n int64) io.Reader\`
@@ -26,13 +26,13 @@ export const task: Task = {
 file, _ := os.Open("large.txt")
 limited := LimitReader(file, 100)
 
-data, _ := io.ReadAll(limited)
+data, _ := ioutil.ReadAll(limited)
 fmt.Printf("Read %d bytes\\n", len(data)) // Output: Read 100 bytes (max)
 
 // Protect against reading too much data
 resp, _ := http.Get("https://api.example.com/data")
 limited := LimitReader(resp.Body, 1024*1024) // Max 1MB
-body, _ := io.ReadAll(limited)
+body, _ := ioutil.ReadAll(limited)
 // Will read at most 1MB, protecting memory
 
 // Read file chunks with limit
@@ -51,7 +51,7 @@ io.Copy(dst2, chunk2) // Read next 1KB
 - Must handle partial reads correctly (when read buffer larger than remaining limit)
 - Must return EOF when limit reached
 - Must preserve underlying reader errors`,
-	initialCode: `package interfaces
+  initialCode: `package interfaces
 
 import (
 	"io"
@@ -61,7 +61,7 @@ import (
 func LimitReader(r io.Reader, n int64) io.Reader {
 	// TODO: Implement
 }`,
-	solutionCode: `package interfaces
+  solutionCode: `package interfaces
 
 import (
 	"io"
@@ -89,10 +89,11 @@ func (l *limitedReader) Read(p []byte) (n int, err error) {
 func LimitReader(r io.Reader, n int64) io.Reader {
 	return &limitedReader{r: r, n: n}                   // Return limited reader
 }`,
-	testCode: `package interfaces
+  testCode: `package interfaces
 
 import (
 	"io"
+	"io/ioutil"
 	"strings"
 	"testing"
 )
@@ -101,7 +102,7 @@ func Test1(t *testing.T) {
 	// Test basic limit reading
 	data := "Hello, World!"
 	r := LimitReader(strings.NewReader(data), 5)
-	result, err := io.ReadAll(r)
+	result, err := ioutil.ReadAll(r)
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
@@ -115,7 +116,7 @@ func Test2(t *testing.T) {
 	// Test reading entire content when limit is larger
 	data := "Test"
 	r := LimitReader(strings.NewReader(data), 100)
-	result, err := io.ReadAll(r)
+	result, err := ioutil.ReadAll(r)
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
@@ -128,7 +129,7 @@ func Test3(t *testing.T) {
 	// Test zero limit
 	data := "Hello"
 	r := LimitReader(strings.NewReader(data), 0)
-	result, err := io.ReadAll(r)
+	result, err := ioutil.ReadAll(r)
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
@@ -184,7 +185,7 @@ func Test5(t *testing.T) {
 func Test6(t *testing.T) {
 	// Test empty reader
 	r := LimitReader(strings.NewReader(""), 10)
-	result, err := io.ReadAll(r)
+	result, err := ioutil.ReadAll(r)
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
@@ -214,7 +215,7 @@ func Test8(t *testing.T) {
 	// Test single byte limit
 	data := "ABC"
 	r := LimitReader(strings.NewReader(data), 1)
-	result, err := io.ReadAll(r)
+	result, err := ioutil.ReadAll(r)
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
@@ -228,7 +229,7 @@ func Test9(t *testing.T) {
 	// Test exact limit match
 	data := "12345"
 	r := LimitReader(strings.NewReader(data), 5)
-	result, err := io.ReadAll(r)
+	result, err := ioutil.ReadAll(r)
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
@@ -241,7 +242,7 @@ func Test10(t *testing.T) {
 	// Test consecutive EOF calls
 	data := "Test"
 	r := LimitReader(strings.NewReader(data), 2)
-	io.ReadAll(r) // Consume all limited data
+	ioutil.ReadAll(r) // Consume all limited data
 
 	buf := make([]byte, 10)
 	n, err := r.Read(buf)
@@ -254,9 +255,9 @@ func Test10(t *testing.T) {
 		t.Errorf("expected EOF on second call, got n=%d, err=%v", n, err)
 	}
 }`,
-	hint1: `Create a struct that holds the reader and a counter (n) for remaining bytes. In Read(), check if limit is reached before reading.`,
-	hint2: `If the read buffer p is larger than remaining bytes (l.n), truncate it to p[0:l.n] before reading. After reading, decrement l.n by the number of bytes actually read. Return EOF when l.n <= 0.`,
-	whyItMatters: `LimitReader is essential for security and resource management, preventing denial-of-service attacks and memory exhaustion from reading unlimited data.
+  hint1: `Create a struct that holds the reader and a counter (n) for remaining bytes. In Read(), check if limit is reached before reading.`,
+  hint2: `If the read buffer p is larger than remaining bytes (l.n), truncate it to p[0:l.n] before reading. After reading, decrement l.n by the number of bytes actually read. Return EOF when l.n <= 0.`,
+  whyItMatters: `LimitReader is essential for security and resource management, preventing denial-of-service attacks and memory exhaustion from reading unlimited data.
 
 **Why Limit Reads:**
 - **Security:** Prevent DoS attacks from malicious large payloads
@@ -273,7 +274,7 @@ func SafeHTTPHandler(w http.ResponseWriter, r *http.Request) {
     const maxBodySize = 1024 * 1024 // 1MB limit
     r.Body = io.NopCloser(LimitReader(r.Body, maxBodySize))
 
-    body, err := io.ReadAll(r.Body)
+    body, err := ioutil.ReadAll(r.Body)
     if err != nil {
         http.Error(w, "Request too large", http.StatusRequestEntityTooLarge)
         return
@@ -313,7 +314,7 @@ func RateLimitedRead(r io.Reader, bytesPerSecond int64) io.Reader {
 func ProcessStream(src io.Reader, chunkSize int64) error {
     for {
         chunk := LimitReader(src, chunkSize)
-        data, err := io.ReadAll(chunk)
+        data, err := ioutil.ReadAll(chunk)
 
         if len(data) > 0 {
             if err := ProcessChunk(data); err != nil {
@@ -340,7 +341,7 @@ func LimitedQuery(db *sql.DB, query string, maxBytes int64) ([]byte, error) {
     defer rows.Close()
 
     limited := LimitReader(NewRowsReader(rows), maxBytes)
-    return io.ReadAll(limited)
+    return ioutil.ReadAll(limited)
 }
 
 // WebSocket message size enforcement
@@ -352,7 +353,7 @@ func HandleWebSocket(conn *websocket.Conn, maxMessageSize int64) {
         }
 
         limited := LimitReader(reader, maxMessageSize)
-        message, err := io.ReadAll(limited)
+        message, err := ioutil.ReadAll(limited)
 
         if err != nil {
             conn.WriteMessage(websocket.CloseMessage, []byte("Message too large"))
@@ -375,7 +376,7 @@ func DownloadWithQuota(bucket, key string, quota int64) ([]byte, error) {
     defer obj.Body.Close()
 
     limited := LimitReader(obj.Body, quota)
-    return io.ReadAll(limited)
+    return ioutil.ReadAll(limited)
 }
 
 // Multipart form parsing with limits
@@ -395,7 +396,7 @@ func ParseMultipartForm(r *http.Request, maxMemory, maxFileSize int64) error {
         }
 
         limited := LimitReader(part, maxFileSize)
-        data, err := io.ReadAll(limited)
+        data, err := ioutil.ReadAll(limited)
 
         if len(data) == int(maxFileSize) {
             return fmt.Errorf("file %s exceeds size limit", part.FileName())
@@ -422,7 +423,7 @@ func ReadProtocolMessage(conn net.Conn, maxSize int64) ([]byte, error) {
     }
 
     limited := LimitReader(conn, int64(msgLen))
-    return io.ReadAll(limited)
+    return ioutil.ReadAll(limited)
 }
 \`\`\`
 
@@ -442,11 +443,11 @@ func ReadProtocolMessage(conn net.Conn, maxSize int64) ([]byte, error) {
 - Off-by-one errors in limit checking
 
 Without LimitReader, applications are vulnerable to resource exhaustion attacks where malicious actors send extremely large payloads, causing servers to run out of memory or disk space.`,
-	order: 3,
-	translations: {
-		ru: {
-			title: 'LimitReader: ограничение чтения до N байт',
-			description: `Реализуйте **LimitReader**, который возвращает Reader, читающий из r, но останавливающийся с EOF после n байт, подобно io.LimitReader, но без его использования.
+  order: 3,
+  translations: {
+    ru: {
+      title: "LimitReader: ограничение чтения до N байт",
+      description: `Реализуйте **LimitReader**, который возвращает Reader, читающий из r, но останавливающийся с EOF после n байт, подобно io.LimitReader, но без его использования.
 
 **Требования:**
 1. Создайте функцию \`LimitReader(r io.Reader, n int64) io.Reader\`
@@ -464,13 +465,13 @@ Without LimitReader, applications are vulnerable to resource exhaustion attacks 
 file, _ := os.Open("large.txt")
 limited := LimitReader(file, 100)
 
-data, _ := io.ReadAll(limited)
+data, _ := ioutil.ReadAll(limited)
 fmt.Printf("Прочитано %d байт\\n", len(data)) // Output: Прочитано 100 байт (макс)
 
 // Защититься от чтения слишком большого объема данных
 resp, _ := http.Get("https://api.example.com/data")
 limited := LimitReader(resp.Body, 1024*1024) // Макс 1MB
-body, _ := io.ReadAll(limited)
+body, _ := ioutil.ReadAll(limited)
 // Прочитает максимум 1MB, защищая память
 
 // Читать куски файла с лимитом
@@ -489,9 +490,9 @@ io.Copy(dst2, chunk2) // Прочитать следующие 1KB
 - Должен корректно обрабатывать частичные чтения (когда буфер чтения больше оставшегося лимита)
 - Должен возвращать EOF когда лимит достигнут
 - Должен сохранять ошибки базового reader`,
-			hint1: `Создайте struct, содержащий reader и счётчик (n) для оставшихся байт. В Read() проверьте достигнут ли лимит перед чтением.`,
-			hint2: `Если буфер чтения p больше оставшихся байт (l.n), обрежьте его до p[0:l.n] перед чтением. После чтения уменьшите l.n на количество фактически прочитанных байт. Возвращайте EOF когда l.n <= 0.`,
-			whyItMatters: `LimitReader критичен для безопасности и управления ресурсами, предотвращая DoS атаки и исчерпание памяти от чтения неограниченных данных.
+      hint1: `Создайте struct, содержащий reader и счётчик (n) для оставшихся байт. В Read() проверьте достигнут ли лимит перед чтением.`,
+      hint2: `Если буфер чтения p больше оставшихся байт (l.n), обрежьте его до p[0:l.n] перед чтением. После чтения уменьшите l.n на количество фактически прочитанных байт. Возвращайте EOF когда l.n <= 0.`,
+      whyItMatters: `LimitReader критичен для безопасности и управления ресурсами, предотвращая DoS атаки и исчерпание памяти от чтения неограниченных данных.
 
 **Почему ограничивать чтения:**
 - **Безопасность:** Предотвратить DoS атаки от вредоносных больших payload
@@ -508,7 +509,7 @@ func SafeHTTPHandler(w http.ResponseWriter, r *http.Request) {
     const maxBodySize = 1024 * 1024 // Лимит 1MB
     r.Body = io.NopCloser(LimitReader(r.Body, maxBodySize))
 
-    body, err := io.ReadAll(r.Body)
+    body, err := ioutil.ReadAll(r.Body)
     if err != nil {
         http.Error(w, "Запрос слишком большой", http.StatusRequestEntityTooLarge)
         return
@@ -548,7 +549,7 @@ func RateLimitedRead(r io.Reader, bytesPerSecond int64) io.Reader {
 func ProcessStream(src io.Reader, chunkSize int64) error {
     for {
         chunk := LimitReader(src, chunkSize)
-        data, err := io.ReadAll(chunk)
+        data, err := ioutil.ReadAll(chunk)
 
         if len(data) > 0 {
             if err := ProcessChunk(data); err != nil {
@@ -575,7 +576,7 @@ func LimitedQuery(db *sql.DB, query string, maxBytes int64) ([]byte, error) {
     defer rows.Close()
 
     limited := LimitReader(NewRowsReader(rows), maxBytes)
-    return io.ReadAll(limited)
+    return ioutil.ReadAll(limited)
 }
 
 // Контроль размера WebSocket сообщений
@@ -587,7 +588,7 @@ func HandleWebSocket(conn *websocket.Conn, maxMessageSize int64) {
         }
 
         limited := LimitReader(reader, maxMessageSize)
-        message, err := io.ReadAll(limited)
+        message, err := ioutil.ReadAll(limited)
 
         if err != nil {
             conn.WriteMessage(websocket.CloseMessage, []byte("Сообщение слишком большое"))
@@ -610,7 +611,7 @@ func DownloadWithQuota(bucket, key string, quota int64) ([]byte, error) {
     defer obj.Body.Close()
 
     limited := LimitReader(obj.Body, quota)
-    return io.ReadAll(limited)
+    return ioutil.ReadAll(limited)
 }
 
 // Парсинг multipart form с ограничениями
@@ -630,7 +631,7 @@ func ParseMultipartForm(r *http.Request, maxMemory, maxFileSize int64) error {
         }
 
         limited := LimitReader(part, maxFileSize)
-        data, err := io.ReadAll(limited)
+        data, err := ioutil.ReadAll(limited)
 
         if len(data) == int(maxFileSize) {
             return fmt.Errorf("файл %s превышает ограничение размера", part.FileName())
@@ -657,7 +658,7 @@ func ReadProtocolMessage(conn net.Conn, maxSize int64) ([]byte, error) {
     }
 
     limited := LimitReader(conn, int64(msgLen))
-    return io.ReadAll(limited)
+    return ioutil.ReadAll(limited)
 }
 \`\`\`
 
@@ -677,7 +678,7 @@ func ReadProtocolMessage(conn net.Conn, maxSize int64) ([]byte, error) {
 - Ошибки на единицу при проверке лимита
 
 Без LimitReader приложения уязвимы к атакам исчерпания ресурсов, где злоумышленники отправляют экстремально большие payload, заставляя серверы исчерпывать память или дисковое пространство.`,
-			solutionCode: `package interfaces
+      solutionCode: `package interfaces
 
 import (
 	"io"
@@ -704,11 +705,11 @@ func (l *limitedReader) Read(p []byte) (n int, err error) {
 
 func LimitReader(r io.Reader, n int64) io.Reader {
 	return &limitedReader{r: r, n: n}                   // Вернуть limited reader
-}`
-		},
-		uz: {
-			title: 'LimitReader: N baytgacha o\'qishni cheklash',
-			description: `r dan o'qiydigan lekin n baytdan keyin EOF bilan to'xtaydigan Reader qaytaradigan **LimitReader**ni amalga oshiring, io.LimitReader ga o'xshash lekin uni ishlatmasdan.
+}`,
+    },
+    uz: {
+      title: "LimitReader: N baytgacha o'qishni cheklash",
+      description: `r dan o'qiydigan lekin n baytdan keyin EOF bilan to'xtaydigan Reader qaytaradigan **LimitReader**ni amalga oshiring, io.LimitReader ga o'xshash lekin uni ishlatmasdan.
 
 **Talablar:**
 1. \`LimitReader(r io.Reader, n int64) io.Reader\` funksiyasini yarating
@@ -726,13 +727,13 @@ func LimitReader(r io.Reader, n int64) io.Reader {
 file, _ := os.Open("large.txt")
 limited := LimitReader(file, 100)
 
-data, _ := io.ReadAll(limited)
+data, _ := ioutil.ReadAll(limited)
 fmt.Printf("O'qildi %d bayt\\n", len(data)) // Output: O'qildi 100 bayt (maks)
 
 // Juda ko'p ma'lumot o'qishdan himoya
 resp, _ := http.Get("https://api.example.com/data")
 limited := LimitReader(resp.Body, 1024*1024) // Maks 1MB
-body, _ := io.ReadAll(limited)
+body, _ := ioutil.ReadAll(limited)
 // Ko'pi bilan 1MB o'qiladi, xotirani himoya qiladi
 
 // Limit bilan fayl qismlarini o'qish
@@ -751,9 +752,9 @@ io.Copy(dst2, chunk2) // Keyingi 1KB o'qish
 - Qisman o'qishlarni to'g'ri ishlashi kerak (o'qish buferi qolgan limitdan katta bo'lganda)
 - Limit yetib borganda EOF qaytarishi kerak
 - Asosiy reader xatolarini saqlaishi kerak`,
-			hint1: `Reader va qolgan baytlar uchun hisoblagich (n) saqlaydigan struct yarating. Read() da o'qishdan oldin limit yetib borgan yoki yo'qligini tekshiring.`,
-			hint2: `Agar o'qish buferi p qolgan baytlardan (l.n) katta bo'lsa, o'qishdan oldin uni p[0:l.n] ga qirqing. O'qishdan keyin l.n ni haqiqatda o'qilgan baytlar soniga kamaytiring. l.n <= 0 bo'lganda EOF qaytaring.`,
-			whyItMatters: `LimitReader xavfsizlik va resurslarni boshqarish uchun muhim, DoS hujumlarini va cheksiz ma'lumotlarni o'qishdan xotira tugashini oldini oladi.
+      hint1: `Reader va qolgan baytlar uchun hisoblagich (n) saqlaydigan struct yarating. Read() da o'qishdan oldin limit yetib borgan yoki yo'qligini tekshiring.`,
+      hint2: `Agar o'qish buferi p qolgan baytlardan (l.n) katta bo'lsa, o'qishdan oldin uni p[0:l.n] ga qirqing. O'qishdan keyin l.n ni haqiqatda o'qilgan baytlar soniga kamaytiring. l.n <= 0 bo'lganda EOF qaytaring.`,
+      whyItMatters: `LimitReader xavfsizlik va resurslarni boshqarish uchun muhim, DoS hujumlarini va cheksiz ma'lumotlarni o'qishdan xotira tugashini oldini oladi.
 
 **Nega o'qishni cheklash:**
 - **Xavfsizlik:** Zararli katta payloadlardan DoS hujumlarini oldini olish
@@ -770,7 +771,7 @@ func SafeHTTPHandler(w http.ResponseWriter, r *http.Request) {
     const maxBodySize = 1024 * 1024 // 1MB limit
     r.Body = io.NopCloser(LimitReader(r.Body, maxBodySize))
 
-    body, err := io.ReadAll(r.Body)
+    body, err := ioutil.ReadAll(r.Body)
     if err != nil {
         http.Error(w, "So'rov juda katta", http.StatusRequestEntityTooLarge)
         return
@@ -810,7 +811,7 @@ func RateLimitedRead(r io.Reader, bytesPerSecond int64) io.Reader {
 func ProcessStream(src io.Reader, chunkSize int64) error {
     for {
         chunk := LimitReader(src, chunkSize)
-        data, err := io.ReadAll(chunk)
+        data, err := ioutil.ReadAll(chunk)
 
         if len(data) > 0 {
             if err := ProcessChunk(data); err != nil {
@@ -837,7 +838,7 @@ func LimitedQuery(db *sql.DB, query string, maxBytes int64) ([]byte, error) {
     defer rows.Close()
 
     limited := LimitReader(NewRowsReader(rows), maxBytes)
-    return io.ReadAll(limited)
+    return ioutil.ReadAll(limited)
 }
 
 // WebSocket xabar o'lchamini nazorat qilish
@@ -849,7 +850,7 @@ func HandleWebSocket(conn *websocket.Conn, maxMessageSize int64) {
         }
 
         limited := LimitReader(reader, maxMessageSize)
-        message, err := io.ReadAll(limited)
+        message, err := ioutil.ReadAll(limited)
 
         if err != nil {
             conn.WriteMessage(websocket.CloseMessage, []byte("Xabar juda katta"))
@@ -872,7 +873,7 @@ func DownloadWithQuota(bucket, key string, quota int64) ([]byte, error) {
     defer obj.Body.Close()
 
     limited := LimitReader(obj.Body, quota)
-    return io.ReadAll(limited)
+    return ioutil.ReadAll(limited)
 }
 
 // Cheklovlar bilan multipart form parsing
@@ -892,7 +893,7 @@ func ParseMultipartForm(r *http.Request, maxMemory, maxFileSize int64) error {
         }
 
         limited := LimitReader(part, maxFileSize)
-        data, err := io.ReadAll(limited)
+        data, err := ioutil.ReadAll(limited)
 
         if len(data) == int(maxFileSize) {
             return fmt.Errorf("fayl %s o'lcham limitidan oshib ketdi", part.FileName())
@@ -919,7 +920,7 @@ func ReadProtocolMessage(conn net.Conn, maxSize int64) ([]byte, error) {
     }
 
     limited := LimitReader(conn, int64(msgLen))
-    return io.ReadAll(limited)
+    return ioutil.ReadAll(limited)
 }
 \`\`\`
 
@@ -939,7 +940,7 @@ func ReadProtocolMessage(conn net.Conn, maxSize int64) ([]byte, error) {
 - Limitni tekshirishda birga xatoliklar
 
 LimitReader bo'lmasa, ilovalar resurslarni tugash hujumlariga zaif bo'ladi, bu yerda hujumchilar juda katta payloadlar yuboradi va serverlarning xotirasi yoki disk maydoni tugashiga olib keladi.`,
-			solutionCode: `package interfaces
+      solutionCode: `package interfaces
 
 import (
 	"io"
@@ -966,9 +967,9 @@ func (l *limitedReader) Read(p []byte) (n int, err error) {
 
 func LimitReader(r io.Reader, n int64) io.Reader {
 	return &limitedReader{r: r, n: n}                   // Limited reader ni qaytarish
-}`
-		}
-	}
+}`,
+    },
+  },
 };
 
 export default task;

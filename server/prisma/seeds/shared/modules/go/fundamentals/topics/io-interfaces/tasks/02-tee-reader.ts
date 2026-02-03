@@ -1,14 +1,14 @@
-import { Task } from '../../../../types';
+import { Task } from "../../../../types";
 
 export const task: Task = {
-	slug: 'go-fundamentals-tee-reader',
-	title: 'TeeReader: Read and Copy Data',
-	difficulty: 'medium',
-	tags: ['go', 'io', 'interfaces', 'streams'],
-	estimatedTime: '25m',
-	isPremium: false,
-	youtubeUrl: '',
-	description: `Implement **TeeReader** that returns a Reader that writes to w what it reads from r, similar to io.TeeReader but without using it.
+  slug: "go-fundamentals-tee-reader",
+  title: "TeeReader: Read and Copy Data",
+  difficulty: "medium",
+  tags: ["go", "io", "interfaces", "streams"],
+  estimatedTime: "25m",
+  isPremium: false,
+  youtubeUrl: "",
+  description: `Implement **TeeReader** that returns a Reader that writes to w what it reads from r, similar to io.TeeReader but without using it.
 
 **Requirements:**
 1. Create function \`TeeReader(r io.Reader, w io.Writer) io.Reader\`
@@ -38,7 +38,7 @@ fmt.Printf("Buffer contains: %s\\n", buf.String())
 // Logging API responses while reading
 logFile, _ := os.Create("api.log")
 tee := TeeReader(resp.Body, logFile)
-body, _ := io.ReadAll(tee) // Body read AND logged
+body, _ := ioutil.ReadAll(tee) // Body read AND logged
 
 // Hashing file while reading
 hash := sha256.New()
@@ -52,7 +52,7 @@ io.Copy(dst, teeReader) // File copied AND hashed
 - Must handle read and write errors correctly
 - Must write exactly what was successfully read
 - Return original read data even if write fails`,
-	initialCode: `package interfaces
+  initialCode: `package interfaces
 
 import (
 	"io"
@@ -62,7 +62,7 @@ import (
 func TeeReader(r io.Reader, w io.Writer) io.Reader {
 	// TODO: Implement
 }`,
-	solutionCode: `package interfaces
+  solutionCode: `package interfaces
 
 import (
 	"io"
@@ -88,11 +88,12 @@ func (t *teeReader) Read(p []byte) (n int, err error) {
 func TeeReader(r io.Reader, w io.Writer) io.Reader {
 	return &teeReader{r: r, w: w}                       // Return custom tee reader
 }`,
-	testCode: `package interfaces
+  testCode: `package interfaces
 
 import (
 	"bytes"
 	"io"
+	"io/ioutil"
 	"strings"
 	"testing"
 )
@@ -102,7 +103,7 @@ func Test1(t *testing.T) {
 	src := strings.NewReader("Hello World")
 	var buf bytes.Buffer
 	tee := TeeReader(src, &buf)
-	data, _ := io.ReadAll(tee)
+	data, _ := ioutil.ReadAll(tee)
 	if string(data) != "Hello World" || buf.String() != "Hello World" {
 		t.Errorf("expected 'Hello World', got data=%s, buf=%s", data, buf.String())
 	}
@@ -113,7 +114,7 @@ func Test2(t *testing.T) {
 	src := strings.NewReader("")
 	var buf bytes.Buffer
 	tee := TeeReader(src, &buf)
-	data, _ := io.ReadAll(tee)
+	data, _ := ioutil.ReadAll(tee)
 	if len(data) != 0 || buf.Len() != 0 {
 		t.Errorf("expected empty, got data=%s, buf=%s", data, buf.String())
 	}
@@ -150,7 +151,7 @@ func Test5(t *testing.T) {
 	src := strings.NewReader("x")
 	var buf bytes.Buffer
 	tee := TeeReader(src, &buf)
-	data, _ := io.ReadAll(tee)
+	data, _ := ioutil.ReadAll(tee)
 	if string(data) != "x" || buf.String() != "x" {
 		t.Errorf("expected 'x', got data=%s, buf=%s", data, buf.String())
 	}
@@ -162,7 +163,7 @@ func Test6(t *testing.T) {
 	src := strings.NewReader(large)
 	var buf bytes.Buffer
 	tee := TeeReader(src, &buf)
-	data, _ := io.ReadAll(tee)
+	data, _ := ioutil.ReadAll(tee)
 	if string(data) != large || buf.String() != large {
 		t.Errorf("large data mismatch")
 	}
@@ -185,7 +186,7 @@ func Test8(t *testing.T) {
 	src := strings.NewReader("hi")
 	var buf bytes.Buffer
 	tee := TeeReader(src, &buf)
-	io.ReadAll(tee)
+	ioutil.ReadAll(tee)
 	_, err := tee.Read(make([]byte, 1))
 	if err != io.EOF {
 		t.Errorf("expected EOF, got err=%v", err)
@@ -198,7 +199,7 @@ func Test9(t *testing.T) {
 	src := bytes.NewReader(binary)
 	var buf bytes.Buffer
 	tee := TeeReader(src, &buf)
-	data, _ := io.ReadAll(tee)
+	data, _ := ioutil.ReadAll(tee)
 	if !bytes.Equal(data, binary) || !bytes.Equal(buf.Bytes(), binary) {
 		t.Errorf("binary data mismatch")
 	}
@@ -210,14 +211,14 @@ func Test10(t *testing.T) {
 	var buf1, buf2 bytes.Buffer
 	tee1 := TeeReader(src, &buf1)
 	tee2 := TeeReader(tee1, &buf2)
-	io.ReadAll(tee2)
+	ioutil.ReadAll(tee2)
 	if buf1.String() != "chain" || buf2.String() != "chain" {
 		t.Errorf("expected both buffers 'chain', got buf1=%s, buf2=%s", buf1.String(), buf2.String())
 	}
 }`,
-	hint1: `Create a custom struct that holds both the reader and writer, then implement the Read() method that reads from r and writes to w.`,
-	hint2: `In your Read() implementation, first call r.Read(p), then if n > 0, call w.Write(p[:n]). Make sure to write only what was successfully read and handle both read and write errors.`,
-	whyItMatters: `TeeReader is essential for observability and monitoring in production systems, enabling you to inspect data streams without modifying the original flow.
+  hint1: `Create a custom struct that holds both the reader and writer, then implement the Read() method that reads from r and writes to w.`,
+  hint2: `In your Read() implementation, first call r.Read(p), then if n > 0, call w.Write(p[:n]). Make sure to write only what was successfully read and handle both read and write errors.`,
+  whyItMatters: `TeeReader is essential for observability and monitoring in production systems, enabling you to inspect data streams without modifying the original flow.
 
 **Why Stream Duplication:**
 - **Debugging:** Capture request/response data without affecting the main flow
@@ -304,7 +305,7 @@ func CachedAPICall(url string, cache io.Writer) ([]byte, error) {
     defer resp.Body.Close()
 
     tee := TeeReader(resp.Body, cache)
-    return io.ReadAll(tee) // Read response AND cache it
+    return ioutil.ReadAll(tee) // Read response AND cache it
 }
 
 // Multi-destination streaming
@@ -334,11 +335,11 @@ func StreamToMultiple(src io.Reader, destinations ...io.Writer) error {
 - Ignoring that Write might not write all bytes
 
 Without TeeReader, you'd need to buffer entire streams in memory or make multiple passes over data, leading to memory issues and performance degradation.`,
-	order: 1,
-	translations: {
-		ru: {
-			title: 'TeeReader: чтение и копирование данных',
-			description: `Реализуйте **TeeReader**, который возвращает Reader, записывающий в w то, что читает из r, подобно io.TeeReader, но без его использования.
+  order: 1,
+  translations: {
+    ru: {
+      title: "TeeReader: чтение и копирование данных",
+      description: `Реализуйте **TeeReader**, который возвращает Reader, записывающий в w то, что читает из r, подобно io.TeeReader, но без его использования.
 
 **Требования:**
 1. Создайте функцию \`TeeReader(r io.Reader, w io.Writer) io.Reader\`
@@ -368,7 +369,7 @@ fmt.Printf("Буфер содержит: %s\\n", buf.String())
 // Логирование API ответов во время чтения
 logFile, _ := os.Create("api.log")
 tee := TeeReader(resp.Body, logFile)
-body, _ := io.ReadAll(tee) // Body прочитан И залогирован
+body, _ := ioutil.ReadAll(tee) // Body прочитан И залогирован
 
 // Хеширование файла во время чтения
 hash := sha256.New()
@@ -382,9 +383,9 @@ io.Copy(dst, teeReader) // Файл скопирован И хеширован
 - Должен корректно обрабатывать ошибки чтения и записи
 - Должен писать ровно то, что было успешно прочитано
 - Вернуть оригинальные прочитанные данные даже если запись не удалась`,
-			hint1: `Создайте кастомный struct, содержащий reader и writer, затем реализуйте метод Read(), который читает из r и пишет в w.`,
-			hint2: `В вашей реализации Read(), сначала вызовите r.Read(p), затем если n > 0, вызовите w.Write(p[:n]). Убедитесь что пишете только то что было успешно прочитано и обрабатывайте ошибки чтения и записи.`,
-			whyItMatters: `TeeReader критичен для наблюдаемости и мониторинга в production системах, позволяя инспектировать потоки данных без изменения основного потока.
+      hint1: `Создайте кастомный struct, содержащий reader и writer, затем реализуйте метод Read(), который читает из r и пишет в w.`,
+      hint2: `В вашей реализации Read(), сначала вызовите r.Read(p), затем если n > 0, вызовите w.Write(p[:n]). Убедитесь что пишете только то что было успешно прочитано и обрабатывайте ошибки чтения и записи.`,
+      whyItMatters: `TeeReader критичен для наблюдаемости и мониторинга в production системах, позволяя инспектировать потоки данных без изменения основного потока.
 
 **Почему дублирование потоков:**
 - **Отладка:** Захват данных запросов/ответов без влияния на основной поток
@@ -471,7 +472,7 @@ func CachedAPICall(url string, cache io.Writer) ([]byte, error) {
     defer resp.Body.Close()
 
     tee := TeeReader(resp.Body, cache)
-    return io.ReadAll(tee) // Прочитать ответ И закешировать его
+    return ioutil.ReadAll(tee) // Прочитать ответ И закешировать его
 }
 
 // Стриминг в несколько мест назначения
@@ -501,7 +502,7 @@ func StreamToMultiple(src io.Reader, destinations ...io.Writer) error {
 - Игнорировать что Write может не записать все байты
 
 Без TeeReader вам пришлось бы буферизовать целые потоки в памяти или делать несколько проходов по данным, что приводит к проблемам с памятью и деградации производительности.`,
-			solutionCode: `package interfaces
+      solutionCode: `package interfaces
 
 import (
 	"io"
@@ -526,11 +527,11 @@ func (t *teeReader) Read(p []byte) (n int, err error) {
 
 func TeeReader(r io.Reader, w io.Writer) io.Reader {
 	return &teeReader{r: r, w: w}                       // Вернуть кастомный tee reader
-}`
-		},
-		uz: {
-			title: 'TeeReader: ma\'lumotlarni o\'qish va nusxalash',
-			description: `r dan o'qiganini w ga yozadigan Reader qaytaradigan **TeeReader**ni amalga oshiring, io.TeeReader ga o'xshash lekin uni ishlatmasdan.
+}`,
+    },
+    uz: {
+      title: "TeeReader: ma'lumotlarni o'qish va nusxalash",
+      description: `r dan o'qiganini w ga yozadigan Reader qaytaradigan **TeeReader**ni amalga oshiring, io.TeeReader ga o'xshash lekin uni ishlatmasdan.
 
 **Talablar:**
 1. \`TeeReader(r io.Reader, w io.Writer) io.Reader\` funksiyasini yarating
@@ -560,7 +561,7 @@ fmt.Printf("Bufer saqlaydi: %s\\n", buf.String())
 // O'qish paytida API javoblarni loglash
 logFile, _ := os.Create("api.log")
 tee := TeeReader(resp.Body, logFile)
-body, _ := io.ReadAll(tee) // Body o'qilgan VA logga yozilgan
+body, _ := ioutil.ReadAll(tee) // Body o'qilgan VA logga yozilgan
 
 // O'qish paytida faylni xeshlash
 hash := sha256.New()
@@ -574,9 +575,9 @@ io.Copy(dst, teeReader) // Fayl ko'chirilgan VA xeshlangan
 - O'qish va yozish xatolarini to'g'ri ishlashi kerak
 - Muvaffaqiyatli o'qilgan narsani aniq yozishi kerak
 - Yozish muvaffaqiyatsiz bo'lsa ham asl o'qilgan ma'lumotlarni qaytarish`,
-			hint1: `Reader va writer ni saqlaydigan maxsus struct yarating, keyin r dan o'qiydigan va w ga yozadigan Read() metodini amalga oshiring.`,
-			hint2: `Read() amalga oshirishda, avval r.Read(p) ni chaqiring, keyin agar n > 0 bo'lsa, w.Write(p[:n]) ni chaqiring. Faqat muvaffaqiyatli o'qilgan narsani yozganingizga ishonch hosil qiling va o'qish va yozish xatolarini ishlang.`,
-			whyItMatters: `TeeReader production tizimlarda kuzatuvchanlik va monitoring uchun muhim, asosiy oqimni o'zgartirmasdan ma'lumot oqimlarini tekshirish imkonini beradi.
+      hint1: `Reader va writer ni saqlaydigan maxsus struct yarating, keyin r dan o'qiydigan va w ga yozadigan Read() metodini amalga oshiring.`,
+      hint2: `Read() amalga oshirishda, avval r.Read(p) ni chaqiring, keyin agar n > 0 bo'lsa, w.Write(p[:n]) ni chaqiring. Faqat muvaffaqiyatli o'qilgan narsani yozganingizga ishonch hosil qiling va o'qish va yozish xatolarini ishlang.`,
+      whyItMatters: `TeeReader production tizimlarda kuzatuvchanlik va monitoring uchun muhim, asosiy oqimni o'zgartirmasdan ma'lumot oqimlarini tekshirish imkonini beradi.
 
 **Nega oqim dublikatlash:**
 - **Debugging:** Asosiy oqimga ta'sir qilmasdan so'rov/javob ma'lumotlarini yozib olish
@@ -663,7 +664,7 @@ func CachedAPICall(url string, cache io.Writer) ([]byte, error) {
     defer resp.Body.Close()
 
     tee := TeeReader(resp.Body, cache)
-    return io.ReadAll(tee) // Javobni o'qish VA uni keshlash
+    return ioutil.ReadAll(tee) // Javobni o'qish VA uni keshlash
 }
 
 // Bir nechta manzillarga streaming
@@ -693,7 +694,7 @@ func StreamToMultiple(src io.Reader, destinations ...io.Writer) error {
 - Write barcha baytlarni yozmasligi mumkinligini e'tiborsiz qoldirish
 
 TeeReader bo'lmasa, siz butun oqimlarni xotirada buferlashtirish yoki ma'lumotlar bo'ylab bir necha marta o'tishingiz kerak bo'ladi, bu xotira muammolari va ish unumdorligini pasayishiga olib keladi.`,
-			solutionCode: `package interfaces
+      solutionCode: `package interfaces
 
 import (
 	"io"
@@ -718,9 +719,9 @@ func (t *teeReader) Read(p []byte) (n int, err error) {
 
 func TeeReader(r io.Reader, w io.Writer) io.Reader {
 	return &teeReader{r: r, w: w}                       // Maxsus tee reader ni qaytarish
-}`
-		}
-	}
+}`,
+    },
+  },
 };
 
 export default task;
