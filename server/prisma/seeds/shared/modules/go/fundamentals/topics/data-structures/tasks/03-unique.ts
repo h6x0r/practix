@@ -1,16 +1,18 @@
-import { Task } from '../../../../types';
+import { Task } from "../../../../types";
 
 export const task: Task = {
-	slug: 'go-fundamentals-unique',
-	title: 'Remove Duplicates from Slice',
-	difficulty: 'easy',	tags: ['go', 'data-structures', 'maps/slices/strings', 'generics'],
-	estimatedTime: '15-20m',	isPremium: false,
-	youtubeUrl: '',
-	description: `Implement **Unique** that removes duplicates from a slice while preserving the order of first appearances.
+  slug: "go-fundamentals-unique",
+  title: "Remove Duplicates from Slice",
+  difficulty: "easy",
+  tags: ["go", "data-structures", "maps/slices/strings"],
+  estimatedTime: "15-20m",
+  isPremium: false,
+  youtubeUrl: "",
+  description: `Implement **Unique** that removes duplicates from an integer slice while preserving the order of first appearances.
 
 **Requirements:**
-1. Create function \`Unique[T comparable](in []T) []T\`
-2. Handle empty slices (return empty slice or nil)
+1. Create function \`Unique(in []int) []int\`
+2. Handle empty slices (return nil)
 3. Remove all duplicate elements
 4. Preserve the order of first appearances
 5. Use a set-like structure to track seen elements
@@ -22,33 +24,32 @@ export const task: Task = {
 result := Unique([]int{1, 2, 2, 3, 1, 4, 3})
 // result = []int{1, 2, 3, 4}
 
-result2 := Unique([]string{"apple", "banana", "apple", "cherry"})
-// result2 = []string{"apple", "banana", "cherry"}
+result2 := Unique([]int{5, 3, 5, 1, 3, 2, 1})
+// result2 = []int{5, 3, 1, 2}
 
 result3 := Unique([]int{})
-// result3 = [] or nil
+// result3 = nil
 \`\`\`
 
 **Constraints:**
 - Must preserve order of first appearances
-- Must work with any comparable type
 - Must not modify the input slice
-- Must efficiently track seen elements
+- Must efficiently track seen elements using a map
 - Should return nil for empty input`,
-	initialCode: `package datastructures
+  initialCode: `package datastructures
 
 // TODO: Implement Unique
-func Unique[T comparable](in []T) []T {
+func Unique(in []int) []int {
 	// TODO: Implement
 }`,
-	solutionCode: `package datastructures
+  solutionCode: `package datastructures
 
-func Unique[T comparable](in []T) []T {
+func Unique(in []int) []int {
 	if len(in) == 0 {                                       // Handle empty slice
 		return nil                                      // Return nil for empty input
 	}
-	seen := make(map[T]struct{}, len(in))                    // Create seen set with capacity
-	result := make([]T, 0, len(in))                          // Pre-allocate result slice
+	seen := make(map[int]struct{}, len(in))                  // Create seen set with capacity
+	result := make([]int, 0, len(in))                        // Pre-allocate result slice
 	for _, value := range in {                              // Iterate through input slice
 		if _, ok := seen[value]; ok {                  // Check if value was already seen
 			continue                                // Skip duplicate
@@ -58,7 +59,7 @@ func Unique[T comparable](in []T) []T {
 	}
 	return result                                           // Return deduplicated slice
 }`,
-	testCode: `package datastructures
+  testCode: `package datastructures
 
 import (
 	"reflect"
@@ -75,9 +76,9 @@ func Test1(t *testing.T) {
 }
 
 func Test2(t *testing.T) {
-	// Strings deduplication
-	result := Unique([]string{"apple", "banana", "apple", "cherry"})
-	expected := []string{"apple", "banana", "cherry"}
+	// Preserves order of first appearance
+	result := Unique([]int{5, 3, 5, 1, 3, 2, 1})
+	expected := []int{5, 3, 1, 2}
 	if !reflect.DeepEqual(result, expected) {
 		t.Errorf("expected %v, got %v", expected, result)
 	}
@@ -153,9 +154,9 @@ func Test10(t *testing.T) {
 		t.Errorf("expected %v, got %v", expected, result)
 	}
 }`,
-	hint1: `Use a map with struct{} values to track which elements you\`ve already seen, maintaining a set-like behavior.`,
-			hint2: `Iterate through the input slice once, checking the map before adding each element to the result.`,
-			whyItMatters: `Unique is essential for removing duplicate data while maintaining order, a common operation in data processing pipelines that prevents processing the same record multiple times.
+  hint1: `Use a map with struct{} values to track which elements you\`ve already seen, maintaining a set-like behavior.`,
+  hint2: `Iterate through the input slice once, checking the map before adding each element to the result.`,
+  whyItMatters: `Unique is essential for removing duplicate data while maintaining order, a common operation in data processing pipelines that prevents processing the same record multiple times.
 
 **Why Deduplication:**
 - **Data Quality:** Remove duplicate records that cause incorrect results
@@ -286,14 +287,15 @@ func GetHealthyHosts(endpoints []ServiceEndpoint) []string {
 - Creating unique lists for dropdown menus
 - Counting distinct values in analytics
 
-Without Unique, duplicate data could skew analysis results, cause incorrect aggregations, and lead to inefficient processing of redundant records.`,	order: 2,
-	translations: {
-		ru: {
-			title: 'Удаление дубликатов из слайса',
-			description: `Реализуйте **Unique**, который устраняет дубликаты в слайсе, сохраняя порядок первого появления.
+Without Unique, duplicate data could skew analysis results, cause incorrect aggregations, and lead to inefficient processing of redundant records.`,
+  order: 2,
+  translations: {
+    ru: {
+      title: "Удаление дубликатов из слайса",
+      description: `Реализуйте **Unique**, который устраняет дубликаты в слайсе, сохраняя порядок первого появления.
 
 **Требования:**
-1. Создайте функцию \`Unique[T comparable](in []T) []T\`
+1. Создайте функцию \`Unique(in []int) []int\`
 2. Обработайте пустые слайсы (верните пустой слайс или nil)
 3. Удалите все дублирующиеся элементы
 4. Сохраните порядок первого появления
@@ -319,9 +321,9 @@ result3 := Unique([]int{})
 - Не должен модифицировать входной слайс
 - Должен эффективно отслеживать seen элементы
 - Должен возвращать nil для пустого входа`,
-			hint1: `Используйте map со struct{} значениями для отслеживания уже встреченных элементов, поддерживая set-подобное поведение.`,
-			hint2: `Пройдите через входной слайс один раз, проверяя map перед добавлением каждого элемента в результат.`,
-			whyItMatters: `Unique необходим для удаления дублирующихся данных сохраняя порядок, часто встречаемая операция в data processing pipelines которая предотвращает обработку одной записи несколько раз.
+      hint1: `Используйте map со struct{} значениями для отслеживания уже встреченных элементов, поддерживая set-подобное поведение.`,
+      hint2: `Пройдите через входной слайс один раз, проверяя map перед добавлением каждого элемента в результат.`,
+      whyItMatters: `Unique необходим для удаления дублирующихся данных сохраняя порядок, часто встречаемая операция в data processing pipelines которая предотвращает обработку одной записи несколько раз.
 
 **Почему Deduplication:**
 - **Качество данных:** Удалите дублирующиеся записи которые вызывают неправильные результаты
@@ -453,14 +455,14 @@ func GetHealthyHosts(endpoints []ServiceEndpoint) []string {
 - Подсчёт distinct значений в аналитике
 
 Без Unique дублирующиеся данные могли бы исказить результаты анализа, вызвать неправильные агрегации и привести к неэффективной обработке избыточных записей.`,
-			solutionCode: `package datastructures
+      solutionCode: `package datastructures
 
-func Unique[T comparable](in []T) []T {
+func Unique(in []int) []int {
 	if len(in) == 0 {                                       // Обработка пустого слайса
 		return nil                                      // Вернуть nil для пустого ввода
 	}
-	seen := make(map[T]struct{}, len(in))                    // Создать set seen с capacity
-	result := make([]T, 0, len(in))                          // Предварительно выделить result слайс
+	seen := make(map[int]struct{}, len(in))                  // Создать set seen с capacity
+	result := make([]int, 0, len(in))                        // Предварительно выделить result слайс
 	for _, value := range in {                              // Итерация по входному слайсу
 		if _, ok := seen[value]; ok {                  // Проверить было ли значение уже встречено
 			continue                                // Пропустить дубликат
@@ -469,14 +471,14 @@ func Unique[T comparable](in []T) []T {
 		result = append(result, value)                  // Добавить уникальное значение в результат
 	}
 	return result                                           // Вернуть дедубликированный слайс
-}`
-		},
-		uz: {
-			title: 'Slaysdan takroriylarni olib tashlash',
-			description: `Birinchi paydo bo'lish tartibini saqlayotganda takroriy elementlarni o'chiradigan **Unique** ni amalga oshiring.
+}`,
+    },
+    uz: {
+      title: "Slaysdan takroriylarni olib tashlash",
+      description: `Birinchi paydo bo'lish tartibini saqlayotganda takroriy elementlarni o'chiradigan **Unique** ni amalga oshiring.
 
 **Talablar:**
-1. \`Unique[T comparable](in []T) []T\` funksiyasini yarating
+1. \`Unique(in []int) []int\` funksiyasini yarating
 2. Bo'sh slayslarni ishlang (bo'sh slayz yoki nil qaytaring)
 3. Barcha takroriy elementlarni o'chiring
 4. Birinchi paydo bo'lish tartibini saqlang
@@ -502,9 +504,9 @@ result3 := Unique([]int{})
 - Kiritish slaysni o'zgartirishmasligi kerak
 - Seen elementlarini samarali kuzatishi kerak
 - Bo'sh kiritish uchun nil qaytarishi kerak`,
-			hint1: `Struct{} qiymatlari bilan mapdan foydalanib allaqachon ko'rgan elementlarni kuzatib, set-o'xshash xatti-harakatni saqlang.`,
-			hint2: `Kiritish slaysdan bir marta o'ting, natijaga har bir elementni qo'shishdan oldin mapni tekshiring.`,
-			whyItMatters: `Unique ma'lumotlardan takroriyliklarni o'chirishga kerak bo'lgan tartibni saqlayotganda, data qayta ishlash pipeline larida umumiy operatsiya bir yozuvni bir necha marta qayta ishlashning oldini oladi.
+      hint1: `Struct{} qiymatlari bilan mapdan foydalanib allaqachon ko'rgan elementlarni kuzatib, set-o'xshash xatti-harakatni saqlang.`,
+      hint2: `Kiritish slaysdan bir marta o'ting, natijaga har bir elementni qo'shishdan oldin mapni tekshiring.`,
+      whyItMatters: `Unique ma'lumotlardan takroriyliklarni o'chirishga kerak bo'lgan tartibni saqlayotganda, data qayta ishlash pipeline larida umumiy operatsiya bir yozuvni bir necha marta qayta ishlashning oldini oladi.
 
 **Nima uchun Deduplication:**
 - **Ma'lumot sifati:** Noto'g'ri natijalar sababchi bo'lgan takroriy yozuvlarni o'chiring
@@ -636,14 +638,14 @@ func GetHealthyHosts(endpoints []ServiceEndpoint) []string {
 - Analitikada distinct qiymatlarni hisoblash
 
 Unique siz, takroriy ma'lumotlar tahlil natijalarini buzishi, noto'g'ri agregatsiyalarga olib kelishi va ortiqcha yozuvlarni samarasiz qayta ishlashga sabab bo'lishi mumkin.`,
-			solutionCode: `package datastructures
+      solutionCode: `package datastructures
 
-func Unique[T comparable](in []T) []T {
+func Unique(in []int) []int {
 	if len(in) == 0 {                                       // Bo'sh slaysni ishlash
 		return nil                                      // Bo'sh kirish uchun nil qaytarish
 	}
-	seen := make(map[T]struct{}, len(in))                    // Capacity bilan seen set yaratish
-	result := make([]T, 0, len(in))                          // Natija slaysini oldindan ajratish
+	seen := make(map[int]struct{}, len(in))                  // Capacity bilan seen set yaratish
+	result := make([]int, 0, len(in))                        // Natija slaysini oldindan ajratish
 	for _, value := range in {                              // Kirish slayi bo'ylab iteratsiya
 		if _, ok := seen[value]; ok {                  // Qiymat allaqachon ko'rilganligini tekshirish
 			continue                                // Takroriyni o'tkazib yuborish
@@ -652,9 +654,9 @@ func Unique[T comparable](in []T) []T {
 		result = append(result, value)                  // Noyob qiymatni natijaga qo'shish
 	}
 	return result                                           // Dedulikatsiyalangan slaysni qaytarish
-}`
-		}
-	}
+}`,
+    },
+  },
 };
 
 export default task;

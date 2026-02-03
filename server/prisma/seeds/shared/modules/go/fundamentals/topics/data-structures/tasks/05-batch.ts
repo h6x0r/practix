@@ -1,15 +1,17 @@
-import { Task } from '../../../../types';
+import { Task } from "../../../../types";
 
 export const task: Task = {
-	slug: 'go-fundamentals-batch',
-	title: 'Split Slice into Chunks',
-	difficulty: 'medium',	tags: ['go', 'data-structures', 'maps/slices/strings', 'generics'],
-	estimatedTime: '15-20m',	isPremium: false,
-	youtubeUrl: '',
-	description: `Implement **Batch** that splits a slice into chunks of size n.
+  slug: "go-fundamentals-batch",
+  title: "Split Slice into Chunks",
+  difficulty: "medium",
+  tags: ["go", "data-structures", "maps/slices/strings"],
+  estimatedTime: "15-20m",
+  isPremium: false,
+  youtubeUrl: "",
+  description: `Implement **Batch** that splits an integer slice into chunks of size n.
 
 **Requirements:**
-1. Create function \`Batch[T any](in []T, n int) [][]T\`
+1. Create function \`Batch(in []int, n int) [][]int\`
 2. Split input slice into chunks of size n
 3. Handle invalid batch size (n <= 0) by returning nil
 4. Handle empty input slice by returning nil
@@ -23,8 +25,8 @@ export const task: Task = {
 result := Batch([]int{1, 2, 3, 4, 5}, 2)
 // result = [][]int{{1, 2}, {3, 4}, {5}}
 
-result2 := Batch([]string{"a", "b", "c", "d", "e", "f"}, 3)
-// result2 = [][]string{{"a", "b", "c"}, {"d", "e", "f"}}
+result2 := Batch([]int{1, 2, 3, 4, 5, 6}, 3)
+// result2 = [][]int{{1, 2, 3}, {4, 5, 6}}
 
 result3 := Batch([]int{1, 2, 3}, 5)
 // result3 = [][]int{{1, 2, 3}} (single chunk smaller than n)
@@ -39,19 +41,19 @@ result4 := Batch([]int{}, 2)
 - Must not copy individual elements (use slice views)
 - Must properly handle partial last chunk
 - Should pre-allocate result slice capacity`,
-	initialCode: `package datastructures
+  initialCode: `package datastructures
 
 // TODO: Implement Batch
-func Batch[T any](in []T, n int) [][]T {
+func Batch(in []int, n int) [][]int {
 	// TODO: Implement
 }`,
-	solutionCode: `package datastructures
+  solutionCode: `package datastructures
 
-func Batch[T any](in []T, n int) [][]T {
+func Batch(in []int, n int) [][]int {
 	if n <= 0 || len(in) == 0 {                             // Check for invalid batch size or empty input
 		return nil                                      // Return nil
 	}
-	chunks := make([][]T, 0, (len(in)+n-1)/n)              // Pre-allocate with ceiling division
+	chunks := make([][]int, 0, (len(in)+n-1)/n)            // Pre-allocate with ceiling division
 	for start := 0; start < len(in); start += n {          // Iterate in steps of n
 		end := start + n                                // Calculate end index
 		if end > len(in) {                              // Check if end exceeds slice length
@@ -61,7 +63,7 @@ func Batch[T any](in []T, n int) [][]T {
 	}
 	return chunks                                           // Return slice of slices
 }`,
-	testCode: `package datastructures
+  testCode: `package datastructures
 
 import (
 	"reflect"
@@ -138,9 +140,9 @@ func Test8(t *testing.T) {
 }
 
 func Test9(t *testing.T) {
-	// Strings batching
-	result := Batch([]string{"a", "b", "c", "d", "e", "f"}, 3)
-	expected := [][]string{{"a", "b", "c"}, {"d", "e", "f"}}
+	// Large numbers
+	result := Batch([]int{1000000, 2000000, 3000000, 4000000, 5000000, 6000000}, 3)
+	expected := [][]int{{1000000, 2000000, 3000000}, {4000000, 5000000, 6000000}}
 	if !reflect.DeepEqual(result, expected) {
 		t.Errorf("expected %v, got %v", expected, result)
 	}
@@ -154,9 +156,9 @@ func Test10(t *testing.T) {
 		t.Errorf("expected %v, got %v", expected, result)
 	}
 }`,
-	hint1: `Use ceiling division ((len+n-1)/n) to calculate the exact capacity needed for the result slice.`,
-			hint2: `Use slice views in[start:end] to create chunks without copying elements - they reference the original data.`,
-			whyItMatters: `Batch is essential for processing large datasets in manageable chunks, enabling parallel processing, streaming, pagination, and memory-efficient operations that would otherwise cause resource exhaustion.
+  hint1: `Use ceiling division ((len+n-1)/n) to calculate the exact capacity needed for the result slice.`,
+  hint2: `Use slice views in[start:end] to create chunks without copying elements - they reference the original data.`,
+  whyItMatters: `Batch is essential for processing large datasets in manageable chunks, enabling parallel processing, streaming, pagination, and memory-efficient operations that would otherwise cause resource exhaustion.
 
 **Why Batching:**
 - **Resource Management:** Process limited amounts of data at a time
@@ -376,11 +378,12 @@ func (la *LogAggregator) AggregateAndSend(batchSize int) error {
 - Rate-limited external API calls
 - Message queue batching
 
-Without Batch, processing gigabyte-scale datasets would require loading everything into memory, causing OOM crashes and terrible performance.`,	order: 4,
-	translations: {
-		ru: {
-			title: 'Разбиение слайса на чанки',
-			description: `Реализуйте **Batch**, который разбивает слайс на чанки размера n.
+Without Batch, processing gigabyte-scale datasets would require loading everything into memory, causing OOM crashes and terrible performance.`,
+  order: 4,
+  translations: {
+    ru: {
+      title: "Разбиение слайса на чанки",
+      description: `Реализуйте **Batch**, который разбивает слайс на чанки размера n.
 
 **Требования:**
 1. Создайте функцию \`Batch[T any](in []T, n int) [][]T\`
@@ -413,9 +416,9 @@ result4 := Batch([]int{}, 2)
 - Не должен копировать отдельные элементы (используйте slice views)
 - Должен правильно обработать неполный последний чанк
 - Должен предварительно выделить capacity результирующего слайса`,
-			hint1: `Используйте ceiling division ((len+n-1)/n) для вычисления точного capacity нужного для результирующего слайса.`,
-			hint2: `Используйте slice views in[start:end] для создания чанков без копирования элементов - они ссылаются на оригинальные данные.`,
-			whyItMatters: `Batch необходим для обработки больших наборов данных управляемыми чанками, включая параллельную обработку, streaming, pagination и memory-efficient операции которые иначе вызвали бы исчерпание ресурсов.
+      hint1: `Используйте ceiling division ((len+n-1)/n) для вычисления точного capacity нужного для результирующего слайса.`,
+      hint2: `Используйте slice views in[start:end] для создания чанков без копирования элементов - они ссылаются на оригинальные данные.`,
+      whyItMatters: `Batch необходим для обработки больших наборов данных управляемыми чанками, включая параллельную обработку, streaming, pagination и memory-efficient операции которые иначе вызвали бы исчерпание ресурсов.
 
 **Почему Batching:**
 - **Управление ресурсами:** Обработка ограниченных объемов данных за раз
@@ -636,13 +639,13 @@ func (la *LogAggregator) AggregateAndSend(batchSize int) error {
 - Message queue batching
 
 Без Batch обработка гигабайтных наборов данных потребовала бы загрузки всего в память, вызывая OOM crashes и ужасную производительность.`,
-			solutionCode: `package datastructures
+      solutionCode: `package datastructures
 
-func Batch[T any](in []T, n int) [][]T {
+func Batch(in []int, n int) [][]int {
 	if n <= 0 || len(in) == 0 {                             // Проверить неправильный размер batch или пустой ввод
 		return nil                                      // Вернуть nil
 	}
-	chunks := make([][]T, 0, (len(in)+n-1)/n)              // Предварительно выделить с ceiling division
+	chunks := make([][]int, 0, (len(in)+n-1)/n)            // Предварительно выделить с ceiling division
 	for start := 0; start < len(in); start += n {          // Итерация с шагом n
 		end := start + n                                // Вычислить конечный индекс
 		if end > len(in) {                              // Проверить превышает ли конец длину слайса
@@ -651,14 +654,14 @@ func Batch[T any](in []T, n int) [][]T {
 		chunks = append(chunks, in[start:end])          // Добавить slice view (без копирования)
 	}
 	return chunks                                           // Вернуть слайс слайсов
-}`
-		},
-		uz: {
-			title: 'Slaysni bo\'laklarga bo\'lish',
-			description: `Slaysni n o'lchami bilan bo'laklarga bo'lib beradigan **Batch** ni amalga oshiring.
+}`,
+    },
+    uz: {
+      title: "Slaysni bo'laklarga bo'lish",
+      description: `Butun sonlar slaysini n o'lchami bilan bo'laklarga bo'lib beradigan **Batch** ni amalga oshiring.
 
 **Talablar:**
-1. \`Batch[T any](in []T, n int) [][]T\` funksiyasini yarating
+1. \`Batch(in []int, n int) [][]int\` funksiyasini yarating
 2. Kiritish slaysni n o'lchamdagi bo'laklarga bo'ling
 3. Noto'g'ri batch o'lchamini ishlang (n <= 0) nil qaytarish orqali
 4. Bo'sh kiritish slaysni ishlang nil qaytarish orqali
@@ -688,9 +691,9 @@ result4 := Batch([]int{}, 2)
 - Alohida elementlarni nusxalashmasligi kerak (slice views dan foydalaning)
 - Noto'liq oxirgi bo'lakni to'g'ri ishlashi kerak
 - Natija slaysning capacity ni oldindan ajratib qo'yishi kerak`,
-			hint1: `Natija slaysis uchun zarur bo'lgan exact capacity ni hisoblash uchun ceiling division ((len+n-1)/n) dan foydalaning.`,
-			hint2: `Elementlarni nusxalashsiz bo'laklar yaratish uchun slice views in[start:end] dan foydalaning - ular asl ma'lumotlarga atsrof qiladi.`,
-			whyItMatters: `Batch katta ma'lumot to'plamlarini boshqariladigan bo'laklar bilan qayta ishlash uchun zarur bo'lib, parallel qayta ishlash, streaming, pagination va memory-efficient operatsiyalarni o'z ichiga oladi, aks holda resurslar tugashiga olib keladi.
+      hint1: `Natija slaysis uchun zarur bo'lgan exact capacity ni hisoblash uchun ceiling division ((len+n-1)/n) dan foydalaning.`,
+      hint2: `Elementlarni nusxalashsiz bo'laklar yaratish uchun slice views in[start:end] dan foydalaning - ular asl ma'lumotlarga atsrof qiladi.`,
+      whyItMatters: `Batch katta ma'lumot to'plamlarini boshqariladigan bo'laklar bilan qayta ishlash uchun zarur bo'lib, parallel qayta ishlash, streaming, pagination va memory-efficient operatsiyalarni o'z ichiga oladi, aks holda resurslar tugashiga olib keladi.
 
 **Nima uchun Batching:**
 - **Resurslarni boshqarish:** Bir vaqtda cheklangan ma'lumot miqdorini qayta ishlash
@@ -911,13 +914,13 @@ func (la *LogAggregator) AggregateAndSend(batchSize int) error {
 - Message queue batching
 
 Batch siz gigabayт hajmidagi ma'lumot to'plamlarini qayta ishlash hamma narsani xotiraga yuklashni talab qiladi, OOM crashlar va dahshatli samaradorlikka olib keladi.`,
-			solutionCode: `package datastructures
+      solutionCode: `package datastructures
 
-func Batch[T any](in []T, n int) [][]T {
+func Batch(in []int, n int) [][]int {
 	if n <= 0 || len(in) == 0 {                             // Noto'g'ri batch o'lchami yoki bo'sh kirishni tekshirish
 		return nil                                      // Nil qaytarish
 	}
-	chunks := make([][]T, 0, (len(in)+n-1)/n)              // Ceiling division bilan oldindan ajratish
+	chunks := make([][]int, 0, (len(in)+n-1)/n)            // Ceiling division bilan oldindan ajratish
 	for start := 0; start < len(in); start += n {          // n qadam bilan iteratsiya
 		end := start + n                                // Tugash indeksini hisoblash
 		if end > len(in) {                              // Tugash slayz uzunligidan oshib ketishini tekshirish
@@ -926,9 +929,9 @@ func Batch[T any](in []T, n int) [][]T {
 		chunks = append(chunks, in[start:end])          // Slice view qo'shish (nusxalashsiz)
 	}
 	return chunks                                           // Slayslar slaysini qaytarish
-}`
-		}
-	}
+}`,
+    },
+  },
 };
 
 export default task;

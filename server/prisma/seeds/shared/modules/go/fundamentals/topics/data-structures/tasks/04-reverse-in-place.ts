@@ -1,21 +1,22 @@
-import { Task } from '../../../../types';
+import { Task } from "../../../../types";
 
 export const task: Task = {
-	slug: 'go-fundamentals-reverse-in-place',
-	title: 'In-Place Slice Reversal',
-	difficulty: 'medium',	tags: ['go', 'data-structures', 'maps/slices/strings', 'generics'],
-	estimatedTime: '15-20m',	isPremium: false,
-	youtubeUrl: '',
-	description: `Implement **ReverseInPlace** that reverses a slice without allocating additional memory.
+  slug: "go-fundamentals-reverse-in-place",
+  title: "In-Place Slice Reversal",
+  difficulty: "medium",
+  tags: ["go", "data-structures", "maps/slices/strings"],
+  estimatedTime: "15-20m",
+  isPremium: false,
+  youtubeUrl: "",
+  description: `Implement **ReverseInPlace** that reverses an integer slice without allocating additional memory.
 
 **Requirements:**
-1. Create function \`ReverseInPlace[T any](in []T)\`
+1. Create function \`ReverseInPlace(in []int)\`
 2. Modify the slice in-place (no new allocation)
 3. Use two-pointer technique from both ends
 4. Swap elements moving towards the center
 5. Stop when pointers meet in the middle
-6. Work with any type via generics
-7. Handle edge cases (empty, single element)
+6. Handle edge cases (empty, single element)
 
 **Example:**
 \`\`\`go
@@ -23,35 +24,34 @@ nums := []int{1, 2, 3, 4, 5}
 ReverseInPlace(nums)
 // nums = []int{5, 4, 3, 2, 1} (modified in-place)
 
-strs := []string{"a", "b", "c"}
-ReverseInPlace(strs)
-// strs = []string{"c", "b", "a"}
+nums2 := []int{1, 2, 3}
+ReverseInPlace(nums2)
+// nums2 = []int{3, 2, 1}
 
-single := []float64{42.0}
+single := []int{42}
 ReverseInPlace(single)
-// single = []float64{42.0} (unchanged)
+// single = []int{42} (unchanged)
 \`\`\`
 
 **Constraints:**
 - Must use in-place reversal (no extra allocation)
 - Must use two-pointer technique
-- Must work with any type
 - Must handle empty and single-element slices
 - Must not create intermediate slices`,
-	initialCode: `package datastructures
+  initialCode: `package datastructures
 
 // TODO: Implement ReverseInPlace
-func ReverseInPlace[T any](in []T) {
+func ReverseInPlace(in []int) {
 	// TODO: Implement
 }`,
-	solutionCode: `package datastructures
+  solutionCode: `package datastructures
 
-func ReverseInPlace[T any](in []T) {
+func ReverseInPlace(in []int) {
 	for left, right := 0, len(in)-1; left < right; left, right = left+1, right-1 {
 		in[left], in[right] = in[right], in[left]                  // Swap elements from left and right
 	}                                                               // Continue until pointers meet
 }`,
-	testCode: `package datastructures
+  testCode: `package datastructures
 
 import (
 	"reflect"
@@ -69,12 +69,12 @@ func Test1(t *testing.T) {
 }
 
 func Test2(t *testing.T) {
-	// String reversal
-	strs := []string{"a", "b", "c"}
-	ReverseInPlace(strs)
-	expected := []string{"c", "b", "a"}
-	if !reflect.DeepEqual(strs, expected) {
-		t.Errorf("expected %v, got %v", expected, strs)
+	// Three elements
+	nums := []int{1, 2, 3}
+	ReverseInPlace(nums)
+	expected := []int{3, 2, 1}
+	if !reflect.DeepEqual(nums, expected) {
+		t.Errorf("expected %v, got %v", expected, nums)
 	}
 }
 
@@ -128,12 +128,12 @@ func Test7(t *testing.T) {
 }
 
 func Test8(t *testing.T) {
-	// Float reversal
-	floats := []float64{1.1, 2.2, 3.3}
-	ReverseInPlace(floats)
-	expected := []float64{3.3, 2.2, 1.1}
-	if !reflect.DeepEqual(floats, expected) {
-		t.Errorf("expected %v, got %v", expected, floats)
+	// Large numbers
+	large := []int{1000000, 2000000, 3000000}
+	ReverseInPlace(large)
+	expected := []int{3000000, 2000000, 1000000}
+	if !reflect.DeepEqual(large, expected) {
+		t.Errorf("expected %v, got %v", expected, large)
 	}
 }
 
@@ -157,9 +157,9 @@ func Test10(t *testing.T) {
 		t.Errorf("expected %v, got %v", expected, orig)
 	}
 }`,
-	hint1: `Use two pointers starting from both ends, swap elements, and move pointers toward the center until they meet.`,
-			hint2: `The loop condition should be left < right. When they meet or cross, the reversal is complete.`,
-			whyItMatters: `ReverseInPlace demonstrates efficient memory usage and the two-pointer pattern, crucial for performance-critical operations where memory allocation overhead can impact system performance.
+  hint1: `Use two pointers starting from both ends, swap elements, and move pointers toward the center until they meet.`,
+  hint2: `The loop condition should be left < right. When they meet or cross, the reversal is complete.`,
+  whyItMatters: `ReverseInPlace demonstrates efficient memory usage and the two-pointer pattern, crucial for performance-critical operations where memory allocation overhead can impact system performance.
 
 **Why In-Place Reversal:**
 - **Memory Efficiency:** No extra allocation for large datasets
@@ -299,14 +299,15 @@ func (tl *TransactionLog) RollbackInReverseOrder() {
 - Reversing operation order for cleanup
 - Bidirectional iteration support
 
-Without ReverseInPlace, processing multi-gigabyte datasets would require double the memory allocation, causing OOM errors and massive GC pauses in production systems.`,	order: 3,
-	translations: {
-		ru: {
-			title: 'Разворот массива без выделения памяти',
-			description: `Реализуйте **ReverseInPlace**, который разворачивает слайс без выделения дополнительной памяти.
+Without ReverseInPlace, processing multi-gigabyte datasets would require double the memory allocation, causing OOM errors and massive GC pauses in production systems.`,
+  order: 3,
+  translations: {
+    ru: {
+      title: "Разворот массива без выделения памяти",
+      description: `Реализуйте **ReverseInPlace**, который разворачивает слайс без выделения дополнительной памяти.
 
 **Требования:**
-1. Создайте функцию \`ReverseInPlace[T any](in []T)\`
+1. Создайте функцию \`ReverseInPlace(in []int)\`
 2. Модифицируйте слайс in-place (без новых выделений)
 3. Используйте two-pointer технику с обоих концов
 4. Меняйте элементы двигаясь к центру
@@ -335,9 +336,9 @@ ReverseInPlace(single)
 - Должен работать с любым типом
 - Должен обработать пустые и single-element слайсы
 - Не должен создавать промежуточные слайсы`,
-			hint1: `Используйте два указателя начиная с обоих концов, меняйте элементы и двигайте указатели к центру пока они не встретятся.`,
-			hint2: `Условие цикла должно быть left < right. Когда они встретятся или пересекутся, reversal завершён.`,
-			whyItMatters: `ReverseInPlace демонстрирует эффективное использование памяти и two-pointer паттерн, критические для performance-critical операций где overhead выделения памяти может повлиять на системную производительность.
+      hint1: `Используйте два указателя начиная с обоих концов, меняйте элементы и двигайте указатели к центру пока они не встретятся.`,
+      hint2: `Условие цикла должно быть left < right. Когда они встретятся или пересекутся, reversal завершён.`,
+      whyItMatters: `ReverseInPlace демонстрирует эффективное использование памяти и two-pointer паттерн, критические для performance-critical операций где overhead выделения памяти может повлиять на системную производительность.
 
 **Почему In-Place Reversal:**
 - **Эффективность памяти:** Нет доп выделения для больших наборов данных
@@ -478,20 +479,20 @@ func (tl *TransactionLog) RollbackInReverseOrder() {
 - Поддержка двунаправленной итерации
 
 Без ReverseInPlace обработка многогигабайтных наборов данных потребовала бы удвоения выделения памяти, вызывая OOM ошибки и массивные паузы GC в production системах.`,
-			solutionCode: `package datastructures
+      solutionCode: `package datastructures
 
-func ReverseInPlace[T any](in []T) {
+func ReverseInPlace(in []int) {
 	for left, right := 0, len(in)-1; left < right; left, right = left+1, right-1 {
 		in[left], in[right] = in[right], in[left]                  // Обменять элементы слева и справа
 	}                                                               // Продолжать пока указатели не встретятся
-}`
-		},
-		uz: {
-			title: 'Massivni joyida teskari aylantirish',
-			description: `Qo'shimcha xotira ajratilmasdan slaysni teskari buraydiagan **ReverseInPlace** ni amalga oshiring.
+}`,
+    },
+    uz: {
+      title: "Massivni joyida teskari aylantirish",
+      description: `Qo'shimcha xotira ajratilmasdan slaysni teskari buraydiagan **ReverseInPlace** ni amalga oshiring.
 
 **Talablar:**
-1. \`ReverseInPlace[T any](in []T)\` funksiyasini yarating
+1. \`ReverseInPlace(in []int)\` funksiyasini yarating
 2. Slaysni in-place o'zgartiring (yangi ajratilmagan)
 3. Ikkala uchidan two-pointer teknikasidan foydalaning
 4. Elementlarni markazga siljiyotganda almashtiring
@@ -520,9 +521,9 @@ ReverseInPlace(single)
 - Har qanday tipi bilan ishlashi kerak
 - Bo'sh va single-element slayslarni ishlashi kerak
 - Oraliq slayslarni yaratmasligi kerak`,
-			hint1: `Ikkala uchidan boshlab ikkita pointerdan foydalanib, elementlarni almashtiring va pointerlarni markazga siljiyting toki ular uchrashmaguncha.`,
-			hint2: `Loop sharti left < right bo'lishi kerak. Ular uchrashganda yoki kesishganda, reversal tugallangan.`,
-			whyItMatters: `ReverseInPlace samarali xotira foydalanishni va two-pointer patternni ko'rsatadi, performance-critical operatsiyalar uchun critical bo'lib memory ajratilishi sistemaning samaradorligiga ta'sir qilishi mumkin.
+      hint1: `Ikkala uchidan boshlab ikkita pointerdan foydalanib, elementlarni almashtiring va pointerlarni markazga siljiyting toki ular uchrashmaguncha.`,
+      hint2: `Loop sharti left < right bo'lishi kerak. Ular uchrashganda yoki kesishganda, reversal tugallangan.`,
+      whyItMatters: `ReverseInPlace samarali xotira foydalanishni va two-pointer patternni ko'rsatadi, performance-critical operatsiyalar uchun critical bo'lib memory ajratilishi sistemaning samaradorligiga ta'sir qilishi mumkin.
 
 **Nima uchun In-Place Reversal:**
 - **Xotira samaradorligi:** Katta ma'lumot to'plamlar uchun qo'shimcha ajratilmagan
@@ -663,15 +664,15 @@ func (tl *TransactionLog) RollbackInReverseOrder() {
 - Ikki tomonlama iteratsiya qo'llab-quvvatlash
 
 ReverseInPlace siz, ko'p gigabaytli ma'lumot to'plamlarini qayta ishlash xotira ajratilishini ikki baravar oshirishni talab qilgan bo'lar edi, production tizimlarda OOM xatolar va katta GC pauzalarga olib keladi.`,
-			solutionCode: `package datastructures
+      solutionCode: `package datastructures
 
-func ReverseInPlace[T any](in []T) {
+func ReverseInPlace(in []int) {
 	for left, right := 0, len(in)-1; left < right; left, right = left+1, right-1 {
 		in[left], in[right] = in[right], in[left]                  // Chap va o'ng elementlarni almashtirish
 	}                                                               // Pointerlar uchrashgunga qadar davom etish
-}`
-		}
-	}
+}`,
+    },
+  },
 };
 
 export default task;

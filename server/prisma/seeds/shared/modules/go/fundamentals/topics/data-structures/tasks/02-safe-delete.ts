@@ -1,21 +1,22 @@
-import { Task } from '../../../../types';
+import { Task } from "../../../../types";
 
 export const task: Task = {
-	slug: 'go-fundamentals-safe-delete',
-	title: 'Safe Map Key Deletion',
-	difficulty: 'easy',	tags: ['go', 'data-structures', 'maps/slices/strings', 'generics'],
-	estimatedTime: '15-20m',	isPremium: false,
-	youtubeUrl: '',
-	description: `Implement **SafeDelete** that returns a copy of a map without specified keys, leaving the original unchanged.
+  slug: "go-fundamentals-safe-delete",
+  title: "Safe Map Key Deletion",
+  difficulty: "easy",
+  tags: ["go", "data-structures", "maps/slices/strings"],
+  estimatedTime: "15-20m",
+  isPremium: false,
+  youtubeUrl: "",
+  description: `Implement **SafeDelete** that returns a copy of a map without specified keys, leaving the original unchanged.
 
 **Requirements:**
-1. Create function \`SafeDelete[M ~map[K]V, K comparable, V any](m M, keys []K) M\`
+1. Create function \`SafeDelete(m map[string]int, keys []string) map[string]int\`
 2. Handle nil maps (return nil)
 3. Create a new map with filtered entries
 4. Skip all keys from the keys slice
 5. Preserve all other key-value pairs
 6. Return the new map without modifying the original
-7. Maintain the map type constraint properly
 
 **Example:**
 \`\`\`go
@@ -24,43 +25,40 @@ result := SafeDelete(original, []string{"b", "d"})
 // result = map[string]int{"a": 1, "c": 3}
 // original = map[string]int{"a": 1, "b": 2, "c": 3, "d": 4} (unchanged)
 
-result2 := SafeDelete(map[int]string{1: "x", 2: "y"}, []int{1})
-// result2 = map[int]string{2: "y"}
+result2 := SafeDelete(map[string]int{"x": 10, "y": 20}, []string{"x"})
+// result2 = map[string]int{"y": 20}
 \`\`\`
 
 **Constraints:**
 - Must not modify the original map
 - Must handle nil maps gracefully
-- Must support any comparable key type
-- Must support any value type
-- Must use generics properly`,
-	initialCode: `package datastructures
+- Must use a lookup set for efficient key checking`,
+  initialCode: `package datastructures
 
 // TODO: Implement SafeDelete
-func SafeDelete[M ~map[K]V, K comparable, V any](m M, keys []K) M {
+func SafeDelete(m map[string]int, keys []string) map[string]int {
 	// TODO: Implement
 }`,
-	solutionCode: `package datastructures
+  solutionCode: `package datastructures
 
-func SafeDelete[M ~map[K]V, K comparable, V any](m M, keys []K) M {
+func SafeDelete(m map[string]int, keys []string) map[string]int {
 	if m == nil {                                           // Handle nil maps
-		var zero M                                      // Create zero value of map type
-		return zero                                     // Return nil
+		return nil                                      // Return nil
 	}
-	toDelete := make(map[K]struct{}, len(keys))             // Create deletion lookup map
+	toDelete := make(map[string]struct{}, len(keys))        // Create deletion lookup map
 	for _, k := range keys {                                // Iterate through keys to delete
 		toDelete[k] = struct{}{}                       // Mark each key for deletion
 	}
-	cloned := make(map[K]V, len(m))                         // Pre-allocate cloned map
+	cloned := make(map[string]int, len(m))                  // Pre-allocate cloned map
 	for k, v := range m {                                   // Iterate through original map
 		if _, skip := toDelete[k]; skip {              // Check if key should be deleted
 			continue                                // Skip this key
 		}
 		cloned[k] = v                                   // Copy key-value pair
 	}
-	return M(cloned)                                        // Convert back to original map type
+	return cloned                                           // Return cloned map
 }`,
-	testCode: `package datastructures
+  testCode: `package datastructures
 
 import (
 	"reflect"
@@ -125,10 +123,10 @@ func Test6(t *testing.T) {
 }
 
 func Test7(t *testing.T) {
-	// Int keys
-	original := map[int]string{1: "x", 2: "y", 3: "z"}
-	result := SafeDelete(original, []int{1, 3})
-	expected := map[int]string{2: "y"}
+	// Multiple keys with same prefix
+	original := map[string]int{"key1": 1, "key2": 2, "key3": 3}
+	result := SafeDelete(original, []string{"key1", "key3"})
+	expected := map[string]int{"key2": 2}
 	if !reflect.DeepEqual(result, expected) {
 		t.Errorf("expected %v, got %v", expected, result)
 	}
@@ -161,9 +159,9 @@ func Test10(t *testing.T) {
 		t.Errorf("expected empty map, got %v", result)
 	}
 }`,
-	hint1: `Create a lookup map with keys to delete (using struct{} as value), then build new map skipping those keys.`,
-			hint2: `Use a set-like map with struct{} values to efficiently check which keys should be skipped during copying.`,
-			whyItMatters: `SafeDelete demonstrates immutable-style operations in Go, preventing accidental mutations that can cause bugs in multi-threaded or shared data environments.
+  hint1: `Create a lookup map with keys to delete (using struct{} as value), then build new map skipping those keys.`,
+  hint2: `Use a set-like map with struct{} values to efficiently check which keys should be skipped during copying.`,
+  whyItMatters: `SafeDelete demonstrates immutable-style operations in Go, preventing accidental mutations that can cause bugs in multi-threaded or shared data environments.
 
 **Why Safe Deletion:**
 - **Data Integrity:** Original data is never modified, preventing cascading bugs
@@ -251,20 +249,20 @@ func GetStableFeatures(allFeatures map[string]bool) map[string]bool {
 - Creating read-only views of configuration
 - Excluding internal fields from public APIs
 
-Without SafeDelete, developers might accidentally modify shared data structures, leading to subtle bugs that are hard to track in concurrent environments.`,	order: 1,
-	translations: {
-		ru: {
-			title: 'Безопасное удаление ключей из map',
-			description: `Реализуйте **SafeDelete**, который возвращает копию map без указанных ключей, оставляя оригинал без изменений.
+Without SafeDelete, developers might accidentally modify shared data structures, leading to subtle bugs that are hard to track in concurrent environments.`,
+  order: 1,
+  translations: {
+    ru: {
+      title: "Безопасное удаление ключей из map",
+      description: `Реализуйте **SafeDelete**, который возвращает копию map без указанных ключей, оставляя оригинал без изменений.
 
 **Требования:**
-1. Создайте функцию \`SafeDelete[M ~map[K]V, K comparable, V any](m M, keys []K) M\`
+1. Создайте функцию \`SafeDelete(m map[string]int, keys []string) map[string]int\`
 2. Обработайте nil maps (верните nil)
 3. Создайте новый map с отфильтрованными записями
 4. Пропустите все ключи из слайса keys
 5. Сохраните все остальные пары ключ-значение
 6. Верните новый map без изменения оригинала
-7. Правильно поддерживайте constraint типа map
 
 **Пример:**
 \`\`\`go
@@ -273,19 +271,17 @@ result := SafeDelete(original, []string{"b", "d"})
 // result = map[string]int{"a": 1, "c": 3}
 // original = map[string]int{"a": 1, "b": 2, "c": 3, "d": 4} (не изменён)
 
-result2 := SafeDelete(map[int]string{1: "x", 2: "y"}, []int{1})
-// result2 = map[int]string{2: "y"}
+result2 := SafeDelete(map[string]int{"x": 10, "y": 20}, []string{"x"})
+// result2 = map[string]int{"y": 20}
 \`\`\`
 
 **Ограничения:**
 - Не должен модифицировать оригинальный map
 - Должен корректно обработать nil maps
-- Должен поддерживать любой comparable тип ключа
-- Должен поддерживать любой тип значения
-- Должен правильно использовать generics`,
-			hint1: `Создайте lookup map с ключами для удаления (используя struct{} как значение), затем постройте новый map пропуская те ключи.`,
-			hint2: `Используйте set-подобный map со struct{} значениями для эффективной проверки каких ключей пропускать при копировании.`,
-			whyItMatters: `SafeDelete демонстрирует операции в стиле immutable в Go, предотвращая случайные мутации которые могут вызвать баги в многопоточных или shared data окружениях.
+- Должен использовать lookup set для эффективной проверки ключей`,
+      hint1: `Создайте lookup map с ключами для удаления (используя struct{} как значение), затем постройте новый map пропуская те ключи.`,
+      hint2: `Используйте set-подобный map со struct{} значениями для эффективной проверки каких ключей пропускать при копировании.`,
+      whyItMatters: `SafeDelete демонстрирует операции в стиле immutable в Go, предотвращая случайные мутации которые могут вызвать баги в многопоточных или shared data окружениях.
 
 **Почему Safe Deletion:**
 - **Целостность данных:** Оригинальные данные никогда не модифицируются, предотвращая каскадные баги
@@ -374,39 +370,37 @@ func GetStableFeatures(allFeatures map[string]bool) map[string]bool {
 - Исключение internal полей из public APIs
 
 Без SafeDelete разработчики могут случайно модифицировать shared структуры данных, приводя к трудноотслеживаемым багам в concurrent окружениях.`,
-			solutionCode: `package datastructures
+      solutionCode: `package datastructures
 
-func SafeDelete[M ~map[K]V, K comparable, V any](m M, keys []K) M {
+func SafeDelete(m map[string]int, keys []string) map[string]int {
 	if m == nil {                                           // Обработка nil maps
-		var zero M                                      // Создать нулевое значение типа map
-		return zero                                     // Вернуть nil
+		return nil                                      // Вернуть nil
 	}
-	toDelete := make(map[K]struct{}, len(keys))             // Создать lookup map для удаления
+	toDelete := make(map[string]struct{}, len(keys))        // Создать lookup map для удаления
 	for _, k := range keys {                                // Итерация по ключам для удаления
 		toDelete[k] = struct{}{}                       // Пометить каждый ключ для удаления
 	}
-	cloned := make(map[K]V, len(m))                         // Предварительно выделить клонированный map
+	cloned := make(map[string]int, len(m))                  // Предварительно выделить клонированный map
 	for k, v := range m {                                   // Итерация по оригинальному map
 		if _, skip := toDelete[k]; skip {              // Проверить должен ли ключ быть удалён
 			continue                                // Пропустить этот ключ
 		}
 		cloned[k] = v                                   // Скопировать пару ключ-значение
 	}
-	return M(cloned)                                        // Преобразовать обратно к исходному типу map
-}`
-		},
-		uz: {
-			title: 'Mapdan kalitlarni xavfsiz o\'chirish',
-			description: `Belgilangan kalitlarni o'z ichiga olmagan map nusxasini qaytaradigan **SafeDelete** ni amalga oshiring, asl versiyoni o'zgartirilmagan.
+	return cloned                                           // Вернуть клонированный map
+}`,
+    },
+    uz: {
+      title: "Mapdan kalitlarni xavfsiz o'chirish",
+      description: `Belgilangan kalitlarni o'z ichiga olmagan map nusxasini qaytaradigan **SafeDelete** ni amalga oshiring, asl versiyoni o'zgartirilmagan.
 
 **Talablar:**
-1. \`SafeDelete[M ~map[K]V, K comparable, V any](m M, keys []K) M\` funksiyasini yarating
+1. \`SafeDelete(m map[string]int, keys []string) map[string]int\` funksiyasini yarating
 2. nil maps ni ishlang (nil qaytaring)
 3. Filtrlangan yozuvlari bilan yangi map yarating
 4. Keys slaysidagi barcha kalitlarni o'tkazib yuboring
 5. Barcha boshqa kalit-qiymat juftliklarini saqlang
 6. Asl versiyoni o'zgartirilmagan holda yangi map qaytaring
-7. Map tipi constraintni to'g'ri ta'minlang
 
 **Misol:**
 \`\`\`go
@@ -415,19 +409,17 @@ result := SafeDelete(original, []string{"b", "d"})
 // result = map[string]int{"a": 1, "c": 3}
 // original = map[string]int{"a": 1, "b": 2, "c": 3, "d": 4} (o'zgartirilmagan)
 
-result2 := SafeDelete(map[int]string{1: "x", 2: "y"}, []int{1})
-// result2 = map[int]string{2: "y"}
+result2 := SafeDelete(map[string]int{"x": 10, "y": 20}, []string{"x"})
+// result2 = map[string]int{"y": 20}
 \`\`\`
 
 **Cheklovlar:**
 - Asl mapni o'zgartirishmasligi kerak
 - nil maps ni to'g'ri ishlashi kerak
-- Har qanday comparable kalit tipini qo'llab-quvvatlashi kerak
-- Har qanday qiymat tipini qo'llab-quvvatlashi kerak
-- Genericsni to'g'ri foydalanishi kerak`,
-			hint1: `O'chirish uchun kalitlari bilan lookup map yarating (struct{} ni qiymat sifatida ishlatib), keyin o'sha kalitlarni o'tkazib yankgi map qurilishi kerak.`,
-			hint2: `Set-o'xshash mapni struct{} qiymatlari bilan foydalanib o'chirish kerak bo'lgan kalitlarni nusxalash paytida samarali tekshirish uchun.`,
-			whyItMatters: `SafeDelete Go da immutable uslubidagi operatsiyalarni ko'rsatadi, ko'p jadvallik yoki shared data muhitida bugga olib kelishi mumkin bo'lgan tasodifiy mutatsiyalarning oldini oladi.
+- Samarali kalit tekshirish uchun lookup set dan foydalanishi kerak`,
+      hint1: `O'chirish uchun kalitlari bilan lookup map yarating (struct{} ni qiymat sifatida ishlatib), keyin o'sha kalitlarni o'tkazib yankgi map qurilishi kerak.`,
+      hint2: `Set-o'xshash mapni struct{} qiymatlari bilan foydalanib o'chirish kerak bo'lgan kalitlarni nusxalash paytida samarali tekshirish uchun.`,
+      whyItMatters: `SafeDelete Go da immutable uslubidagi operatsiyalarni ko'rsatadi, ko'p jadvallik yoki shared data muhitida bugga olib kelishi mumkin bo'lgan tasodifiy mutatsiyalarning oldini oladi.
 
 **Nima uchun Safe Deletion:**
 - **Malumot integralligi:** Asl ma'lumotlar hech qachon o'zgartirilmaydi, kaskad buglarning oldini oladi
@@ -516,28 +508,27 @@ func GetStableFeatures(allFeatures map[string]bool) map[string]bool {
 - Public APIs dan internal maydonlarni chiqarib tashlash
 
 SafeDelete siz, dasturcholar tasodifan shared ma'lumot strukturalarini o'zgartirishi mumkin, bu concurrent muhitda kuzatish qiyin buglar ga olib keladi.`,
-			solutionCode: `package datastructures
+      solutionCode: `package datastructures
 
-func SafeDelete[M ~map[K]V, K comparable, V any](m M, keys []K) M {
+func SafeDelete(m map[string]int, keys []string) map[string]int {
 	if m == nil {                                           // Nil maps ni ishlash
-		var zero M                                      // Map tipining nol qiymatini yaratish
-		return zero                                     // Nil qaytarish
+		return nil                                      // Nil qaytarish
 	}
-	toDelete := make(map[K]struct{}, len(keys))             // O'chirish uchun lookup map yaratish
+	toDelete := make(map[string]struct{}, len(keys))        // O'chirish uchun lookup map yaratish
 	for _, k := range keys {                                // O'chirish uchun kalitlarni iteratsiya qilish
 		toDelete[k] = struct{}{}                       // Har bir kalitni o'chirish uchun belgilash
 	}
-	cloned := make(map[K]V, len(m))                         // Klonlangan mapni oldindan ajratish
+	cloned := make(map[string]int, len(m))                  // Klonlangan mapni oldindan ajratish
 	for k, v := range m {                                   // Asl map bo'ylab iteratsiya qilish
 		if _, skip := toDelete[k]; skip {              // Kalit o'chirilishi kerakligini tekshirish
 			continue                                // Ushbu kalitni o'tkazib yuborish
 		}
 		cloned[k] = v                                   // Kalit-qiymat juftligini nusxalash
 	}
-	return M(cloned)                                        // Asl map tipiga qaytarish
-}`
-		}
-	}
+	return cloned                                           // Klonlangan mapni qaytarish
+}`,
+    },
+  },
 };
 
 export default task;
