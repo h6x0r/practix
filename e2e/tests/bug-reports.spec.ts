@@ -1,5 +1,9 @@
 import { test, expect } from "../fixtures/auth.fixture";
-import { BugReportPage, BugCategory, BugSeverity } from "../pages/bug-report.page";
+import {
+  BugReportPage,
+  BugCategory,
+  BugSeverity,
+} from "../pages/bug-report.page";
 
 const API_URL = process.env.E2E_API_URL || "http://localhost:8080";
 
@@ -22,7 +26,7 @@ test.describe("Bug Reports", () => {
 
         // Look for bug report button
         const bugButton = page
-          .locator('button')
+          .locator("button")
           .filter({ hasText: /bug|report|ошибк/i })
           .or(page.locator('[data-testid="bug-report-button"]'))
           .first();
@@ -46,7 +50,7 @@ test.describe("Bug Reports", () => {
         await page.waitForLoadState("networkidle");
 
         const bugButton = page
-          .locator('button')
+          .locator("button")
           .filter({ hasText: /bug|report|ошибк/i })
           .first();
 
@@ -74,7 +78,7 @@ test.describe("Bug Reports", () => {
         await page.waitForLoadState("networkidle");
 
         const bugButton = page
-          .locator('button')
+          .locator("button")
           .filter({ hasText: /bug|report|ошибк/i })
           .first();
 
@@ -94,7 +98,9 @@ test.describe("Bug Reports", () => {
           await bugReportPage.expectSubmitDisabled();
 
           // Fill description - now should be enabled
-          await bugReportPage.fillDescription("Test bug description with details");
+          await bugReportPage.fillDescription(
+            "Test bug description with details",
+          );
           await bugReportPage.expectSubmitEnabled();
         }
       }
@@ -110,7 +116,7 @@ test.describe("Bug Reports", () => {
         await page.waitForLoadState("networkidle");
 
         const bugButton = page
-          .locator('button')
+          .locator("button")
           .filter({ hasText: /bug|report|ошибк/i })
           .first();
 
@@ -127,10 +133,8 @@ test.describe("Bug Reports", () => {
   });
 
   test.describe("Bug Report API", () => {
-    let authToken: string;
-
-    test.beforeAll(async ({ request }) => {
-      // Get auth token
+    // Helper to get auth token
+    async function getAuthToken(request: any): Promise<string> {
       const loginResponse = await request.post(`${API_URL}/auth/login`, {
         data: {
           email: "e2e-test@practix.dev",
@@ -138,10 +142,11 @@ test.describe("Bug Reports", () => {
         },
       });
       const loginData = await loginResponse.json();
-      authToken = loginData.token;
-    });
+      return loginData.token;
+    }
 
     test("should create a bug report via API", async ({ request }) => {
+      const authToken = await getAuthToken(request);
       const response = await request.post(`${API_URL}/bugreports`, {
         headers: {
           Authorization: `Bearer ${authToken}`,
@@ -163,6 +168,7 @@ test.describe("Bug Reports", () => {
     });
 
     test("should get user's bug reports", async ({ request }) => {
+      const authToken = await getAuthToken(request);
       const response = await request.get(`${API_URL}/bugreports/my`, {
         headers: {
           Authorization: `Bearer ${authToken}`,
@@ -189,6 +195,7 @@ test.describe("Bug Reports", () => {
     });
 
     test("should validate required fields", async ({ request }) => {
+      const authToken = await getAuthToken(request);
       const response = await request.post(`${API_URL}/bugreports`, {
         headers: {
           Authorization: `Bearer ${authToken}`,
@@ -203,6 +210,7 @@ test.describe("Bug Reports", () => {
     });
 
     test("should validate category enum", async ({ request }) => {
+      const authToken = await getAuthToken(request);
       const response = await request.post(`${API_URL}/bugreports`, {
         headers: {
           Authorization: `Bearer ${authToken}`,
@@ -219,37 +227,52 @@ test.describe("Bug Reports", () => {
   });
 
   test.describe("Bug Report Admin", () => {
-    let adminToken: string;
-    let testReportId: string;
-
-    test.beforeAll(async ({ request }) => {
-      // Login as admin
+    // Helper to get admin token
+    async function getAdminToken(request: any): Promise<string> {
       const loginResponse = await request.post(`${API_URL}/auth/login`, {
         data: {
           email: "e2e-admin@practix.dev",
+          password: "AdminPassword123!",
+        },
+      });
+      const loginData = await loginResponse.json();
+      return loginData.token;
+    }
+
+    // Helper to get user token
+    async function getUserToken(request: any): Promise<string> {
+      const loginResponse = await request.post(`${API_URL}/auth/login`, {
+        data: {
+          email: "e2e-test@practix.dev",
           password: "TestPassword123!",
         },
       });
       const loginData = await loginResponse.json();
-      adminToken = loginData.token;
+      return loginData.token;
+    }
 
-      // Create a test report
+    // Helper to create test bug report
+    async function createTestReport(
+      request: any,
+      token: string,
+    ): Promise<string> {
       const createResponse = await request.post(`${API_URL}/bugreports`, {
         headers: {
-          Authorization: `Bearer ${adminToken}`,
+          Authorization: `Bearer ${token}`,
         },
         data: {
-          title: "Admin Test Bug",
+          title: "Admin Test Bug " + Date.now(),
           description: "Bug for admin testing",
           category: "other",
           severity: "medium",
         },
       });
       const report = await createResponse.json();
-      testReportId = report.id;
-    });
+      return report.id;
+    }
 
     test("should get all bug reports as admin", async ({ request }) => {
+      const adminToken = await getAdminToken(request);
       const response = await request.get(`${API_URL}/bugreports`, {
         headers: {
           Authorization: `Bearer ${adminToken}`,
@@ -262,6 +285,7 @@ test.describe("Bug Reports", () => {
     });
 
     test("should filter bug reports by status", async ({ request }) => {
+      const adminToken = await getAdminToken(request);
       const response = await request.get(`${API_URL}/bugreports?status=open`, {
         headers: {
           Authorization: `Bearer ${adminToken}`,
@@ -278,10 +302,8 @@ test.describe("Bug Reports", () => {
     });
 
     test("should update bug report status as admin", async ({ request }) => {
-      if (!testReportId) {
-        test.skip();
-        return;
-      }
+      const adminToken = await getAdminToken(request);
+      const testReportId = await createTestReport(request, adminToken);
 
       const response = await request.patch(
         `${API_URL}/bugreports/${testReportId}/status`,
@@ -292,7 +314,7 @@ test.describe("Bug Reports", () => {
           data: {
             status: "in-progress",
           },
-        }
+        },
       );
 
       expect(response.status()).toBe(200);
@@ -303,14 +325,9 @@ test.describe("Bug Reports", () => {
     test("should not allow regular user to update status", async ({
       request,
     }) => {
-      // Get regular user token
-      const loginResponse = await request.post(`${API_URL}/auth/login`, {
-        data: {
-          email: "e2e-test@practix.dev",
-          password: "TestPassword123!",
-        },
-      });
-      const { token: userToken } = await loginResponse.json();
+      const adminToken = await getAdminToken(request);
+      const userToken = await getUserToken(request);
+      const testReportId = await createTestReport(request, adminToken);
 
       const response = await request.patch(
         `${API_URL}/bugreports/${testReportId}/status`,
@@ -321,7 +338,7 @@ test.describe("Bug Reports", () => {
           data: {
             status: "resolved",
           },
-        }
+        },
       );
 
       expect(response.status()).toBe(403);
@@ -330,14 +347,7 @@ test.describe("Bug Reports", () => {
     test("should not allow regular user to view all reports", async ({
       request,
     }) => {
-      // Get regular user token
-      const loginResponse = await request.post(`${API_URL}/auth/login`, {
-        data: {
-          email: "e2e-test@practix.dev",
-          password: "TestPassword123!",
-        },
-      });
-      const { token: userToken } = await loginResponse.json();
+      const userToken = await getUserToken(request);
 
       const response = await request.get(`${API_URL}/bugreports`, {
         headers: {

@@ -67,6 +67,16 @@ services:
     ports:
       - "2358:2358"
     privileged: true
+    # Required for isolate on Docker Desktop (macOS/Windows)
+    cap_add:
+      - SYS_ADMIN
+      - NET_ADMIN
+    security_opt:
+      - seccomp:unconfined
+      - apparmor:unconfined
+    tmpfs:
+      - /box:exec,size=512M
+      - /tmp:exec,size=512M
     environment:
       # Database (uses separate postgres for Judge0)
       - POSTGRES_HOST=judge0-db
@@ -81,9 +91,9 @@ services:
       - ENABLE_WAIT_RESULT=true
       - ENABLE_BATCHED_SUBMISSIONS=true
       - MAX_QUEUE_SIZE=100
-      - CPU_TIME_LIMIT=30
+      - CPU_TIME_LIMIT=15
       - CPU_EXTRA_TIME=5
-      - WALL_TIME_LIMIT=60
+      - WALL_TIME_LIMIT=20
       - MEMORY_LIMIT=512000
       - STACK_LIMIT=64000
       - MAX_PROCESSES_AND_OR_THREADS=60
@@ -92,6 +102,8 @@ services:
       - MAX_FILE_SIZE=2048
       - NUMBER_OF_RUNS=1
       - ENABLE_NETWORK=false
+      # Disable cgroups if not available (Docker Desktop workaround)
+      - DISABLE_MEMORY_LIMIT=true
     depends_on:
       judge0-db:
         condition: service_healthy
@@ -111,6 +123,16 @@ services:
     restart: always
     command: ["./scripts/workers"]
     privileged: true
+    # Required for isolate on Docker Desktop (macOS/Windows)
+    cap_add:
+      - SYS_ADMIN
+      - NET_ADMIN
+    security_opt:
+      - seccomp:unconfined
+      - apparmor:unconfined
+    tmpfs:
+      - /box:exec,size=512M
+      - /tmp:exec,size=512M
     environment:
       - POSTGRES_HOST=judge0-db
       - POSTGRES_PORT=5432
@@ -120,11 +142,12 @@ services:
       - REDIS_HOST=judge0-redis
       - REDIS_PORT=6379
       - ENABLE_WAIT_RESULT=true
-      - CPU_TIME_LIMIT=30
+      - CPU_TIME_LIMIT=15
       - CPU_EXTRA_TIME=5
-      - WALL_TIME_LIMIT=60
+      - WALL_TIME_LIMIT=20
       - MEMORY_LIMIT=512000
       - NUMBER_OF_RUNS=1
+      - DISABLE_MEMORY_LIMIT=true
     depends_on:
       judge0-server:
         condition: service_healthy

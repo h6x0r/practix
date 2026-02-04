@@ -81,14 +81,15 @@ export interface LanguageConfig {
 
 // Judge0 Language IDs (CE edition)
 // https://ce.judge0.com/languages
-// Note: max_cpu_time_limit=15, max_wall_time_limit=20 in default Judge0 config
+// Note: Default Judge0 limits are max_cpu_time_limit=15, max_wall_time_limit=20
+// These can be increased via JUDGE0_MAX_CPU_TIME_LIMIT env var in docker-compose
 export const LANGUAGES: Record<string, LanguageConfig> = {
   go: {
     judge0Id: 60, // Go (1.13.5)
     name: "Go",
     extension: ".go",
     monacoId: "go",
-    timeLimit: 30, // Go needs extra time for compilation
+    timeLimit: 15, // Respecting Judge0 default max
     memoryLimit: 512000, // 512MB in KB
   },
   java: {
@@ -96,7 +97,7 @@ export const LANGUAGES: Record<string, LanguageConfig> = {
     name: "Java",
     extension: ".java",
     monacoId: "java",
-    timeLimit: 30, // Java/JVM needs extra time for compilation
+    timeLimit: 15, // Respecting Judge0 default max
     memoryLimit: 512000,
   },
   javascript: {
@@ -341,8 +342,8 @@ export class Judge0Service implements OnModuleInit, OnModuleDestroy {
         source_code: code,
         language_id: langConfig.judge0Id,
         stdin: stdin || "",
-        cpu_time_limit: Math.min(langConfig.timeLimit, 30), // Judge0 configured with 30s max
-        wall_time_limit: Math.min(langConfig.timeLimit * 2, 60), // Judge0 configured with 60s max
+        cpu_time_limit: Math.min(langConfig.timeLimit, 15), // Judge0 default max is 15s
+        wall_time_limit: Math.min(langConfig.timeLimit * 1.5, 20), // Judge0 default max is 20s
         memory_limit: Math.min(langConfig.memoryLimit, 512000), // max 512MB
       };
 

@@ -42,7 +42,7 @@ test.describe("User Courses", () => {
 
       expect(response.status()).toBe(200);
       const enrollment = await response.json();
-      expect(enrollment).toHaveProperty("courseSlug", "python-fundamentals");
+      expect(enrollment).toHaveProperty("slug", "python-fundamentals");
       expect(enrollment).toHaveProperty("progress");
     });
 
