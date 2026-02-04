@@ -1,10 +1,20 @@
-import { Injectable, ForbiddenException, ServiceUnavailableException, Logger } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import { UsersService } from '../users/users.service';
-import { ConfigService } from '@nestjs/config';
+import {
+  Injectable,
+  ForbiddenException,
+  ServiceUnavailableException,
+  Logger,
+} from "@nestjs/common";
+import { PrismaService } from "../prisma/prisma.service";
+import { UsersService } from "../users/users.service";
+import { ConfigService } from "@nestjs/config";
 import { GoogleGenAI } from "@google/genai";
-import { AccessControlService } from '../subscriptions/access-control.service';
-import { DEFAULT_AI_MODEL, AI_DAILY_LIMITS } from './ai.config';
+import { AccessControlService } from "../subscriptions/access-control.service";
+import {
+  DEFAULT_AI_MODEL,
+  AI_DAILY_LIMITS,
+  PROMPT_ENGINEERING_COURSE_SLUG,
+  AiLimitTier,
+} from "./ai.config";
 
 /**
  * Prompt test scenario result
@@ -28,14 +38,20 @@ export interface PromptEvaluationResult {
   summary: string;
 }
 
+/**
+ * Result of AI limit check
+ */
+export interface AiLimitInfo {
+  tier: AiLimitTier;
+  limit: number;
+  used: number;
+  remaining: number;
+}
+
 @Injectable()
 export class AiService {
   private readonly logger = new Logger(AiService.name);
   private genAI: GoogleGenAI;
-
-  // Daily request limits by subscription type
-  private readonly LIMIT_COURSE_SUBSCRIPTION = 30; // Course subscription
-  private readonly LIMIT_GLOBAL_PREMIUM = 50; // Global premium subscription
 
   // Optimized prompt for Flash-Lite: concise, instruction-following
   private readonly PROMPT_TEMPLATE = `You are PRACTIX AI Tutor for \${language}.
@@ -69,33 +85,104 @@ Languages: en=English, ru=Russian, uz=Uzbek`;
     private prisma: PrismaService,
     private usersService: UsersService,
     private configService: ConfigService,
-    private accessControlService: AccessControlService
+    private accessControlService: AccessControlService,
   ) {
-    const apiKey = this.configService.get<string>('GEMINI_API_KEY') || this.configService.get<string>('API_KEY');
+    const apiKey =
+      this.configService.get<string>("GEMINI_API_KEY") ||
+      this.configService.get<string>("API_KEY");
     if (apiKey) {
-        this.genAI = new GoogleGenAI({ apiKey });
+      this.genAI = new GoogleGenAI({ apiKey });
     }
   }
 
-  async askTutor(userId: string, taskId: string, taskTitle: string, userCode: string, question: string, language: string, uiLanguage: string = 'en') {
+  /**
+   * Determine the AI limit tier and limit for a user based on their subscriptions
+   * Priority: Global Premium > Prompt Engineering > Course Subscription > Free
+   */
+  async getUserAiLimit(
+    userId: string,
+    taskId?: string,
+  ): Promise<{ tier: AiLimitTier; limit: number }> {
+    // 1. Check global premium subscription (highest priority)
+    const hasGlobalAccess =
+      await this.accessControlService.hasGlobalAccess(userId);
+    if (hasGlobalAccess) {
+      return { tier: "global", limit: AI_DAILY_LIMITS.GLOBAL_PREMIUM };
+    }
+
+    // 2. Check if user has access to Prompt Engineering course (special 100/day limit)
+    const peCourseMaybe = await this.prisma.course.findUnique({
+      where: { slug: PROMPT_ENGINEERING_COURSE_SLUG },
+    });
+
+    if (peCourseMaybe) {
+      const hasPeAccess = await this.accessControlService.hasCourseAccess(
+        userId,
+        peCourseMaybe.id,
+      );
+      if (hasPeAccess) {
+        return {
+          tier: "prompt_engineering",
+          limit: AI_DAILY_LIMITS.PROMPT_ENGINEERING,
+        };
+      }
+    }
+
+    // 3. Check if user has any course subscription
+    if (taskId) {
+      const canUseAiTutor = await this.accessControlService.canUseAiTutor(
+        userId,
+        taskId,
+      );
+      if (canUseAiTutor) {
+        return { tier: "course", limit: AI_DAILY_LIMITS.COURSE_SUBSCRIPTION };
+      }
+    }
+
+    // 4. Default: Free tier (all authenticated users)
+    return { tier: "free", limit: AI_DAILY_LIMITS.FREE };
+  }
+
+  /**
+   * Get current AI usage info for a user
+   */
+  async getAiLimitInfo(userId: string, taskId?: string): Promise<AiLimitInfo> {
+    const { tier, limit } = await this.getUserAiLimit(userId, taskId);
+    const today = new Date().toISOString().split("T")[0];
+
+    const usage = await this.prisma.aiUsage.findUnique({
+      where: { userId_date: { userId, date: today } },
+    });
+
+    const used = usage?.count ?? 0;
+    return {
+      tier,
+      limit,
+      used,
+      remaining: Math.max(0, limit - used),
+    };
+  }
+
+  async askTutor(
+    userId: string,
+    taskId: string,
+    taskTitle: string,
+    userCode: string,
+    question: string,
+    language: string,
+    uiLanguage: string = "en",
+  ) {
     if (!this.genAI) {
-        throw new ServiceUnavailableException('AI Service is not configured (Missing API Key).');
+      throw new ServiceUnavailableException(
+        "AI Service is not configured (Missing API Key).",
+      );
     }
 
-    // 1. Check subscription access (AI Tutor is premium-only)
-    const canUseAiTutor = await this.accessControlService.canUseAiTutor(userId, taskId);
-    if (!canUseAiTutor) {
-      throw new ForbiddenException('AI Tutor requires a subscription. Upgrade to Premium to access this feature.');
-    }
+    // 1. Determine user's AI limit tier
+    const { tier, limit } = await this.getUserAiLimit(userId, taskId);
 
-    // 2. Determine limit based on subscription type (global vs course)
-    const hasGlobalAccess = await this.accessControlService.hasGlobalAccess(userId);
-    const limit = hasGlobalAccess
-      ? this.LIMIT_GLOBAL_PREMIUM   // 50/day for global premium
-      : this.LIMIT_COURSE_SUBSCRIPTION; // 30/day for course subscription
-
-    // 3. Check Rate Limit with atomic transaction to prevent race conditions
-    const today = new Date().toISOString().split('T')[0];
+    // 2. Check Rate Limit with atomic transaction to prevent race conditions
+    const today = new Date().toISOString().split("T")[0];
 
     const usageResult = await this.prisma.$transaction(async (tx) => {
       // Create or get usage record
@@ -107,7 +194,7 @@ Languages: en=English, ru=Russian, uz=Uzbek`;
 
       // Check limit BEFORE incrementing
       if (usage.count >= limit) {
-        return { exceeded: true, count: usage.count, limit };
+        return { exceeded: true, count: usage.count, limit, tier };
       }
 
       // Atomic increment - only succeeds if count still < limit
@@ -122,67 +209,77 @@ Languages: en=English, ru=Russian, uz=Uzbek`;
 
       // If no rows were updated, another request beat us
       if (updated.count === 0) {
-        return { exceeded: true, count: limit, limit };
+        return { exceeded: true, count: limit, limit, tier };
       }
 
-      return { exceeded: false, count: usage.count + 1, limit };
+      return { exceeded: false, count: usage.count + 1, limit, tier };
     });
 
     if (usageResult.exceeded) {
-      // Don't expose exact numbers - cleaner error message
-      throw new ForbiddenException('Daily AI Tutor limit reached. Try again tomorrow.');
+      throw new ForbiddenException(
+        `Daily AI Tutor limit reached (${limit}/${tier}). Try again tomorrow or upgrade your subscription.`,
+      );
     }
 
     const currentCount = usageResult.count;
 
     // 4. Prepare Prompt with language mapping
     const languageNames: Record<string, string> = {
-      en: 'English',
-      ru: 'Russian',
-      uz: 'Uzbek'
+      en: "English",
+      ru: "Russian",
+      uz: "Uzbek",
     };
-    const uiLangFull = languageNames[uiLanguage] || 'English';
+    const uiLangFull = languageNames[uiLanguage] || "English";
 
-    const prompt = this.PROMPT_TEMPLATE
-        .replace(/\${language}/g, language || 'General')
-        .replace(/\${taskTitle}/g, taskTitle || 'Unknown Task')
-        .replace(/\${userCode}/g, userCode || '')
-        .replace(/\${question}/g, question)
-        .replace(/\${uiLanguage}/g, uiLangFull);
+    const prompt = this.PROMPT_TEMPLATE.replace(
+      /\${language}/g,
+      language || "General",
+    )
+      .replace(/\${taskTitle}/g, taskTitle || "Unknown Task")
+      .replace(/\${userCode}/g, userCode || "")
+      .replace(/\${question}/g, question)
+      .replace(/\${uiLanguage}/g, uiLangFull);
 
     try {
-        // 5. Call Gemini Flash-Lite (cost-efficient, faster, better for hints)
-        const response = await this.genAI.models.generateContent({
-            model: 'gemini-2.5-flash-lite',
-            contents: prompt,
-        });
+      // 5. Call Gemini Flash-Lite (cost-efficient, faster, better for hints)
+      const response = await this.genAI.models.generateContent({
+        model: "gemini-2.5-flash-lite",
+        contents: prompt,
+      });
 
-        const text = response.text;
+      const text = response.text;
 
-        // Return remaining requests count for UI
-        return {
-          answer: text,
-          remaining: usageResult.limit - currentCount,
-          isGlobalPremium: hasGlobalAccess,
-        };
-
+      // Return remaining requests count and tier info for UI
+      return {
+        answer: text,
+        remaining: usageResult.limit - currentCount,
+        limit: usageResult.limit,
+        tier: usageResult.tier,
+      };
     } catch (error) {
-        this.logger.error('Gemini API call failed', error instanceof Error ? error.stack : String(error));
+      this.logger.error(
+        "Gemini API call failed",
+        error instanceof Error ? error.stack : String(error),
+      );
 
-        // Rollback the usage increment on failure
-        // Use exact count match to prevent race conditions:
-        // - Won't decrement below 0
-        // - Won't decrement if another request already decremented
-        // - Only affects our specific increment
-        await this.prisma.aiUsage.updateMany({
+      // Rollback the usage increment on failure
+      // Use exact count match to prevent race conditions:
+      // - Won't decrement below 0
+      // - Won't decrement if another request already decremented
+      // - Only affects our specific increment
+      await this.prisma.aiUsage
+        .updateMany({
           where: { userId, date: today, count: currentCount },
           data: { count: { decrement: 1 } },
-        }).catch((rollbackError) => {
+        })
+        .catch((rollbackError) => {
           // Log rollback failures for debugging, but don't block
           this.logger.warn(`Usage rollback failed: ${rollbackError.message}`);
         });
 
-        throw new ServiceUnavailableException("AI is currently overloaded. Please try again.");
+      throw new ServiceUnavailableException(
+        "AI is currently overloaded. Please try again.",
+      );
     }
   }
 
@@ -204,7 +301,9 @@ Languages: en=English, ru=Russian, uz=Uzbek`;
     },
   ): Promise<PromptEvaluationResult> {
     if (!this.genAI) {
-      throw new ServiceUnavailableException('AI Service is not configured (Missing API Key).');
+      throw new ServiceUnavailableException(
+        "AI Service is not configured (Missing API Key).",
+      );
     }
 
     const scenarioResults: PromptTestResult[] = [];
@@ -216,21 +315,28 @@ Languages: en=English, ru=Russian, uz=Uzbek`;
 
       try {
         // Step 1: Execute student's prompt with scenario input
-        const populatedPrompt = studentPrompt.replace(/\{\{INPUT\}\}/gi, scenario.input);
+        const populatedPrompt = studentPrompt.replace(
+          /\{\{INPUT\}\}/gi,
+          scenario.input,
+        );
 
-        const aiModel = this.configService.get<string>('AI_MODEL_NAME') || DEFAULT_AI_MODEL;
+        const aiModel =
+          this.configService.get<string>("AI_MODEL_NAME") || DEFAULT_AI_MODEL;
         const executionResponse = await this.genAI.models.generateContent({
           model: aiModel,
           contents: populatedPrompt,
         });
 
-        const output = executionResponse.text || '';
+        const output = executionResponse.text || "";
 
         // Step 2: Use AI Judge to evaluate the output
         const judgePromptPopulated = promptConfig.judgePrompt
           .replace(/\{\{OUTPUT\}\}/gi, output)
-          .replace(/\{\{CRITERIA\}\}/gi, scenario.expectedCriteria.join('\n- '))
-          .replace(/\{\{RUBRIC\}\}/gi, scenario.rubric || 'Score based on criteria match');
+          .replace(/\{\{CRITERIA\}\}/gi, scenario.expectedCriteria.join("\n- "))
+          .replace(
+            /\{\{RUBRIC\}\}/gi,
+            scenario.rubric || "Score based on criteria match",
+          );
 
         const judgeSystemPrompt = `You are an AI Judge evaluating prompt engineering outputs.
 Evaluate the following output against the given criteria.
@@ -244,11 +350,13 @@ Do not include any other text, markdown, or formatting.`;
           contents: `${judgeSystemPrompt}\n\n${judgePromptPopulated}`,
         });
 
-        const judgeText = judgeResponse.text || '{"score": 0, "feedback": "Failed to evaluate"}';
+        const judgeText =
+          judgeResponse.text ||
+          '{"score": 0, "feedback": "Failed to evaluate"}';
 
         // Parse judge response
         let score = 0;
-        let feedback = 'Failed to parse evaluation';
+        let feedback = "Failed to parse evaluation";
 
         try {
           // Extract JSON from response (handle potential markdown wrapping)
@@ -256,43 +364,49 @@ Do not include any other text, markdown, or formatting.`;
           if (jsonMatch) {
             const parsed = JSON.parse(jsonMatch[0]);
             score = Math.min(10, Math.max(0, Number(parsed.score) || 0));
-            feedback = parsed.feedback || 'No feedback provided';
+            feedback = parsed.feedback || "No feedback provided";
           }
         } catch (parseError) {
           this.logger.warn(`Failed to parse judge response: ${judgeText}`);
-          feedback = 'Evaluation parsing failed';
+          feedback = "Evaluation parsing failed";
         }
 
         scenarioResults.push({
           scenarioIndex: i,
-          input: scenario.input.substring(0, 200) + (scenario.input.length > 200 ? '...' : ''),
-          output: output.substring(0, 500) + (output.length > 500 ? '...' : ''),
+          input:
+            scenario.input.substring(0, 200) +
+            (scenario.input.length > 200 ? "..." : ""),
+          output: output.substring(0, 500) + (output.length > 500 ? "..." : ""),
           score,
           feedback,
           passed: score >= promptConfig.passingScore,
         });
 
         totalScore += score;
-
       } catch (error) {
-        this.logger.error(`Scenario ${i} failed: ${error instanceof Error ? error.message : String(error)}`);
+        this.logger.error(
+          `Scenario ${i} failed: ${error instanceof Error ? error.message : String(error)}`,
+        );
         scenarioResults.push({
           scenarioIndex: i,
           input: scenario.input.substring(0, 200),
-          output: '',
+          output: "",
           score: 0,
-          feedback: 'Execution failed: ' + (error instanceof Error ? error.message : 'Unknown error'),
+          feedback:
+            "Execution failed: " +
+            (error instanceof Error ? error.message : "Unknown error"),
           passed: false,
         });
       }
     }
 
     // Calculate average score
-    const averageScore = promptConfig.testScenarios.length > 0
-      ? totalScore / promptConfig.testScenarios.length
-      : 0;
+    const averageScore =
+      promptConfig.testScenarios.length > 0
+        ? totalScore / promptConfig.testScenarios.length
+        : 0;
 
-    const passedScenarios = scenarioResults.filter(r => r.passed).length;
+    const passedScenarios = scenarioResults.filter((r) => r.passed).length;
     const totalScenarios = scenarioResults.length;
     const overallPassed = averageScore >= promptConfig.passingScore;
 

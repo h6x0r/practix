@@ -1,43 +1,47 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { AiController } from './ai.controller';
-import { AiService } from './ai.service';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { ThrottlerModule } from '@nestjs/throttler';
-import { ForbiddenException, ServiceUnavailableException } from '@nestjs/common';
+import { Test, TestingModule } from "@nestjs/testing";
+import { AiController } from "./ai.controller";
+import { AiService } from "./ai.service";
+import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { ThrottlerModule } from "@nestjs/throttler";
+import {
+  ForbiddenException,
+  ServiceUnavailableException,
+} from "@nestjs/common";
 
-describe('AiController', () => {
+describe("AiController", () => {
   let controller: AiController;
   let aiService: AiService;
 
   const mockAiService = {
     askTutor: jest.fn(),
+    getAiLimitInfo: jest.fn(),
   };
 
   const mockRequest = {
-    user: { userId: 'user-123' },
+    user: { userId: "user-123" },
   };
 
   const mockAskAiDto = {
-    taskId: 'task-456',
-    taskTitle: 'Hello World',
+    taskId: "task-456",
+    taskTitle: "Hello World",
     userCode: 'func main() { println("Hello") }',
-    question: 'Why is my code not working?',
-    language: 'go',
-    uiLanguage: 'en',
+    question: "Why is my code not working?",
+    language: "go",
+    uiLanguage: "en",
   };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       imports: [
-        ThrottlerModule.forRoot([{
-          ttl: 60000,
-          limit: 100,
-        }]),
+        ThrottlerModule.forRoot([
+          {
+            ttl: 60000,
+            limit: 100,
+          },
+        ]),
       ],
       controllers: [AiController],
-      providers: [
-        { provide: AiService, useValue: mockAiService },
-      ],
+      providers: [{ provide: AiService, useValue: mockAiService }],
     })
       .overrideGuard(JwtAuthGuard)
       .useValue({ canActivate: () => true })
@@ -49,14 +53,66 @@ describe('AiController', () => {
     jest.clearAllMocks();
   });
 
-  it('should be defined', () => {
+  it("should be defined", () => {
     expect(controller).toBeDefined();
   });
 
-  describe('askTutor()', () => {
-    it('should return AI response', async () => {
+  describe("getLimits()", () => {
+    it("should return AI limit info for user", async () => {
+      const mockLimitInfo = {
+        tier: "global",
+        limit: 100,
+        used: 25,
+        remaining: 75,
+      };
+      mockAiService.getAiLimitInfo.mockResolvedValue(mockLimitInfo);
+
+      const result = await controller.getLimits(mockRequest, "task-456");
+
+      expect(result).toEqual(mockLimitInfo);
+      expect(mockAiService.getAiLimitInfo).toHaveBeenCalledWith(
+        "user-123",
+        "task-456",
+      );
+    });
+
+    it("should work without taskId parameter", async () => {
+      const mockLimitInfo = {
+        tier: "free",
+        limit: 5,
+        used: 2,
+        remaining: 3,
+      };
+      mockAiService.getAiLimitInfo.mockResolvedValue(mockLimitInfo);
+
+      const result = await controller.getLimits(mockRequest, undefined);
+
+      expect(result).toEqual(mockLimitInfo);
+      expect(mockAiService.getAiLimitInfo).toHaveBeenCalledWith(
+        "user-123",
+        undefined,
+      );
+    });
+
+    it("should return different tiers based on subscription", async () => {
+      mockAiService.getAiLimitInfo.mockResolvedValue({
+        tier: "course",
+        limit: 30,
+        used: 10,
+        remaining: 20,
+      });
+
+      const result = await controller.getLimits(mockRequest, "task-123");
+
+      expect(result.tier).toBe("course");
+      expect(result.limit).toBe(30);
+    });
+  });
+
+  describe("askTutor()", () => {
+    it("should return AI response", async () => {
       const mockResponse = {
-        answer: 'Here is a hint about your code...',
+        answer: "Here is a hint about your code...",
         remaining: 45,
         isGlobalPremium: true,
       };
@@ -66,18 +122,22 @@ describe('AiController', () => {
 
       expect(result).toEqual(mockResponse);
       expect(mockAiService.askTutor).toHaveBeenCalledWith(
-        'user-123',
-        'task-456',
-        'Hello World',
+        "user-123",
+        "task-456",
+        "Hello World",
         'func main() { println("Hello") }',
-        'Why is my code not working?',
-        'go',
-        'en'
+        "Why is my code not working?",
+        "go",
+        "en",
       );
     });
 
     it('should default to "en" when uiLanguage is not provided', async () => {
-      const mockResponse = { answer: 'Response', remaining: 45, isGlobalPremium: true };
+      const mockResponse = {
+        answer: "Response",
+        remaining: 45,
+        isGlobalPremium: true,
+      };
       mockAiService.askTutor.mockResolvedValue(mockResponse);
 
       const dtoWithoutUiLanguage = { ...mockAskAiDto };
@@ -86,41 +146,45 @@ describe('AiController', () => {
       await controller.askTutor(mockRequest, dtoWithoutUiLanguage);
 
       expect(mockAiService.askTutor).toHaveBeenCalledWith(
-        'user-123',
-        'task-456',
-        'Hello World',
+        "user-123",
+        "task-456",
+        "Hello World",
         'func main() { println("Hello") }',
-        'Why is my code not working?',
-        'go',
-        'en'
+        "Why is my code not working?",
+        "go",
+        "en",
       );
     });
 
-    it('should pass through ForbiddenException from service', async () => {
+    it("should pass through ForbiddenException from service", async () => {
       mockAiService.askTutor.mockRejectedValue(
-        new ForbiddenException('Daily AI Tutor limit reached')
+        new ForbiddenException("Daily AI Tutor limit reached"),
       );
 
       await expect(
-        controller.askTutor(mockRequest, mockAskAiDto)
+        controller.askTutor(mockRequest, mockAskAiDto),
       ).rejects.toThrow(ForbiddenException);
     });
 
-    it('should pass through ServiceUnavailableException from service', async () => {
+    it("should pass through ServiceUnavailableException from service", async () => {
       mockAiService.askTutor.mockRejectedValue(
-        new ServiceUnavailableException('AI is currently overloaded')
+        new ServiceUnavailableException("AI is currently overloaded"),
       );
 
       await expect(
-        controller.askTutor(mockRequest, mockAskAiDto)
+        controller.askTutor(mockRequest, mockAskAiDto),
       ).rejects.toThrow(ServiceUnavailableException);
     });
 
-    it('should handle different UI languages', async () => {
-      const mockResponse = { answer: 'Ответ на русском', remaining: 45, isGlobalPremium: true };
+    it("should handle different UI languages", async () => {
+      const mockResponse = {
+        answer: "Ответ на русском",
+        remaining: 45,
+        isGlobalPremium: true,
+      };
       mockAiService.askTutor.mockResolvedValue(mockResponse);
 
-      const russianDto = { ...mockAskAiDto, uiLanguage: 'ru' };
+      const russianDto = { ...mockAskAiDto, uiLanguage: "ru" };
       await controller.askTutor(mockRequest, russianDto);
 
       expect(mockAiService.askTutor).toHaveBeenCalledWith(
@@ -130,43 +194,55 @@ describe('AiController', () => {
         expect.any(String),
         expect.any(String),
         expect.any(String),
-        'ru'
+        "ru",
       );
     });
 
-    it('should handle different programming languages', async () => {
-      const mockResponse = { answer: 'Python hint', remaining: 30, isGlobalPremium: false };
+    it("should handle different programming languages", async () => {
+      const mockResponse = {
+        answer: "Python hint",
+        remaining: 30,
+        isGlobalPremium: false,
+      };
       mockAiService.askTutor.mockResolvedValue(mockResponse);
 
-      const pythonDto = { ...mockAskAiDto, language: 'python', userCode: 'print("Hello")' };
+      const pythonDto = {
+        ...mockAskAiDto,
+        language: "python",
+        userCode: 'print("Hello")',
+      };
       await controller.askTutor(mockRequest, pythonDto);
 
       expect(mockAiService.askTutor).toHaveBeenCalledWith(
-        'user-123',
-        'task-456',
-        'Hello World',
+        "user-123",
+        "task-456",
+        "Hello World",
         'print("Hello")',
-        'Why is my code not working?',
-        'python',
-        'en'
+        "Why is my code not working?",
+        "python",
+        "en",
       );
     });
 
-    it('should pass user ID from request', async () => {
-      const mockResponse = { answer: 'Response', remaining: 10, isGlobalPremium: false };
+    it("should pass user ID from request", async () => {
+      const mockResponse = {
+        answer: "Response",
+        remaining: 10,
+        isGlobalPremium: false,
+      };
       mockAiService.askTutor.mockResolvedValue(mockResponse);
 
-      const differentUser = { user: { userId: 'different-user-789' } };
+      const differentUser = { user: { userId: "different-user-789" } };
       await controller.askTutor(differentUser, mockAskAiDto);
 
       expect(mockAiService.askTutor).toHaveBeenCalledWith(
-        'different-user-789',
+        "different-user-789",
         expect.any(String),
         expect.any(String),
         expect.any(String),
         expect.any(String),
         expect.any(String),
-        expect.any(String)
+        expect.any(String),
       );
     });
   });
