@@ -606,6 +606,9 @@ const UI_TRANSLATIONS: Record<Language, Record<string, string>> = {
     "roadmap.featurePersonalDesc": "Tailored to your experience and goals",
     "roadmap.featureProgress": "Track Progress",
     "roadmap.featureProgressDesc": "Visual roadmap with completion tracking",
+    "roadmap.interestsHint": "Select at least one area of interest",
+    "roadmap.interestsError":
+      "Please select at least one area of interest to continue",
     "roadmap.firstFree": "First generation FREE",
     "roadmap.regeneratePremium": "Regenerate with Premium",
     "roadmap.regeneratePremiumTitle": "Regeneration requires Premium",
@@ -1264,6 +1267,9 @@ const UI_TRANSLATIONS: Record<Language, Record<string, string>> = {
     "roadmap.featurePersonalDesc": "Адаптировано под ваш опыт и цели",
     "roadmap.featureProgress": "Отслеживание",
     "roadmap.featureProgressDesc": "Визуальный roadmap с прогрессом",
+    "roadmap.interestsHint": "Выберите хотя бы одну область интересов",
+    "roadmap.interestsError":
+      "Пожалуйста, выберите хотя бы одну область интересов для продолжения",
     "roadmap.firstFree": "Первая генерация БЕСПЛАТНО",
     "roadmap.regeneratePremium": "Перегенерация с Premium",
     "roadmap.regeneratePremiumTitle": "Для перегенерации нужен Premium",
@@ -1929,6 +1935,9 @@ const UI_TRANSLATIONS: Record<Language, Record<string, string>> = {
       "Tajribangiz va maqsadlaringizga moslashtirilgan",
     "roadmap.featureProgress": "Kuzatish",
     "roadmap.featureProgressDesc": "Vizual roadmap jarayonni kuzatish bilan",
+    "roadmap.interestsHint": "Kamida bitta qiziqish sohasini tanlang",
+    "roadmap.interestsError":
+      "Davom etish uchun kamida bitta qiziqish sohasini tanlang",
     "roadmap.firstFree": "Birinchi generatsiya BEPUL",
     "roadmap.regeneratePremium": "Qayta generatsiya Premium bilan",
     "roadmap.regeneratePremiumTitle": "Qayta generatsiya uchun Premium kerak",
