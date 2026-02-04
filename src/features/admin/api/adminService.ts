@@ -119,6 +119,38 @@ export interface UpdateAiSettingsDto {
   limits?: Partial<AiLimits>;
 }
 
+// Bug Reports
+export type BugCategory =
+  | "description"
+  | "solution"
+  | "editor"
+  | "hints"
+  | "ai-tutor"
+  | "other";
+export type BugSeverity = "low" | "medium" | "high";
+export type BugStatus =
+  | "open"
+  | "in-progress"
+  | "resolved"
+  | "closed"
+  | "wont-fix";
+
+export interface BugReport {
+  id: string;
+  userId: string;
+  taskId: string | null;
+  category: BugCategory;
+  severity: BugSeverity;
+  status: BugStatus;
+  title: string;
+  description: string;
+  metadata: Record<string, unknown> | null;
+  createdAt: string;
+  updatedAt: string;
+  user: { name: string; email: string };
+  task: { title: string; slug: string } | null;
+}
+
 /**
  * Admin Analytics Service - Connected to Backend Admin API
  *
@@ -189,5 +221,33 @@ export const adminService = {
    */
   updateAiSettings: async (dto: UpdateAiSettingsDto): Promise<AiSettings> => {
     return await api.put<AiSettings>("/admin/settings/ai", dto);
+  },
+
+  /**
+   * Get all bug reports
+   * GET /bugreports
+   */
+  getBugReports: async (filters?: {
+    status?: BugStatus;
+    severity?: BugSeverity;
+    category?: BugCategory;
+  }): Promise<BugReport[]> => {
+    const params = new URLSearchParams();
+    if (filters?.status) params.append("status", filters.status);
+    if (filters?.severity) params.append("severity", filters.severity);
+    if (filters?.category) params.append("category", filters.category);
+    const query = params.toString() ? `?${params.toString()}` : "";
+    return await api.get<BugReport[]>(`/bugreports${query}`);
+  },
+
+  /**
+   * Update bug report status
+   * PATCH /bugreports/:id/status
+   */
+  updateBugReportStatus: async (
+    id: string,
+    status: BugStatus,
+  ): Promise<BugReport> => {
+    return await api.patch<BugReport>(`/bugreports/${id}/status`, { status });
   },
 };

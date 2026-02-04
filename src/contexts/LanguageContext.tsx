@@ -732,6 +732,21 @@ const UI_TRANSLATIONS: Record<Language, Record<string, string>> = {
     "admin.aiSettings.loadError": "Failed to load AI settings",
     "admin.aiSettings.saveError": "Failed to save AI settings",
 
+    // Bug Reports
+    "admin.bugReports.title": "Bug Reports",
+    "admin.bugReports.subtitle": "User-submitted bug reports",
+    "admin.bugReports.allStatuses": "All Statuses",
+    "admin.bugReports.noReports": "No bug reports found",
+    "admin.bugReports.loadError": "Failed to load bug reports",
+    "admin.bugReports.description": "Description",
+    "admin.bugReports.relatedTask": "Related Task",
+    "admin.bugReports.metadata": "Metadata",
+    "admin.bugReports.status.open": "Open",
+    "admin.bugReports.status.in-progress": "In Progress",
+    "admin.bugReports.status.resolved": "Resolved",
+    "admin.bugReports.status.closed": "Closed",
+    "admin.bugReports.status.wont-fix": "Won't Fix",
+
     // ===================== COMMON =====================
     "common.loading": "Loading...",
     "common.error": "Error",
@@ -1361,6 +1376,21 @@ const UI_TRANSLATIONS: Record<Language, Record<string, string>> = {
     "admin.aiSettings.saveSuccess": "Настройки успешно сохранены!",
     "admin.aiSettings.loadError": "Ошибка загрузки настроек AI",
     "admin.aiSettings.saveError": "Ошибка сохранения настроек AI",
+
+    // Bug Reports
+    "admin.bugReports.title": "Баг-репорты",
+    "admin.bugReports.subtitle": "Отчёты пользователей об ошибках",
+    "admin.bugReports.allStatuses": "Все статусы",
+    "admin.bugReports.noReports": "Баг-репорты не найдены",
+    "admin.bugReports.loadError": "Ошибка загрузки баг-репортов",
+    "admin.bugReports.description": "Описание",
+    "admin.bugReports.relatedTask": "Связанная задача",
+    "admin.bugReports.metadata": "Метаданные",
+    "admin.bugReports.status.open": "Открыт",
+    "admin.bugReports.status.in-progress": "В работе",
+    "admin.bugReports.status.resolved": "Решён",
+    "admin.bugReports.status.closed": "Закрыт",
+    "admin.bugReports.status.wont-fix": "Не будет исправлен",
 
     // ===================== COMMON =====================
     "common.loading": "Загрузка...",
@@ -1996,6 +2026,21 @@ const UI_TRANSLATIONS: Record<Language, Record<string, string>> = {
     "admin.aiSettings.saveSuccess": "Sozlamalar muvaffaqiyatli saqlandi!",
     "admin.aiSettings.loadError": "AI sozlamalarini yuklashda xatolik",
     "admin.aiSettings.saveError": "AI sozlamalarini saqlashda xatolik",
+
+    // Bug Reports
+    "admin.bugReports.title": "Xatolik hisobotlari",
+    "admin.bugReports.subtitle": "Foydalanuvchilar yuborgan xatoliklar",
+    "admin.bugReports.allStatuses": "Barcha holatlar",
+    "admin.bugReports.noReports": "Xatolik hisobotlari topilmadi",
+    "admin.bugReports.loadError": "Xatolik hisobotlarini yuklashda xato",
+    "admin.bugReports.description": "Tavsif",
+    "admin.bugReports.relatedTask": "Bog'liq vazifa",
+    "admin.bugReports.metadata": "Metama'lumotlar",
+    "admin.bugReports.status.open": "Ochiq",
+    "admin.bugReports.status.in-progress": "Jarayonda",
+    "admin.bugReports.status.resolved": "Hal qilindi",
+    "admin.bugReports.status.closed": "Yopildi",
+    "admin.bugReports.status.wont-fix": "Tuzatilmaydi",
 
     // ===================== COMMON =====================
     "common.loading": "Yuklanmoqda...",

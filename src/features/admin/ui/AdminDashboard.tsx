@@ -31,6 +31,7 @@ import { Link, Navigate } from "react-router-dom";
 import { createLogger } from "@/lib/logger";
 import { useUITranslation, useLanguage } from "@/contexts/LanguageContext";
 import AiSettingsPanel from "./AiSettingsPanel";
+import BugReportsPanel from "./BugReportsPanel";
 
 const log = createLogger("AdminDashboard");
 
@@ -228,8 +229,11 @@ const AdminDashboard = () => {
         </p>
       </div>
 
-      {/* AI Settings Panel */}
-      <AiSettingsPanel />
+      {/* Settings & Reports Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <AiSettingsPanel />
+        <BugReportsPanel />
+      </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
