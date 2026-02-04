@@ -12,6 +12,11 @@ const UserSearchPanel: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [banModalUser, setBanModalUser] = useState<UserSearchResult | null>(
+    null,
+  );
+  const [banReason, setBanReason] = useState("");
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   const handleSearch = useCallback(async () => {
     if (query.length < 2) {
@@ -42,6 +47,55 @@ const UserSearchPanel: React.FC = () => {
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return "-";
     return new Date(dateStr).toLocaleDateString();
+  };
+
+  const handleBan = async () => {
+    if (!banModalUser || !banReason.trim()) return;
+
+    try {
+      setActionLoading(banModalUser.id);
+      await adminService.banUser(banModalUser.id, banReason.trim());
+      // Update local state
+      setResults((prev) =>
+        prev.map((u) =>
+          u.id === banModalUser.id
+            ? {
+                ...u,
+                isBanned: true,
+                bannedAt: new Date().toISOString(),
+                bannedReason: banReason.trim(),
+              }
+            : u,
+        ),
+      );
+      setBanModalUser(null);
+      setBanReason("");
+    } catch (err) {
+      log.error("Failed to ban user", err);
+      setError(tUI("admin.userSearch.banError"));
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleUnban = async (userId: string) => {
+    try {
+      setActionLoading(userId);
+      await adminService.unbanUser(userId);
+      // Update local state
+      setResults((prev) =>
+        prev.map((u) =>
+          u.id === userId
+            ? { ...u, isBanned: false, bannedAt: null, bannedReason: null }
+            : u,
+        ),
+      );
+    } catch (err) {
+      log.error("Failed to unban user", err);
+      setError(tUI("admin.userSearch.unbanError"));
+    } finally {
+      setActionLoading(null);
+    }
   };
 
   return (
@@ -132,7 +186,11 @@ const UserSearchPanel: React.FC = () => {
           {results.map((user) => (
             <div
               key={user.id}
-              className="p-4 bg-gray-50 dark:bg-dark-bg rounded-xl hover:bg-gray-100 dark:hover:bg-dark-bg/80 transition-colors"
+              className={`p-4 rounded-xl transition-colors ${
+                user.isBanned
+                  ? "bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800"
+                  : "bg-gray-50 dark:bg-dark-bg hover:bg-gray-100 dark:hover:bg-dark-bg/80"
+              }`}
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
@@ -140,6 +198,11 @@ const UserSearchPanel: React.FC = () => {
                     <span className="font-medium text-gray-900 dark:text-white">
                       {user.name || tUI("admin.userSearch.noName")}
                     </span>
+                    {user.isBanned && (
+                      <span className="px-2 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-xs font-medium rounded">
+                        {tUI("admin.userSearch.banned")}
+                      </span>
+                    )}
                     {user.role === "ADMIN" && (
                       <span className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 text-xs font-medium rounded">
                         Admin
@@ -155,11 +218,21 @@ const UserSearchPanel: React.FC = () => {
                     {user.email}
                   </div>
                   <div className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                    {tUI("admin.userSearch.registered")}: {formatDate(user.createdAt)}
+                    {tUI("admin.userSearch.registered")}:{" "}
+                    {formatDate(user.createdAt)}
                     {user.lastActivityAt && (
-                      <> • {tUI("admin.userSearch.lastActive")}: {formatDate(user.lastActivityAt)}</>
+                      <>
+                        {" "}
+                        • {tUI("admin.userSearch.lastActive")}:{" "}
+                        {formatDate(user.lastActivityAt)}
+                      </>
                     )}
                   </div>
+                  {user.isBanned && user.bannedReason && (
+                    <div className="text-xs text-red-600 dark:text-red-400 mt-1">
+                      {tUI("admin.userSearch.banReason")}: {user.bannedReason}
+                    </div>
+                  )}
                 </div>
                 <div className="flex items-center gap-4 text-sm">
                   <div className="text-center">
@@ -178,6 +251,30 @@ const UserSearchPanel: React.FC = () => {
                       {tUI("admin.userSearch.courses")}
                     </div>
                   </div>
+                  {/* Ban/Unban button */}
+                  {user.role !== "ADMIN" && (
+                    <div>
+                      {user.isBanned ? (
+                        <button
+                          onClick={() => handleUnban(user.id)}
+                          disabled={actionLoading === user.id}
+                          className="px-3 py-1.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-medium rounded-lg hover:bg-green-200 dark:hover:bg-green-900/50 transition-colors disabled:opacity-50"
+                        >
+                          {actionLoading === user.id
+                            ? "..."
+                            : tUI("admin.userSearch.unban")}
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => setBanModalUser(user)}
+                          disabled={actionLoading === user.id}
+                          className="px-3 py-1.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-xs font-medium rounded-lg hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors disabled:opacity-50"
+                        >
+                          {tUI("admin.userSearch.ban")}
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -189,6 +286,63 @@ const UserSearchPanel: React.FC = () => {
       {!searched && !loading && (
         <div className="text-center py-8 text-gray-500 dark:text-gray-400">
           {tUI("admin.userSearch.hint")}
+        </div>
+      )}
+
+      {/* Ban Modal */}
+      {banModalUser && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          onClick={() => setBanModalUser(null)}
+        >
+          <div
+            className="relative w-full max-w-md bg-white dark:bg-dark-surface rounded-2xl border border-gray-200 dark:border-dark-border shadow-2xl p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+              {tUI("admin.userSearch.banModalTitle")}
+            </h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+              {tUI("admin.userSearch.banModalDesc")}{" "}
+              <span className="font-medium text-gray-900 dark:text-white">
+                {banModalUser.email}
+              </span>
+            </p>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                {tUI("admin.userSearch.banReasonLabel")}
+              </label>
+              <textarea
+                value={banReason}
+                onChange={(e) => setBanReason(e.target.value)}
+                placeholder={tUI("admin.userSearch.banReasonPlaceholder")}
+                className="w-full px-4 py-2.5 bg-gray-100 dark:bg-dark-bg border border-gray-200 dark:border-dark-border rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none"
+                rows={3}
+              />
+            </div>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => {
+                  setBanModalUser(null);
+                  setBanReason("");
+                }}
+                className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+              >
+                {tUI("common.cancel")}
+              </button>
+              <button
+                onClick={handleBan}
+                disabled={
+                  !banReason.trim() || actionLoading === banModalUser.id
+                }
+                className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
+              >
+                {actionLoading === banModalUser.id
+                  ? "..."
+                  : tUI("admin.userSearch.confirmBan")}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

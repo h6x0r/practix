@@ -45,6 +45,12 @@ model User {
   maxStreak      Int      @default(0)     // Longest streak ever
   lastActivityAt DateTime?               // Last task completion date (for streak)
 
+  // === BAN SYSTEM ===
+  isBanned     Boolean   @default(false)
+  bannedAt     DateTime?
+  bannedReason String?
+  bannedBy     String?   // Admin user ID who performed the ban
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -65,6 +71,7 @@ model User {
   @@index([level, xp])        // Leaderboard sorting
   @@index([xp])               // XP-based rankings
   @@index([currentStreak])    // Streak leaderboard
+  @@index([isBanned])         // Quick banned users lookup
 }
 
 model Course {

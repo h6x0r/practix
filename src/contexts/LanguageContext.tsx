@@ -764,6 +764,18 @@ const UI_TRANSLATIONS: Record<Language, Record<string, string>> = {
     "admin.userSearch.submissions": "submissions",
     "admin.userSearch.courses": "courses",
     "admin.userSearch.hint": "Search for users by email or name",
+    "admin.userSearch.banned": "Banned",
+    "admin.userSearch.ban": "Ban",
+    "admin.userSearch.unban": "Unban",
+    "admin.userSearch.banReason": "Ban reason",
+    "admin.userSearch.banError": "Failed to ban user",
+    "admin.userSearch.unbanError": "Failed to unban user",
+    "admin.userSearch.banModalTitle": "Ban User",
+    "admin.userSearch.banModalDesc": "You are about to ban user",
+    "admin.userSearch.banReasonLabel": "Reason for ban",
+    "admin.userSearch.banReasonPlaceholder":
+      "Enter reason for banning this user...",
+    "admin.userSearch.confirmBan": "Ban User",
 
     // ===================== COMMON =====================
     "common.loading": "Loading...",
@@ -1427,6 +1439,18 @@ const UI_TRANSLATIONS: Record<Language, Record<string, string>> = {
     "admin.userSearch.submissions": "отправок",
     "admin.userSearch.courses": "курсов",
     "admin.userSearch.hint": "Поиск пользователей по email или имени",
+    "admin.userSearch.banned": "Заблокирован",
+    "admin.userSearch.ban": "Бан",
+    "admin.userSearch.unban": "Разбан",
+    "admin.userSearch.banReason": "Причина бана",
+    "admin.userSearch.banError": "Не удалось заблокировать пользователя",
+    "admin.userSearch.unbanError": "Не удалось разблокировать пользователя",
+    "admin.userSearch.banModalTitle": "Заблокировать пользователя",
+    "admin.userSearch.banModalDesc":
+      "Вы собираетесь заблокировать пользователя",
+    "admin.userSearch.banReasonLabel": "Причина блокировки",
+    "admin.userSearch.banReasonPlaceholder": "Введите причину блокировки...",
+    "admin.userSearch.confirmBan": "Заблокировать",
 
     // ===================== COMMON =====================
     "common.loading": "Загрузка...",
@@ -2096,6 +2120,19 @@ const UI_TRANSLATIONS: Record<Language, Record<string, string>> = {
     "admin.userSearch.courses": "kurslar",
     "admin.userSearch.hint":
       "Email yoki ism bo'yicha foydalanuvchilarni qidiring",
+    "admin.userSearch.banned": "Bloklangan",
+    "admin.userSearch.ban": "Bloklash",
+    "admin.userSearch.unban": "Blokdan chiqarish",
+    "admin.userSearch.banReason": "Bloklash sababi",
+    "admin.userSearch.banError": "Foydalanuvchini bloklashda xatolik",
+    "admin.userSearch.unbanError":
+      "Foydalanuvchini blokdan chiqarishda xatolik",
+    "admin.userSearch.banModalTitle": "Foydalanuvchini bloklash",
+    "admin.userSearch.banModalDesc":
+      "Siz foydalanuvchini bloklash arafasidasiz",
+    "admin.userSearch.banReasonLabel": "Bloklash sababi",
+    "admin.userSearch.banReasonPlaceholder": "Bloklash sababini kiriting...",
+    "admin.userSearch.confirmBan": "Bloklash",
 
     // ===================== COMMON =====================
     "common.loading": "Yuklanmoqda...",

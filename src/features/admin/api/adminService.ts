@@ -158,10 +158,46 @@ export interface UserSearchResult {
   name: string | null;
   role: string;
   isPremium: boolean;
+  isBanned: boolean;
+  bannedAt: string | null;
+  bannedReason: string | null;
   createdAt: string;
   lastActivityAt: string | null;
   submissionsCount: number;
   coursesCount: number;
+}
+
+// User Details (full profile)
+export interface UserDetails extends UserSearchResult {
+  bannedBy: string | null;
+  xp: number;
+  level: number;
+  currentStreak: number;
+  bugReportsCount: number;
+}
+
+// Banned Users Response
+export interface BannedUsersResponse {
+  users: Array<{
+    id: string;
+    email: string;
+    name: string | null;
+    bannedAt: string;
+    bannedReason: string | null;
+    bannedBy: string | null;
+    createdAt: string;
+  }>;
+  total: number;
+}
+
+// Ban User Response
+export interface BanUserResponse {
+  id: string;
+  email: string;
+  name: string | null;
+  isBanned: boolean;
+  bannedAt: string;
+  bannedReason: string;
 }
 
 /**
@@ -272,6 +308,51 @@ export const adminService = {
     if (!query || query.length < 2) return [];
     return await api.get<UserSearchResult[]>(
       `/admin/analytics/users/search?q=${encodeURIComponent(query)}`,
+    );
+  },
+
+  /**
+   * Get user details by ID
+   * GET /admin/analytics/users/:id
+   */
+  getUserById: async (userId: string): Promise<UserDetails> => {
+    return await api.get<UserDetails>(`/admin/analytics/users/${userId}`);
+  },
+
+  /**
+   * Get list of banned users
+   * GET /admin/analytics/users/banned/list
+   */
+  getBannedUsers: async (
+    limit = 50,
+    offset = 0,
+  ): Promise<BannedUsersResponse> => {
+    return await api.get<BannedUsersResponse>(
+      `/admin/analytics/users/banned/list?limit=${limit}&offset=${offset}`,
+    );
+  },
+
+  /**
+   * Ban a user
+   * POST /admin/analytics/users/:id/ban
+   */
+  banUser: async (userId: string, reason: string): Promise<BanUserResponse> => {
+    return await api.post<BanUserResponse>(
+      `/admin/analytics/users/${userId}/ban`,
+      { reason },
+    );
+  },
+
+  /**
+   * Unban a user
+   * POST /admin/analytics/users/:id/unban
+   */
+  unbanUser: async (
+    userId: string,
+  ): Promise<{ id: string; isBanned: boolean }> => {
+    return await api.post<{ id: string; isBanned: boolean }>(
+      `/admin/analytics/users/${userId}/unban`,
+      {},
     );
   },
 };
