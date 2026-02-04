@@ -56,8 +56,12 @@ vi.mock("@/contexts/LanguageContext", () => ({
         "roadmap.interestsHint": "Select at least one area of interest",
         "roadmap.interestsError":
           "Please select at least one area of interest to continue",
+        "roadmap.selectPaymentMethod": "Select Payment Method",
+        "roadmap.selectProviderError": "Please select a payment method",
+        "roadmap.checkoutError": "Payment failed. Please try again.",
         "common.cancel": "Cancel",
         "common.upgrade": "Upgrade",
+        "common.loading": "Processing...",
       };
       return translations[key] || key;
     },
@@ -91,7 +95,15 @@ vi.mock("./components/RoadmapVariantCard", () => ({
   ),
 }));
 
+vi.mock("@/features/payments/api/paymentService", () => ({
+  paymentService: {
+    getProviders: vi.fn(),
+    createCheckout: vi.fn(),
+  },
+}));
+
 import { roadmapService } from "../api/roadmapService";
+import { paymentService } from "@/features/payments/api/paymentService";
 
 describe("RoadmapPage", () => {
   const mockUser = {
@@ -170,6 +182,14 @@ describe("RoadmapPage", () => {
       variants: mockVariants,
     });
     vi.mocked(roadmapService.selectVariant).mockResolvedValue(mockRoadmap);
+    // Default payment provider mock for regenerate modal tests
+    vi.mocked(paymentService.getProviders).mockResolvedValue([
+      { id: "payme", name: "Payme", configured: true },
+    ]);
+    vi.mocked(paymentService.createCheckout).mockResolvedValue({
+      orderId: "order-123",
+      paymentUrl: "https://payme.uz/checkout/123",
+    });
   });
 
   const renderWithAuth = (user: typeof mockUser | null) => {
@@ -1043,6 +1063,200 @@ describe("RoadmapPage", () => {
       // Check the link
       const premiumLink = screen.getByText("Upgrade to Premium →");
       expect(premiumLink.closest("a")).toHaveAttribute("href", "/premium");
+    });
+
+    it("should load payment providers when modal opens", async () => {
+      const nonRegenerateRoadmap = {
+        ...mockRoadmap,
+        canRegenerate: false,
+        isPremium: false,
+      };
+      vi.mocked(roadmapService.getUserRoadmap).mockResolvedValue(
+        nonRegenerateRoadmap,
+      );
+      vi.mocked(paymentService.getProviders).mockResolvedValue([
+        { id: "payme", name: "Payme", configured: true },
+        { id: "click", name: "Click", configured: true },
+      ]);
+
+      renderWithAuth(mockUser);
+
+      await waitFor(() => {
+        expect(screen.getByText(/Regenerate \(Premium\)/)).toBeInTheDocument();
+      });
+
+      fireEvent.click(
+        screen.getByText(/Regenerate \(Premium\)/).closest("button")!,
+      );
+
+      await waitFor(() => {
+        expect(paymentService.getProviders).toHaveBeenCalled();
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId("provider-payme")).toBeInTheDocument();
+        expect(screen.getByTestId("provider-click")).toBeInTheDocument();
+      });
+    });
+
+    it("should select payment provider when clicked", async () => {
+      const nonRegenerateRoadmap = {
+        ...mockRoadmap,
+        canRegenerate: false,
+        isPremium: false,
+      };
+      vi.mocked(roadmapService.getUserRoadmap).mockResolvedValue(
+        nonRegenerateRoadmap,
+      );
+      vi.mocked(paymentService.getProviders).mockResolvedValue([
+        { id: "payme", name: "Payme", configured: true },
+        { id: "click", name: "Click", configured: true },
+      ]);
+
+      renderWithAuth(mockUser);
+
+      await waitFor(() => {
+        expect(screen.getByText(/Regenerate \(Premium\)/)).toBeInTheDocument();
+      });
+
+      fireEvent.click(
+        screen.getByText(/Regenerate \(Premium\)/).closest("button")!,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId("provider-payme")).toBeInTheDocument();
+      });
+
+      // Click on Click provider
+      fireEvent.click(screen.getByTestId("provider-click"));
+
+      // Check that Click is now selected (has the selected class)
+      await waitFor(() => {
+        expect(screen.getByTestId("provider-click")).toHaveClass(
+          "border-brand-500",
+        );
+      });
+    });
+
+    it("should create checkout when purchase button clicked", async () => {
+      const nonRegenerateRoadmap = {
+        ...mockRoadmap,
+        canRegenerate: false,
+        isPremium: false,
+      };
+      vi.mocked(roadmapService.getUserRoadmap).mockResolvedValue(
+        nonRegenerateRoadmap,
+      );
+      vi.mocked(paymentService.getProviders).mockResolvedValue([
+        { id: "payme", name: "Payme", configured: true },
+      ]);
+      vi.mocked(paymentService.createCheckout).mockResolvedValue({
+        orderId: "order-123",
+        paymentUrl: "https://payme.uz/checkout/123",
+      });
+
+      // Mock window.location
+      const originalLocation = window.location;
+      // @ts-ignore
+      delete window.location;
+      window.location = { ...originalLocation, href: "" };
+
+      renderWithAuth(mockUser);
+
+      await waitFor(() => {
+        expect(screen.getByText(/Regenerate \(Premium\)/)).toBeInTheDocument();
+      });
+
+      fireEvent.click(
+        screen.getByText(/Regenerate \(Premium\)/).closest("button")!,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId("provider-payme")).toBeInTheDocument();
+      });
+
+      // Provider is auto-selected, click purchase
+      fireEvent.click(screen.getByTestId("purchase-button"));
+
+      await waitFor(() => {
+        expect(paymentService.createCheckout).toHaveBeenCalledWith({
+          orderType: "purchase",
+          purchaseType: "roadmap_generation",
+          quantity: 1,
+          provider: "payme",
+          returnUrl: expect.stringContaining("/roadmap?status=success"),
+        });
+      });
+
+      // Restore window.location
+      window.location = originalLocation;
+    });
+
+    it("should show error when checkout fails", async () => {
+      const nonRegenerateRoadmap = {
+        ...mockRoadmap,
+        canRegenerate: false,
+        isPremium: false,
+      };
+      vi.mocked(roadmapService.getUserRoadmap).mockResolvedValue(
+        nonRegenerateRoadmap,
+      );
+      vi.mocked(paymentService.getProviders).mockResolvedValue([
+        { id: "payme", name: "Payme", configured: true },
+      ]);
+      vi.mocked(paymentService.createCheckout).mockRejectedValue(
+        new Error("Payment error"),
+      );
+
+      renderWithAuth(mockUser);
+
+      await waitFor(() => {
+        expect(screen.getByText(/Regenerate \(Premium\)/)).toBeInTheDocument();
+      });
+
+      fireEvent.click(
+        screen.getByText(/Regenerate \(Premium\)/).closest("button")!,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId("provider-payme")).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByTestId("purchase-button"));
+
+      await waitFor(() => {
+        expect(screen.getByTestId("checkout-error")).toBeInTheDocument();
+        expect(
+          screen.getByText("Payment failed. Please try again."),
+        ).toBeInTheDocument();
+      });
+    });
+
+    it("should disable purchase button when no provider selected and providers loading", async () => {
+      const nonRegenerateRoadmap = {
+        ...mockRoadmap,
+        canRegenerate: false,
+        isPremium: false,
+      };
+      vi.mocked(roadmapService.getUserRoadmap).mockResolvedValue(
+        nonRegenerateRoadmap,
+      );
+      // Return empty providers - no provider will be selected
+      vi.mocked(paymentService.getProviders).mockResolvedValue([]);
+
+      renderWithAuth(mockUser);
+
+      await waitFor(() => {
+        expect(screen.getByText(/Regenerate \(Premium\)/)).toBeInTheDocument();
+      });
+
+      fireEvent.click(
+        screen.getByText(/Regenerate \(Premium\)/).closest("button")!,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId("purchase-button")).toBeDisabled();
+      });
     });
   });
 

@@ -20,6 +20,10 @@ import {
   RoadmapGenerationInput,
 } from "../model/types";
 import { roadmapService, SelectVariantParams } from "../api/roadmapService";
+import {
+  paymentService,
+  PaymentProvider,
+} from "@/features/payments/api/paymentService";
 import { AuthContext } from "@/components/Layout";
 import { storage } from "@/lib/storage";
 import { createLogger } from "@/lib/logger";
@@ -355,6 +359,34 @@ const RoadmapPage = () => {
   const [showRegenerateModal, setShowRegenerateModal] = useState(false);
   const [interestsError, setInterestsError] = useState(false);
 
+  // Payment state for regeneration purchase
+  const [paymentProviders, setPaymentProviders] = useState<PaymentProvider[]>(
+    [],
+  );
+  const [selectedProvider, setSelectedProvider] = useState<
+    "payme" | "click" | null
+  >(null);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
+
+  // Load payment providers when regenerate modal opens
+  useEffect(() => {
+    if (showRegenerateModal && paymentProviders.length === 0) {
+      paymentService
+        .getProviders()
+        .then((providers) => {
+          const configured = providers.filter((p) => p.configured);
+          setPaymentProviders(configured);
+          if (configured.length > 0 && !selectedProvider) {
+            setSelectedProvider(configured[0].id as "payme" | "click");
+          }
+        })
+        .catch((e) => {
+          log.error("Failed to load payment providers", e);
+        });
+    }
+  }, [showRegenerateModal, paymentProviders.length, selectedProvider]);
+
   // Save wizard state to localStorage when it changes
   useEffect(() => {
     if (step === "wizard") {
@@ -591,10 +623,35 @@ const RoadmapPage = () => {
     setSelectedVariant(null);
   };
 
-  const handleRegeneratePurchase = () => {
-    // TODO: Integrate with payment system
-    // For now, redirect to premium page
-    window.location.href = "/premium";
+  const handleRegeneratePurchase = async () => {
+    if (!selectedProvider) {
+      setCheckoutError(
+        tUI("roadmap.selectProviderError") || "Please select a payment method",
+      );
+      return;
+    }
+
+    setCheckoutLoading(true);
+    setCheckoutError(null);
+
+    try {
+      const response = await paymentService.createCheckout({
+        orderType: "purchase",
+        purchaseType: "roadmap_generation",
+        quantity: 1,
+        provider: selectedProvider,
+        returnUrl: window.location.origin + "/roadmap?status=success",
+      });
+
+      // Redirect to payment page
+      window.location.href = response.paymentUrl;
+    } catch (e) {
+      log.error("Checkout failed", e);
+      setCheckoutError(
+        tUI("roadmap.checkoutError") || "Payment failed. Please try again.",
+      );
+      setCheckoutLoading(false);
+    }
   };
 
   const reset = async () => {
@@ -1108,16 +1165,69 @@ const RoadmapPage = () => {
                 </li>
               </ul>
 
+              {/* Payment Provider Selection */}
+              {paymentProviders.length > 0 && (
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                    {tUI("roadmap.selectPaymentMethod") ||
+                      "Select Payment Method"}
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
+                    {paymentProviders.map((provider) => (
+                      <button
+                        key={provider.id}
+                        onClick={() =>
+                          setSelectedProvider(provider.id as "payme" | "click")
+                        }
+                        data-testid={`provider-${provider.id}`}
+                        className={`p-4 rounded-xl border-2 transition-all ${
+                          selectedProvider === provider.id
+                            ? "border-brand-500 bg-brand-50 dark:bg-brand-900/20"
+                            : "border-gray-200 dark:border-dark-border hover:border-gray-300 dark:hover:border-gray-600"
+                        }`}
+                      >
+                        <span className="font-medium text-gray-900 dark:text-white">
+                          {provider.name}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Checkout Error */}
+              {checkoutError && (
+                <div
+                  className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-600 dark:text-red-400"
+                  data-testid="checkout-error"
+                >
+                  {checkoutError}
+                </div>
+              )}
+
               {/* Actions */}
               <div className="space-y-3">
                 <button
                   onClick={handleRegeneratePurchase}
-                  className="w-full py-3 bg-gradient-to-r from-brand-600 to-purple-600 hover:from-brand-500 hover:to-purple-500 text-white font-bold rounded-xl shadow-lg shadow-brand-500/20 transition-all"
+                  disabled={checkoutLoading || !selectedProvider}
+                  data-testid="purchase-button"
+                  className={`w-full py-3 bg-gradient-to-r from-brand-600 to-purple-600 hover:from-brand-500 hover:to-purple-500 text-white font-bold rounded-xl shadow-lg shadow-brand-500/20 transition-all ${
+                    checkoutLoading || !selectedProvider
+                      ? "opacity-50 cursor-not-allowed"
+                      : ""
+                  }`}
                 >
-                  {tUI("roadmap.purchaseRegenerate") || "Purchase Regeneration"}
+                  {checkoutLoading
+                    ? tUI("common.loading") || "Processing..."
+                    : tUI("roadmap.purchaseRegenerate") ||
+                      "Purchase Regeneration"}
                 </button>
                 <button
-                  onClick={() => setShowRegenerateModal(false)}
+                  onClick={() => {
+                    setShowRegenerateModal(false);
+                    setCheckoutError(null);
+                  }}
+                  disabled={checkoutLoading}
                   className="w-full py-3 text-gray-500 dark:text-gray-400 font-medium hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
                 >
                   {tUI("common.cancel") || "Cancel"}

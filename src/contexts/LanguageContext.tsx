@@ -643,6 +643,9 @@ const UI_TRANSLATIONS: Record<Language, Record<string, string>> = {
     "roadmap.wizardStep4Subtitle": "What do you want to achieve?",
     "roadmap.wizardStep5Title": "Time Commitment",
     "roadmap.wizardStep5Subtitle": "How much time can you dedicate?",
+    "roadmap.selectPaymentMethod": "Select Payment Method",
+    "roadmap.selectProviderError": "Please select a payment method",
+    "roadmap.checkoutError": "Payment failed. Please try again.",
 
     // ===================== PAYMENTS PAGE =====================
     "payments.title": "Billing & Payments",
@@ -1426,6 +1429,9 @@ const UI_TRANSLATIONS: Record<Language, Record<string, string>> = {
     "roadmap.wizardStep4Subtitle": "Чего вы хотите достичь?",
     "roadmap.wizardStep5Title": "Время на обучение",
     "roadmap.wizardStep5Subtitle": "Сколько времени вы можете уделять?",
+    "roadmap.selectPaymentMethod": "Выберите способ оплаты",
+    "roadmap.selectProviderError": "Пожалуйста, выберите способ оплаты",
+    "roadmap.checkoutError": "Ошибка оплаты. Попробуйте ещё раз.",
 
     // ===================== PAYMENTS PAGE =====================
     "payments.title": "Биллинг и платежи",
@@ -2217,6 +2223,9 @@ const UI_TRANSLATIONS: Record<Language, Record<string, string>> = {
     "roadmap.wizardStep4Subtitle": "Nimaga erishmoqchisiz?",
     "roadmap.wizardStep5Title": "Vaqt ajratish",
     "roadmap.wizardStep5Subtitle": "Qancha vaqt ajrata olasiz?",
+    "roadmap.selectPaymentMethod": "To'lov usulini tanlang",
+    "roadmap.selectProviderError": "Iltimos, to'lov usulini tanlang",
+    "roadmap.checkoutError": "To'lov xatosi. Qaytadan urinib ko'ring.",
 
     // ===================== PAYMENTS PAGE =====================
     "payments.title": "Hisob-kitob va to'lovlar",
