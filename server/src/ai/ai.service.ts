@@ -9,9 +9,9 @@ import { UsersService } from "../users/users.service";
 import { ConfigService } from "@nestjs/config";
 import { GoogleGenAI } from "@google/genai";
 import { AccessControlService } from "../subscriptions/access-control.service";
+import { SettingsService } from "../admin/settings/settings.service";
 import {
   DEFAULT_AI_MODEL,
-  AI_DAILY_LIMITS,
   PROMPT_ENGINEERING_COURSE_SLUG,
   AiLimitTier,
 } from "./ai.config";
@@ -86,6 +86,7 @@ Languages: en=English, ru=Russian, uz=Uzbek`;
     private usersService: UsersService,
     private configService: ConfigService,
     private accessControlService: AccessControlService,
+    private settingsService: SettingsService,
   ) {
     const apiKey =
       this.configService.get<string>("GEMINI_API_KEY") ||
@@ -98,19 +99,23 @@ Languages: en=English, ru=Russian, uz=Uzbek`;
   /**
    * Determine the AI limit tier and limit for a user based on their subscriptions
    * Priority: Global Premium > Prompt Engineering > Course Subscription > Free
+   * Limits are now loaded dynamically from platform settings
    */
   async getUserAiLimit(
     userId: string,
     taskId?: string,
   ): Promise<{ tier: AiLimitTier; limit: number }> {
+    // Load dynamic AI settings
+    const aiSettings = await this.settingsService.getAiSettings();
+
     // 1. Check global premium subscription (highest priority)
     const hasGlobalAccess =
       await this.accessControlService.hasGlobalAccess(userId);
     if (hasGlobalAccess) {
-      return { tier: "global", limit: AI_DAILY_LIMITS.GLOBAL_PREMIUM };
+      return { tier: "global", limit: aiSettings.limits.premium };
     }
 
-    // 2. Check if user has access to Prompt Engineering course (special 100/day limit)
+    // 2. Check if user has access to Prompt Engineering course (special limit)
     const peCourseMaybe = await this.prisma.course.findUnique({
       where: { slug: PROMPT_ENGINEERING_COURSE_SLUG },
     });
@@ -123,7 +128,7 @@ Languages: en=English, ru=Russian, uz=Uzbek`;
       if (hasPeAccess) {
         return {
           tier: "prompt_engineering",
-          limit: AI_DAILY_LIMITS.PROMPT_ENGINEERING,
+          limit: aiSettings.limits.promptEngineering,
         };
       }
     }
@@ -135,12 +140,12 @@ Languages: en=English, ru=Russian, uz=Uzbek`;
         taskId,
       );
       if (canUseAiTutor) {
-        return { tier: "course", limit: AI_DAILY_LIMITS.COURSE_SUBSCRIPTION };
+        return { tier: "course", limit: aiSettings.limits.course };
       }
     }
 
     // 4. Default: Free tier (all authenticated users)
-    return { tier: "free", limit: AI_DAILY_LIMITS.FREE };
+    return { tier: "free", limit: aiSettings.limits.free };
   }
 
   /**

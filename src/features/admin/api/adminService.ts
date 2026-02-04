@@ -1,5 +1,4 @@
-
-import { api } from '@/lib/api';
+import { api } from "@/lib/api";
 
 // Dashboard Stats (matches backend response)
 export interface DashboardStats {
@@ -23,7 +22,10 @@ export interface CourseAnalyticsItem {
   completed: number;
   completionRate: number;
   averageProgress: number;
-  translations?: Record<string, { title?: string; description?: string }> | null;
+  translations?: Record<
+    string,
+    { title?: string; description?: string }
+  > | null;
 }
 
 export interface CourseAnalyticsResponse {
@@ -99,6 +101,24 @@ export interface AiUsageStats {
   }>;
 }
 
+// AI Settings (matches backend SettingsService)
+export interface AiLimits {
+  free: number;
+  course: number;
+  premium: number;
+  promptEngineering: number;
+}
+
+export interface AiSettings {
+  enabled: boolean;
+  limits: AiLimits;
+}
+
+export interface UpdateAiSettingsDto {
+  enabled?: boolean;
+  limits?: Partial<AiLimits>;
+}
+
 /**
  * Admin Analytics Service - Connected to Backend Admin API
  *
@@ -110,7 +130,7 @@ export const adminService = {
    * GET /admin/analytics/dashboard
    */
   getDashboardStats: async (): Promise<DashboardStats> => {
-    return await api.get<DashboardStats>('/admin/analytics/dashboard');
+    return await api.get<DashboardStats>("/admin/analytics/dashboard");
   },
 
   /**
@@ -118,7 +138,7 @@ export const adminService = {
    * GET /admin/analytics/courses
    */
   getCourseAnalytics: async (): Promise<CourseAnalyticsResponse> => {
-    return await api.get<CourseAnalyticsResponse>('/admin/analytics/courses');
+    return await api.get<CourseAnalyticsResponse>("/admin/analytics/courses");
   },
 
   /**
@@ -126,7 +146,7 @@ export const adminService = {
    * GET /admin/analytics/tasks
    */
   getTaskAnalytics: async (): Promise<TaskAnalyticsResponse> => {
-    return await api.get<TaskAnalyticsResponse>('/admin/analytics/tasks');
+    return await api.get<TaskAnalyticsResponse>("/admin/analytics/tasks");
   },
 
   /**
@@ -134,7 +154,9 @@ export const adminService = {
    * GET /admin/analytics/submissions
    */
   getSubmissionStats: async (): Promise<SubmissionStatsResponse> => {
-    return await api.get<SubmissionStatsResponse>('/admin/analytics/submissions');
+    return await api.get<SubmissionStatsResponse>(
+      "/admin/analytics/submissions",
+    );
   },
 
   /**
@@ -142,7 +164,7 @@ export const adminService = {
    * GET /admin/analytics/subscriptions
    */
   getSubscriptionStats: async (): Promise<SubscriptionStats> => {
-    return await api.get<SubscriptionStats>('/admin/analytics/subscriptions');
+    return await api.get<SubscriptionStats>("/admin/analytics/subscriptions");
   },
 
   /**
@@ -150,6 +172,22 @@ export const adminService = {
    * GET /admin/analytics/ai-usage
    */
   getAiUsageStats: async (): Promise<AiUsageStats> => {
-    return await api.get<AiUsageStats>('/admin/analytics/ai-usage');
+    return await api.get<AiUsageStats>("/admin/analytics/ai-usage");
+  },
+
+  /**
+   * Get AI Tutor settings
+   * GET /admin/settings/ai
+   */
+  getAiSettings: async (): Promise<AiSettings> => {
+    return await api.get<AiSettings>("/admin/settings/ai");
+  },
+
+  /**
+   * Update AI Tutor settings
+   * PUT /admin/settings/ai
+   */
+  updateAiSettings: async (dto: UpdateAiSettingsDto): Promise<AiSettings> => {
+    return await api.put<AiSettings>("/admin/settings/ai", dto);
   },
 };

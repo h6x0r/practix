@@ -4,6 +4,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import { UsersService } from "../users/users.service";
 import { ConfigService } from "@nestjs/config";
 import { AccessControlService } from "../subscriptions/access-control.service";
+import { SettingsService } from "../admin/settings/settings.service";
 import {
   ForbiddenException,
   ServiceUnavailableException,
@@ -66,6 +67,18 @@ describe("AiService", () => {
     hasCourseAccess: jest.fn().mockResolvedValue(false),
   };
 
+  const mockSettingsService = {
+    getAiSettings: jest.fn().mockResolvedValue({
+      enabled: true,
+      limits: {
+        free: 5,
+        course: 30,
+        premium: 100,
+        promptEngineering: 100,
+      },
+    }),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -74,6 +87,7 @@ describe("AiService", () => {
         { provide: UsersService, useValue: mockUsersService },
         { provide: ConfigService, useValue: mockConfigService },
         { provide: AccessControlService, useValue: mockAccessControlService },
+        { provide: SettingsService, useValue: mockSettingsService },
       ],
     }).compile();
 
@@ -533,6 +547,7 @@ describe("AiService", () => {
               provide: AccessControlService,
               useValue: mockAccessControlService,
             },
+            { provide: SettingsService, useValue: mockSettingsService },
           ],
         }).compile();
 
@@ -583,6 +598,7 @@ describe("AiService", () => {
                 provide: AccessControlService,
                 useValue: mockAccessControlService,
               },
+              { provide: SettingsService, useValue: mockSettingsService },
             ],
           }).compile();
 
@@ -640,6 +656,7 @@ describe("AiService", () => {
                 provide: AccessControlService,
                 useValue: mockAccessControlService,
               },
+              { provide: SettingsService, useValue: mockSettingsService },
             ],
           }).compile();
 
@@ -683,6 +700,7 @@ describe("AiService", () => {
               provide: AccessControlService,
               useValue: mockAccessControlService,
             },
+            { provide: SettingsService, useValue: mockSettingsService },
           ],
         }).compile();
 
@@ -872,6 +890,7 @@ describe("AiService", () => {
           { provide: UsersService, useValue: mockUsersService },
           { provide: ConfigService, useValue: mockConfigService },
           { provide: AccessControlService, useValue: mockAccessControlService },
+          { provide: SettingsService, useValue: mockSettingsService },
         ],
       }).compile();
 
@@ -889,6 +908,7 @@ describe("AiService", () => {
             useValue: { get: jest.fn().mockReturnValue(null) },
           },
           { provide: AccessControlService, useValue: mockAccessControlService },
+          { provide: SettingsService, useValue: mockSettingsService },
         ],
       }).compile();
 
@@ -951,6 +971,7 @@ describe("AiService", () => {
           { provide: UsersService, useValue: mockUsersService },
           { provide: ConfigService, useValue: mockConfigService },
           { provide: AccessControlService, useValue: mockAccessControlService },
+          { provide: SettingsService, useValue: mockSettingsService },
         ],
       }).compile();
 
@@ -986,6 +1007,7 @@ describe("AiService", () => {
           { provide: UsersService, useValue: mockUsersService },
           { provide: ConfigService, useValue: mockConfigService },
           { provide: AccessControlService, useValue: mockAccessControlService },
+          { provide: SettingsService, useValue: mockSettingsService },
         ],
       }).compile();
 
@@ -1024,6 +1046,7 @@ describe("AiService", () => {
           { provide: UsersService, useValue: mockUsersService },
           { provide: ConfigService, useValue: mockConfigService },
           { provide: AccessControlService, useValue: mockAccessControlService },
+          { provide: SettingsService, useValue: mockSettingsService },
         ],
       }).compile();
 
@@ -1060,6 +1083,7 @@ describe("AiService", () => {
           { provide: PrismaService, useValue: mockPrismaService },
           { provide: UsersService, useValue: mockUsersService },
           { provide: ConfigService, useValue: mockConfigService },
+          { provide: SettingsService, useValue: mockSettingsService },
           { provide: AccessControlService, useValue: mockAccessControlService },
         ],
       }).compile();
@@ -1100,6 +1124,7 @@ describe("AiService", () => {
           { provide: UsersService, useValue: mockUsersService },
           { provide: ConfigService, useValue: mockConfigService },
           { provide: AccessControlService, useValue: mockAccessControlService },
+          { provide: SettingsService, useValue: mockSettingsService },
         ],
       }).compile();
 
@@ -1152,6 +1177,7 @@ describe("AiService", () => {
           { provide: UsersService, useValue: mockUsersService },
           { provide: ConfigService, useValue: mockConfigService },
           { provide: AccessControlService, useValue: mockAccessControlService },
+          { provide: SettingsService, useValue: mockSettingsService },
         ],
       }).compile();
 
@@ -1195,6 +1221,7 @@ describe("AiService", () => {
           { provide: UsersService, useValue: mockUsersService },
           { provide: ConfigService, useValue: mockConfigService },
           { provide: AccessControlService, useValue: mockAccessControlService },
+          { provide: SettingsService, useValue: mockSettingsService },
         ],
       }).compile();
 
@@ -1229,6 +1256,7 @@ describe("AiService", () => {
           { provide: UsersService, useValue: mockUsersService },
           { provide: ConfigService, useValue: mockConfigService },
           { provide: AccessControlService, useValue: mockAccessControlService },
+          { provide: SettingsService, useValue: mockSettingsService },
         ],
       }).compile();
 
