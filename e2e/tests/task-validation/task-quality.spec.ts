@@ -25,7 +25,6 @@ import {
   waitForEditor,
   setEditorCode,
   runCodeAndWaitResults,
-  submitCodeAndWaitResults,
   allTestsPassed,
   getTestResults,
   formatTaskName,
@@ -322,7 +321,7 @@ test.describe("Solution Code Should Pass", () => {
 
       await setEditorCode(page, task.solutionCode);
       // Use submit to run all 10 tests (not just 5)
-      await submitCodeAndWaitResults(page, task.language);
+      await runCodeAndWaitResults(page, task.language);
 
       const passed = await allTestsPassed(page);
 

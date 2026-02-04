@@ -125,7 +125,7 @@ func Stop() {
 // 2. Use fmt.Sprintf to format message with args
 // 3. Send to channel (non-blocking - use select with default case)
 // 4. If channel full, drop or handle error (for simplicity: drop)
-func AsyncLog(level string, format string, args ...any) {
+func AsyncLog(level string, format string, args ...interface{}) {
 	// TODO: Implement
 }
 
@@ -167,7 +167,7 @@ func Stop() {
 	<-done         // block until worker signals completion - ensures no log loss
 }
 
-func AsyncLog(level string, format string, args ...any) {
+func AsyncLog(level string, format string, args ...interface{}) {
 	entry := LogEntry{
 		Time:    time.Now(),                   // capture timestamp immediately for accurate event timing
 		Level:   level,                        // store severity level for filtering
@@ -480,7 +480,7 @@ var (
     droppedLogs atomic.Int64
 )
 
-func AsyncLog(level string, format string, args ...any) {
+func AsyncLog(level string, format string, args ...interface{}) {
     entry := LogEntry{...}
 
     select {
@@ -539,7 +539,7 @@ func Stop() {
 	<-done         // блокируемся пока worker не сигнализирует завершение - гарантирует отсутствие потери логов
 }
 
-func AsyncLog(level string, format string, args ...any) {
+func AsyncLog(level string, format string, args ...interface{}) {
 	entry := LogEntry{
 		Time:    time.Now(),                   // захватываем timestamp немедленно для точного времени события
 		Level:   level,                        // сохраняем уровень severity для фильтрации
@@ -800,7 +800,7 @@ var (
     droppedLogs atomic.Int64
 )
 
-func AsyncLog(level string, format string, args ...any) {
+func AsyncLog(level string, format string, args ...interface{}) {
     entry := LogEntry{...}
     select {
     case logChan <- entry:
@@ -856,7 +856,7 @@ func Stop() {
 	<-done         // worker tugashini signallagunicha bloklaymiz - log yo'qotilmasligini ta'minlaydi
 }
 
-func AsyncLog(level string, format string, args ...any) {
+func AsyncLog(level string, format string, args ...interface{}) {
 	entry := LogEntry{
 		Time:    time.Now(),                   // aniq hodisa vaqti uchun timestampni darhol tutib olamiz
 		Level:   level,                        // filtrlash uchun severity darajasini saqlaymiz

@@ -108,28 +108,28 @@ func GetLevel() LogLevel {
 // TODO: Implement Debug
 // Check if DEBUG >= GetLevel() before logging
 // Format: [DEBUG] <message>
-func Debug(format string, args ...any) {
+func Debug(format string, args ...interface{}) {
 	// TODO: Implement
 }
 
 // TODO: Implement Info
 // Check if INFO >= GetLevel() before logging
 // Format: [INFO] <message>
-func Info(format string, args ...any) {
+func Info(format string, args ...interface{}) {
 	// TODO: Implement
 }
 
 // TODO: Implement Warn
 // Check if WARN >= GetLevel() before logging
 // Format: [WARN] <message>
-func Warn(format string, args ...any) {
+func Warn(format string, args ...interface{}) {
 	// TODO: Implement
 }
 
 // TODO: Implement Error
 // Check if ERROR >= GetLevel() before logging
 // Format: [ERROR] <message>
-func Error(format string, args ...any) {
+func Error(format string, args ...interface{}) {
 	// TODO: Implement
 }
 
@@ -137,7 +137,7 @@ func Error(format string, args ...any) {
 // Always log (FATAL is highest level)
 // Format: [FATAL] <message>
 // Call panic() after logging
-func Fatal(format string, args ...any) {
+func Fatal(format string, args ...interface{}) {
 	// TODO: Implement
 }`,
 	solutionCode: `package loggingx
@@ -167,35 +167,35 @@ func GetLevel() LogLevel {
 	return LogLevel(atomic.LoadInt32(&currentLevel)) // atomic read ensures consistent view across goroutines
 }
 
-func Debug(format string, args ...any) {
+func Debug(format string, args ...interface{}) {
 	if DEBUG < GetLevel() { // early exit avoids expensive string formatting when level disabled
 		return
 	}
 	log.Printf("[DEBUG] "+format, args...) // prefix message with level for grep filtering
 }
 
-func Info(format string, args ...any) {
+func Info(format string, args ...interface{}) {
 	if INFO < GetLevel() { // skip processing when current level filters out info messages
 		return
 	}
 	log.Printf("[INFO] "+format, args...) // log informational milestone events
 }
 
-func Warn(format string, args ...any) {
+func Warn(format string, args ...interface{}) {
 	if WARN < GetLevel() { // only log warnings when level permits
 		return
 	}
 	log.Printf("[WARN] "+format, args...) // signal non-critical issues requiring attention
 }
 
-func Error(format string, args ...any) {
+func Error(format string, args ...interface{}) {
 	if ERROR < GetLevel() { // respect level even for errors (fatal might be only enabled level)
 		return
 	}
 	log.Printf("[ERROR] "+format, args...) // record critical failures
 }
 
-func Fatal(format string, args ...any) {
+func Fatal(format string, args ...interface{}) {
 	log.Printf("[FATAL] "+format, args...) // always log fatal messages regardless of level
 	panic("fatal error occurred")          // terminate execution after logging unrecoverable error
 }`,
@@ -499,35 +499,35 @@ func GetLevel() LogLevel {
 	return LogLevel(atomic.LoadInt32(&currentLevel)) // атомарное чтение обеспечивает консистентное представление для всех goroutines
 }
 
-func Debug(format string, args ...any) {
+func Debug(format string, args ...interface{}) {
 	if DEBUG < GetLevel() { // ранний выход избегает дорогого форматирования строк когда уровень отключен
 		return
 	}
 	log.Printf("[DEBUG] "+format, args...) // префиксим сообщение уровнем для grep фильтрации
 }
 
-func Info(format string, args ...any) {
+func Info(format string, args ...interface{}) {
 	if INFO < GetLevel() { // пропускаем обработку когда текущий уровень фильтрует info сообщения
 		return
 	}
 	log.Printf("[INFO] "+format, args...) // логируем информационные milestone события
 }
 
-func Warn(format string, args ...any) {
+func Warn(format string, args ...interface{}) {
 	if WARN < GetLevel() { // логируем warnings только когда уровень разрешает
 		return
 	}
 	log.Printf("[WARN] "+format, args...) // сигнализируем некритичные проблемы требующие внимания
 }
 
-func Error(format string, args ...any) {
+func Error(format string, args ...interface{}) {
 	if ERROR < GetLevel() { // уважаем уровень даже для ошибок (может быть включен только fatal)
 		return
 	}
 	log.Printf("[ERROR] "+format, args...) // записываем критичные сбои
 }
 
-func Fatal(format string, args ...any) {
+func Fatal(format string, args ...interface{}) {
 	log.Printf("[FATAL] "+format, args...) // всегда логируем fatal сообщения независимо от уровня
 	panic("fatal error occurred")          // завершаем выполнение после логирования невосстановимой ошибки
 }`,
@@ -773,35 +773,35 @@ func GetLevel() LogLevel {
 	return LogLevel(atomic.LoadInt32(&currentLevel)) // atomik o'qish barcha goroutinelar uchun izchil ko'rinishni ta'minlaydi
 }
 
-func Debug(format string, args ...any) {
+func Debug(format string, args ...interface{}) {
 	if DEBUG < GetLevel() { // erta chiqish daraja o'chirilganda qimmat satr formatlashdan qochadi
 		return
 	}
 	log.Printf("[DEBUG] "+format, args...) // grep filtrlash uchun xabarni daraja bilan prefikslaymiz
 }
 
-func Info(format string, args ...any) {
+func Info(format string, args ...interface{}) {
 	if INFO < GetLevel() { // joriy daraja info xabarlarini filtrlasa qayta ishlashni o'tkazib yuboramiz
 		return
 	}
 	log.Printf("[INFO] "+format, args...) // ma'lumot milestone hodisalarini log qilamiz
 }
 
-func Warn(format string, args ...any) {
+func Warn(format string, args ...interface{}) {
 	if WARN < GetLevel() { // daraja ruxsat bergandagina warninglarni log qilamiz
 		return
 	}
 	log.Printf("[WARN] "+format, args...) // e'tibor talab qiladigan muhim bo'lmagan muammolarni signallaymiz
 }
 
-func Error(format string, args ...any) {
+func Error(format string, args ...interface{}) {
 	if ERROR < GetLevel() { // xatolar uchun ham darajaga rioya qilamiz (faqat fatal yoqilgan bo'lishi mumkin)
 		return
 	}
 	log.Printf("[ERROR] "+format, args...) // kritik nosozliklarni qayd qilamiz
 }
 
-func Fatal(format string, args ...any) {
+func Fatal(format string, args ...interface{}) {
 	log.Printf("[FATAL] "+format, args...) // darajadan qat'i nazar har doim fatal xabarlarni log qilamiz
 	panic("fatal error occurred")          // tiklab bo'lmaydigan xatoni log qilgandan keyin bajarishni to'xtatamiz
 }`,

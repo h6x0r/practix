@@ -22,7 +22,7 @@ export const task: Task = {
 **Example:**
 \`\`\`go
 handler := DecompressGZIP(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-    body, _ := io.ReadAll(r.Body)
+    body, _ := ioutil.ReadAll(r.Body)
     fmt.Fprintf(w, "Decompressed: %s", body)
 }))
 
@@ -74,7 +74,7 @@ func DecompressGZIP(next http.Handler) http.Handler {
 		}
 		defer reader.Close()	// Close gzip reader
 
-		payload, err := io.ReadAll(reader)	// Read decompressed data
+		payload, err := ioutil.ReadAll(reader)	// Read decompressed data
 		if err != nil {
 			http.Error(w, "invalid gzip body", http.StatusBadRequest)	// Handle read errors
 			return
@@ -101,6 +101,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -127,7 +128,7 @@ func Test3(t *testing.T) {
 	// Test non-gzip request passes through unchanged
 	var body []byte
 	h := DecompressGZIP(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		body, _ = io.ReadAll(r.Body)
+		body, _ = ioutil.ReadAll(r.Body)
 	}))
 	h.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("POST", "/", strings.NewReader("plain data")))
 	if string(body) != "plain data" {
@@ -144,7 +145,7 @@ func Test4(t *testing.T) {
 
 	var body []byte
 	h := DecompressGZIP(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		body, _ = io.ReadAll(r.Body)
+		body, _ = ioutil.ReadAll(r.Body)
 	}))
 	req := httptest.NewRequest("POST", "/", &buf)
 	req.Header.Set("Content-Encoding", "gzip")
@@ -220,7 +221,7 @@ func Test9(t *testing.T) {
 
 	var body []byte
 	h := DecompressGZIP(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		body, _ = io.ReadAll(r.Body)
+		body, _ = ioutil.ReadAll(r.Body)
 	}))
 	req := httptest.NewRequest("POST", "/", &buf)
 	req.Header.Set("Content-Encoding", "gzip")
@@ -336,7 +337,7 @@ func SafeDecompression(maxSize int64) func(http.Handler) http.Handler {
 
 	// Limit decompressed size to prevent bombs
             limitedReader := io.LimitReader(reader, maxSize)
-            payload, err := io.ReadAll(limitedReader)
+            payload, err := ioutil.ReadAll(limitedReader)
             if err != nil {
                 http.Error(w, "decompression failed", http.StatusBadRequest)
                 return
@@ -424,7 +425,7 @@ Without DecompressGZIP, handlers must manually check encoding and decompress, le
 **Пример:**
 \`\`\`go
 handler := DecompressGZIP(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-    body, _ := io.ReadAll(r.Body)
+    body, _ := ioutil.ReadAll(r.Body)
     fmt.Fprintf(w, "Decompressed: %s", body)
 }))
 
@@ -532,7 +533,7 @@ func SafeDecompression(maxSize int64) func(http.Handler) http.Handler {
             defer reader.Close()
 
             limitedReader := io.LimitReader(reader, maxSize)
-            payload, err := io.ReadAll(limitedReader)
+            payload, err := ioutil.ReadAll(limitedReader)
             if err != nil {
                 http.Error(w, "decompression failed", http.StatusBadRequest)
                 return
@@ -639,7 +640,7 @@ func DecompressGZIP(next http.Handler) http.Handler {
 		}
 		defer reader.Close()	// Закрытие gzip reader
 
-		payload, err := io.ReadAll(reader)	// Чтение распакованных данных
+		payload, err := ioutil.ReadAll(reader)	// Чтение распакованных данных
 		if err != nil {
 			http.Error(w, "invalid gzip body", http.StatusBadRequest)	// Обработка ошибок чтения
 			return
@@ -677,7 +678,7 @@ func DecompressGZIP(next http.Handler) http.Handler {
 **Misol:**
 \`\`\`go
 handler := DecompressGZIP(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-    body, _ := io.ReadAll(r.Body)
+    body, _ := ioutil.ReadAll(r.Body)
     fmt.Fprintf(w, "Decompressed: %s", body)
 }))
 
@@ -785,7 +786,7 @@ func SafeDecompression(maxSize int64) func(http.Handler) http.Handler {
             defer reader.Close()
 
             limitedReader := io.LimitReader(reader, maxSize)
-            payload, err := io.ReadAll(limitedReader)
+            payload, err := ioutil.ReadAll(limitedReader)
             if err != nil {
                 http.Error(w, "decompression failed", http.StatusBadRequest)
                 return
@@ -892,7 +893,7 @@ func DecompressGZIP(next http.Handler) http.Handler {
 		}
 		defer reader.Close()	// gzip readerni yopish
 
-		payload, err := io.ReadAll(reader)	// Ochilgan ma'lumotlarni o'qish
+		payload, err := ioutil.ReadAll(reader)	// Ochilgan ma'lumotlarni o'qish
 		if err != nil {
 			http.Error(w, "invalid gzip body", http.StatusBadRequest)	// O'qish xatolarini ishlash
 			return

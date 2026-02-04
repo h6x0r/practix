@@ -87,7 +87,7 @@ func RequestID(ctx context.Context) string {
 // Log message with request ID prefix if present
 // Format: [rid=<id>] <message>
 // Use log.Printf for output
-func Logf(ctx context.Context, format string, args ...any) {
+func Logf(ctx context.Context, format string, args ...interface{}) {
 	// TODO: Implement
 }`,
 	solutionCode: `package loggingx
@@ -119,7 +119,7 @@ func RequestID(ctx context.Context) string {
 	return val                                 // return identifier or empty string when missing
 }
 
-func Logf(ctx context.Context, format string, args ...any) {
+func Logf(ctx context.Context, format string, args ...interface{}) {
 	rid := RequestID(ctx) // fetch request identifier if present
 	if rid != "" {        // include request id prefix when available
 		log.Printf("[rid=%s] "+format, append([]any{rid}, args...)...) // prefix message with rid before formatting
@@ -336,7 +336,7 @@ func RequestID(ctx context.Context) string {
 	return val                                 // возвращаем идентификатор или пустую строку если отсутствует
 }
 
-func Logf(ctx context.Context, format string, args ...any) {
+func Logf(ctx context.Context, format string, args ...interface{}) {
 	rid := RequestID(ctx) // получаем идентификатор запроса если есть
 	if rid != "" {        // включаем префикс request id когда доступен
 		log.Printf("[rid=%s] "+format, append([]any{rid}, args...)...) // префиксим сообщение rid перед форматированием
@@ -506,7 +506,7 @@ func RequestID(ctx context.Context) string {
 	return val                                 // identifikator yoki mavjud bo'lmaganda bo'sh satr qaytaramiz
 }
 
-func Logf(ctx context.Context, format string, args ...any) {
+func Logf(ctx context.Context, format string, args ...interface{}) {
 	rid := RequestID(ctx) // mavjud bo'lsa so'rov identifikatorini olamiz
 	if rid != "" {        // mavjud bo'lganda request id prefiksini qo'shamiz
 		log.Printf("[rid=%s] "+format, append([]any{rid}, args...)...) // formatlashdan oldin xabarni rid bilan prefikslaymiz

@@ -20,7 +20,7 @@ export const task: Task = {
 var buf bytes.Buffer
 
 handler := TeeBody(&buf, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-    body, _ := io.ReadAll(r.Body)
+    body, _ := ioutil.ReadAll(r.Body)
     fmt.Fprintf(w, "Read: %s", body)
 }))
 
@@ -81,6 +81,7 @@ func (b *bodyReadCloser) Close() error {	// Implement Close method
 import (
 	"bytes"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -121,7 +122,7 @@ func Test4(t *testing.T) {
 	// Test body is copied to writer
 	var buf bytes.Buffer
 	h := TeeBody(&buf, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		io.ReadAll(r.Body)
+		ioutil.ReadAll(r.Body)
 	}))
 	h.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("POST", "/", strings.NewReader("Hello World")))
 	if buf.String() != "Hello World" {
@@ -134,7 +135,7 @@ func Test5(t *testing.T) {
 	var body []byte
 	var buf bytes.Buffer
 	h := TeeBody(&buf, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		body, _ = io.ReadAll(r.Body)
+		body, _ = ioutil.ReadAll(r.Body)
 	}))
 	h.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("POST", "/", strings.NewReader("Hello World")))
 	if string(body) != "Hello World" {
@@ -146,7 +147,7 @@ func Test6(t *testing.T) {
 	// Test empty body
 	var buf bytes.Buffer
 	h := TeeBody(&buf, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		io.ReadAll(r.Body)
+		ioutil.ReadAll(r.Body)
 	}))
 	h.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("POST", "/", bytes.NewReader(nil)))
 	if buf.Len() != 0 {
@@ -186,7 +187,7 @@ func Test9(t *testing.T) {
 	// Test response writing works
 	var buf bytes.Buffer
 	h := TeeBody(&buf, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		io.ReadAll(r.Body)
+		ioutil.ReadAll(r.Body)
 		w.WriteHeader(http.StatusCreated)
 		w.Write([]byte("created"))
 	}))
@@ -202,7 +203,7 @@ func Test10(t *testing.T) {
 	var buf bytes.Buffer
 	data := strings.Repeat("x", 10000)
 	h := TeeBody(&buf, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		io.ReadAll(r.Body)
+		ioutil.ReadAll(r.Body)
 	}))
 	h.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("POST", "/", strings.NewReader(data)))
 	if buf.Len() != 10000 {
@@ -289,7 +290,7 @@ func AsyncArchiver(archive chan<- []byte) func(http.Handler) http.Handler {
 	// Async write to archive channel
             go func() {
                 defer pw.Close()
-                data, _ := io.ReadAll(pr)
+                data, _ := ioutil.ReadAll(pr)
                 select {
                 case archive <- data:
                 case <-time.After(time.Second):
@@ -345,7 +346,7 @@ Without TeeBody, logging request bodies requires either reading twice (inefficie
 var buf bytes.Buffer
 
 handler := TeeBody(&buf, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-    body, _ := io.ReadAll(r.Body)
+    body, _ := ioutil.ReadAll(r.Body)
     fmt.Fprintf(w, "Read: %s", body)
 }))
 
@@ -432,7 +433,7 @@ func AsyncArchiver(archive chan<- []byte) func(http.Handler) http.Handler {
 
             go func() {
                 defer pw.Close()
-                data, _ := io.ReadAll(pr)
+                data, _ := ioutil.ReadAll(pr)
                 select {
                 case archive <- data:
                 case <-time.After(time.Second):
@@ -524,7 +525,7 @@ func (b *bodyReadCloser) Close() error {	// Реализация метода Cl
 var buf bytes.Buffer
 
 handler := TeeBody(&buf, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-    body, _ := io.ReadAll(r.Body)
+    body, _ := ioutil.ReadAll(r.Body)
     fmt.Fprintf(w, "Read: %s", body)
 }))
 
@@ -611,7 +612,7 @@ func AsyncArchiver(archive chan<- []byte) func(http.Handler) http.Handler {
 
             go func() {
                 defer pw.Close()
-                data, _ := io.ReadAll(pr)
+                data, _ := ioutil.ReadAll(pr)
                 select {
                 case archive <- data:
                 case <-time.After(time.Second):

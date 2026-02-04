@@ -107,7 +107,7 @@ func CallExternalAPI(url string) ([]byte, error) {
     err := DoWithTimeout(ctx, func() {
         resp, _ := http.Get(url)
         defer resp.Body.Close()
-        result, _ = io.ReadAll(resp.Body)
+        result, _ = ioutil.ReadAll(resp.Body)
     }, 5*time.Second)
 
     return result, err
@@ -338,7 +338,7 @@ func CallExternalAPI(url string) ([]byte, error) {
     err := DoWithTimeout(ctx, func() {
         resp, _ := http.Get(url)
         defer resp.Body.Close()
-        result, _ = io.ReadAll(resp.Body)
+        result, _ = ioutil.ReadAll(resp.Body)
     }, 5*time.Second)
 
     return result, err
@@ -490,7 +490,7 @@ func CallExternalAPI(url string) ([]byte, error) {
     err := DoWithTimeout(ctx, func() {
         resp, _ := http.Get(url)
         defer resp.Body.Close()
-        result, _ = io.ReadAll(resp.Body)
+        result, _ = ioutil.ReadAll(resp.Body)
     }, 5*time.Second)
 
     return result, err

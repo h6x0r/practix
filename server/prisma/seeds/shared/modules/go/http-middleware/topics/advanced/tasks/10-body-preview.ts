@@ -25,7 +25,7 @@ handler := BodyPreview(100, BodyKey, http.HandlerFunc(func(w http.ResponseWriter
     fmt.Fprintf(w, "Preview: %s", preview)
 
 	// Body can still be read fully
-    body, _ := io.ReadAll(r.Body)
+    body, _ := ioutil.ReadAll(r.Body)
     fmt.Fprintf(w, "Full: %s", body)
 }))
 
@@ -104,6 +104,7 @@ func (b *bodyReadCloser) Close() error {	// Implement Close method
 import (
 	"bytes"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -170,7 +171,7 @@ func Test6(t *testing.T) {
 	const key ctxKey = "preview"
 	var body []byte
 	h := BodyPreview(5, key, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		body, _ = io.ReadAll(r.Body)
+		body, _ = ioutil.ReadAll(r.Body)
 	}))
 	h.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("POST", "/", strings.NewReader("Hello World")))
 	if string(body) != "Hello World" {
@@ -364,7 +365,7 @@ handler := BodyPreview(100, BodyKey, http.HandlerFunc(func(w http.ResponseWriter
     fmt.Fprintf(w, "Preview: %s", preview)
 
 	// Body всё ещё можно прочитать полностью
-    body, _ := io.ReadAll(r.Body)
+    body, _ := ioutil.ReadAll(r.Body)
     fmt.Fprintf(w, "Full: %s", body)
 }))
 
@@ -524,7 +525,7 @@ handler := BodyPreview(100, BodyKey, http.HandlerFunc(func(w http.ResponseWriter
     fmt.Fprintf(w, "Preview: %s", preview)
 
 	// Body hali ham to'liq o'qilishi mumkin
-    body, _ := io.ReadAll(r.Body)
+    body, _ := ioutil.ReadAll(r.Body)
     fmt.Fprintf(w, "Full: %s", body)
 }))
 

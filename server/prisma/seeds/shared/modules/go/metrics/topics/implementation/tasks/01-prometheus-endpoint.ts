@@ -91,6 +91,7 @@ func Handler() http.Handler {
 
 import (
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -114,7 +115,7 @@ func Test2(t *testing.T) {
 	req := httptest.NewRequest("GET", "/metrics", nil)
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
-	body, _ := io.ReadAll(w.Body)
+	body, _ := ioutil.ReadAll(w.Body)
 	if !strings.Contains(string(body), "# HELP demo_up") {
 		t.Error("response missing HELP comment")
 	}
@@ -126,7 +127,7 @@ func Test3(t *testing.T) {
 	req := httptest.NewRequest("GET", "/metrics", nil)
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
-	body, _ := io.ReadAll(w.Body)
+	body, _ := ioutil.ReadAll(w.Body)
 	if !strings.Contains(string(body), "# TYPE demo_up gauge") {
 		t.Error("response missing TYPE comment")
 	}
@@ -138,7 +139,7 @@ func Test4(t *testing.T) {
 	req := httptest.NewRequest("GET", "/metrics", nil)
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
-	body, _ := io.ReadAll(w.Body)
+	body, _ := ioutil.ReadAll(w.Body)
 	if !strings.Contains(string(body), "demo_up 1") {
 		t.Error("response missing metric value")
 	}

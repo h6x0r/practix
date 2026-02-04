@@ -20,7 +20,7 @@ export const task: Task = {
 **Example:**
 \`\`\`go
 handler := MaxBytes(100, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-    body, _ := io.ReadAll(r.Body)
+    body, _ := ioutil.ReadAll(r.Body)
     fmt.Fprintf(w, "Body: %s", body)
 }))
 
@@ -62,7 +62,7 @@ func MaxBytes(limit int64, next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)	// Skip middleware if no limit
 			return
 		}
-		payload, err := io.ReadAll(io.LimitReader(r.Body, limit+1))	// Read up to limit+1 bytes
+		payload, err := ioutil.ReadAll(io.LimitReader(r.Body, limit+1))	// Read up to limit+1 bytes
 		if err != nil {
 			http.Error(w, "failed to read body", http.StatusBadRequest)	// Handle read errors
 			return
@@ -86,6 +86,7 @@ func MaxBytes(limit int64, next http.Handler) http.Handler {
 import (
 	"bytes"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -94,7 +95,7 @@ import (
 
 func Test1(t *testing.T) {
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		body, _ := io.ReadAll(r.Body)
+		body, _ := ioutil.ReadAll(r.Body)
 		w.Write(body)
 	})
 	h := MaxBytes(100, handler)
@@ -124,7 +125,7 @@ func Test2(t *testing.T) {
 
 func Test3(t *testing.T) {
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		body, _ := io.ReadAll(r.Body)
+		body, _ := ioutil.ReadAll(r.Body)
 		w.Write(body)
 	})
 	h := MaxBytes(5, handler)
@@ -154,7 +155,7 @@ func Test4(t *testing.T) {
 
 func Test5(t *testing.T) {
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		body, _ := io.ReadAll(r.Body)
+		body, _ := ioutil.ReadAll(r.Body)
 		w.Write(body)
 	})
 	h := MaxBytes(0, handler)
@@ -168,7 +169,7 @@ func Test5(t *testing.T) {
 
 func Test6(t *testing.T) {
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		body, _ := io.ReadAll(r.Body)
+		body, _ := ioutil.ReadAll(r.Body)
 		w.Write(body)
 	})
 	h := MaxBytes(-1, handler)
@@ -192,7 +193,7 @@ func Test7(t *testing.T) {
 
 func Test8(t *testing.T) {
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		body, _ := io.ReadAll(r.Body)
+		body, _ := ioutil.ReadAll(r.Body)
 		w.Write(body)
 	})
 	h := MaxBytes(100, handler)
@@ -224,7 +225,7 @@ func Test9(t *testing.T) {
 func Test10(t *testing.T) {
 	var bodyRead string
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		first, _ := io.ReadAll(r.Body)
+		first, _ := ioutil.ReadAll(r.Body)
 		bodyRead = string(first)
 		w.WriteHeader(http.StatusOK)
 	})
@@ -294,7 +295,7 @@ func SmartMaxBytes(next http.Handler) http.Handler {
 func ProgressiveMaxBytes(warningLimit, hardLimit int64) func(http.Handler) http.Handler {
     return func(next http.Handler) http.Handler {
         return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-            payload, err := io.ReadAll(io.LimitReader(r.Body, hardLimit+1))
+            payload, err := ioutil.ReadAll(io.LimitReader(r.Body, hardLimit+1))
             if err != nil {
                 http.Error(w, "read failed", http.StatusBadRequest)
                 return
@@ -344,7 +345,7 @@ func TieredMaxBytes(next http.Handler) http.Handler {
 // Metrics tracking
 func MaxBytesWithMetrics(limit int64, next http.Handler) http.Handler {
     return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-        payload, err := io.ReadAll(io.LimitReader(r.Body, limit+1))
+        payload, err := ioutil.ReadAll(io.LimitReader(r.Body, limit+1))
         if err != nil {
             http.Error(w, "read failed", http.StatusBadRequest)
             return
@@ -456,7 +457,7 @@ Without MaxBytes, attackers can upload gigabyte payloads, exhausting memory and 
 **Пример:**
 \`\`\`go
 handler := MaxBytes(100, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-    body, _ := io.ReadAll(r.Body)
+    body, _ := ioutil.ReadAll(r.Body)
     fmt.Fprintf(w, "Body: %s", body)
 }))
 
@@ -527,7 +528,7 @@ func SmartMaxBytes(next http.Handler) http.Handler {
 func ProgressiveMaxBytes(warningLimit, hardLimit int64) func(http.Handler) http.Handler {
     return func(next http.Handler) http.Handler {
         return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-            payload, err := io.ReadAll(io.LimitReader(r.Body, hardLimit+1))
+            payload, err := ioutil.ReadAll(io.LimitReader(r.Body, hardLimit+1))
             if err != nil {
                 http.Error(w, "read failed", http.StatusBadRequest)
                 return
@@ -577,7 +578,7 @@ func TieredMaxBytes(next http.Handler) http.Handler {
 // Отслеживание метрик
 func MaxBytesWithMetrics(limit int64, next http.Handler) http.Handler {
     return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-        payload, err := io.ReadAll(io.LimitReader(r.Body, limit+1))
+        payload, err := ioutil.ReadAll(io.LimitReader(r.Body, limit+1))
         if err != nil {
             http.Error(w, "read failed", http.StatusBadRequest)
             return
@@ -690,7 +691,7 @@ func MaxBytes(limit int64, next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)	// Пропуск middleware если нет лимита
 			return
 		}
-		payload, err := io.ReadAll(io.LimitReader(r.Body, limit+1))	// Чтение до limit+1 байт
+		payload, err := ioutil.ReadAll(io.LimitReader(r.Body, limit+1))	// Чтение до limit+1 байт
 		if err != nil {
 			http.Error(w, "failed to read body", http.StatusBadRequest)	// Обработка ошибок чтения
 			return
@@ -724,7 +725,7 @@ func MaxBytes(limit int64, next http.Handler) http.Handler {
 **Misol:**
 \`\`\`go
 handler := MaxBytes(100, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-    body, _ := io.ReadAll(r.Body)
+    body, _ := ioutil.ReadAll(r.Body)
     fmt.Fprintf(w, "Body: %s", body)
 }))
 
@@ -795,7 +796,7 @@ func SmartMaxBytes(next http.Handler) http.Handler {
 func ProgressiveMaxBytes(warningLimit, hardLimit int64) func(http.Handler) http.Handler {
     return func(next http.Handler) http.Handler {
         return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-            payload, err := io.ReadAll(io.LimitReader(r.Body, hardLimit+1))
+            payload, err := ioutil.ReadAll(io.LimitReader(r.Body, hardLimit+1))
             if err != nil {
                 http.Error(w, "read failed", http.StatusBadRequest)
                 return
@@ -845,7 +846,7 @@ func TieredMaxBytes(next http.Handler) http.Handler {
 // Metrikalarni kuzatish
 func MaxBytesWithMetrics(limit int64, next http.Handler) http.Handler {
     return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-        payload, err := io.ReadAll(io.LimitReader(r.Body, limit+1))
+        payload, err := ioutil.ReadAll(io.LimitReader(r.Body, limit+1))
         if err != nil {
             http.Error(w, "read failed", http.StatusBadRequest)
             return
@@ -958,7 +959,7 @@ func MaxBytes(limit int64, next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)	// Agar limit bo'lmasa middleware ni o'tkazish
 			return
 		}
-		payload, err := io.ReadAll(io.LimitReader(r.Body, limit+1))	// limit+1 baytgacha o'qish
+		payload, err := ioutil.ReadAll(io.LimitReader(r.Body, limit+1))	// limit+1 baytgacha o'qish
 		if err != nil {
 			http.Error(w, "failed to read body", http.StatusBadRequest)	// O'qish xatolarini ishlash
 			return

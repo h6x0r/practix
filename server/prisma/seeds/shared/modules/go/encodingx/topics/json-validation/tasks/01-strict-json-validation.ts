@@ -297,6 +297,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"io/ioutil"
 )
 
 type UserDTO struct {
@@ -632,7 +633,7 @@ func TestUserProcessing(t *testing.T) {
 
 // NEVER for user input!
 func HandleRequest(w http.ResponseWriter, r *http.Request) {
-    data, _ := io.ReadAll(r.Body)
+    data, _ := ioutil.ReadAll(r.Body)
     user := MustStrictDecode(data)  // WRONG - will crash server!
 }
 \`\`\`
@@ -1111,7 +1112,7 @@ func TestUserProcessing(t *testing.T) {
 
 // НИКОГДА для пользовательского ввода!
 func HandleRequest(w http.ResponseWriter, r *http.Request) {
-    data, _ := io.ReadAll(r.Body)
+    data, _ := ioutil.ReadAll(r.Body)
     user := MustStrictDecode(data)  // НЕПРАВИЛЬНО — уронит сервер!
 }
 \`\`\`
@@ -1684,7 +1685,7 @@ func TestUserProcessing(t *testing.T) {
 
 // HECH QACHON foydalanuvchi kiritishi uchun!
 func HandleRequest(w http.ResponseWriter, r *http.Request) {
-    data, _ := io.ReadAll(r.Body)
+    data, _ := ioutil.ReadAll(r.Body)
     user := MustStrictDecode(data)  // NOTO'G'RI — serverni yiqitadi!
 }
 \`\`\`

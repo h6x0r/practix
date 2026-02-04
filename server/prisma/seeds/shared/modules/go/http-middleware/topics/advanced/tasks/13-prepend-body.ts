@@ -21,7 +21,7 @@ export const task: Task = {
 prefix := []byte("PREFIX:")
 
 handler := PrependBody(prefix, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-    body, _ := io.ReadAll(r.Body)
+    body, _ := ioutil.ReadAll(r.Body)
     fmt.Fprintf(w, "Body: %s", body)
 }))
 
@@ -87,6 +87,7 @@ func (b *bodyReadCloser) Close() error {	// Implement Close method
 
 import (
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -113,7 +114,7 @@ func Test3(t *testing.T) {
 	// Test nil prefix skips middleware
 	var body []byte
 	h := PrependBody(nil, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		body, _ = io.ReadAll(r.Body)
+		body, _ = ioutil.ReadAll(r.Body)
 	}))
 	h.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("POST", "/", strings.NewReader("data")))
 	if string(body) != "data" {
@@ -125,7 +126,7 @@ func Test4(t *testing.T) {
 	// Test empty prefix skips middleware
 	var body []byte
 	h := PrependBody([]byte{}, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		body, _ = io.ReadAll(r.Body)
+		body, _ = ioutil.ReadAll(r.Body)
 	}))
 	h.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("POST", "/", strings.NewReader("data")))
 	if string(body) != "data" {
@@ -137,7 +138,7 @@ func Test5(t *testing.T) {
 	// Test prefix is prepended
 	var body []byte
 	h := PrependBody([]byte("PREFIX:"), http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		body, _ = io.ReadAll(r.Body)
+		body, _ = ioutil.ReadAll(r.Body)
 	}))
 	h.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("POST", "/", strings.NewReader("data")))
 	if string(body) != "PREFIX:data" {
@@ -149,7 +150,7 @@ func Test6(t *testing.T) {
 	// Test empty body with prefix
 	var body []byte
 	h := PrependBody([]byte("PREFIX"), http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		body, _ = io.ReadAll(r.Body)
+		body, _ = ioutil.ReadAll(r.Body)
 	}))
 	h.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("POST", "/", strings.NewReader("")))
 	if string(body) != "PREFIX" {
@@ -234,7 +235,7 @@ func JSONArrayWrapper(next http.Handler) http.Handler {
         handler := PrependBody([]byte("["), http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	// Append "]" (need custom append middleware)
 	// Read body, append "]", then process
-            body, _ := io.ReadAll(r.Body)
+            body, _ := ioutil.ReadAll(r.Body)
             fullJSON := append(body, ']')
             r.Body = io.NopCloser(bytes.NewReader(fullJSON))
             next.ServeHTTP(w, r)
@@ -266,7 +267,7 @@ handler := CSVHeaderInjector([]string{"id", "name", "email"})(uploadHandler)
 func LengthPrefixer(next http.Handler) http.Handler {
     return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	// Read body to calculate length
-        body, err := io.ReadAll(r.Body)
+        body, err := ioutil.ReadAll(r.Body)
         if err != nil {
             http.Error(w, "failed to read body", http.StatusBadRequest)
             return
@@ -349,7 +350,7 @@ Without PrependBody, adding prefixes requires reading the entire body, concatena
 prefix := []byte("PREFIX:")
 
 handler := PrependBody(prefix, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-    body, _ := io.ReadAll(r.Body)
+    body, _ := ioutil.ReadAll(r.Body)
     fmt.Fprintf(w, "Body: %s", body)
 }))
 
@@ -384,7 +385,7 @@ func AuthTokenInjector(token string) func(http.Handler) http.Handler {
 func JSONArrayWrapper(next http.Handler) http.Handler {
     return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
         handler := PrependBody([]byte("["), http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-            body, _ := io.ReadAll(r.Body)
+            body, _ := ioutil.ReadAll(r.Body)
             fullJSON := append(body, ']')
             r.Body = io.NopCloser(bytes.NewReader(fullJSON))
             next.ServeHTTP(w, r)
@@ -415,7 +416,7 @@ handler := CSVHeaderInjector([]string{"id", "name", "email"})(uploadHandler)
 // Length-prefixed messages (бинарный протокол)
 func LengthPrefixer(next http.Handler) http.Handler {
     return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-        body, err := io.ReadAll(r.Body)
+        body, err := ioutil.ReadAll(r.Body)
         if err != nil {
             http.Error(w, "failed to read body", http.StatusBadRequest)
             return
@@ -532,7 +533,7 @@ func (b *bodyReadCloser) Close() error {	// Реализация метода Cl
 prefix := []byte("PREFIX:")
 
 handler := PrependBody(prefix, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-    body, _ := io.ReadAll(r.Body)
+    body, _ := ioutil.ReadAll(r.Body)
     fmt.Fprintf(w, "Body: %s", body)
 }))
 
@@ -567,7 +568,7 @@ func AuthTokenInjector(token string) func(http.Handler) http.Handler {
 func JSONArrayWrapper(next http.Handler) http.Handler {
     return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
         handler := PrependBody([]byte("["), http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-            body, _ := io.ReadAll(r.Body)
+            body, _ := ioutil.ReadAll(r.Body)
             fullJSON := append(body, ']')
             r.Body = io.NopCloser(bytes.NewReader(fullJSON))
             next.ServeHTTP(w, r)
@@ -598,7 +599,7 @@ handler := CSVHeaderInjector([]string{"id", "name", "email"})(uploadHandler)
 // Length-prefixed messages (binary protokol)
 func LengthPrefixer(next http.Handler) http.Handler {
     return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-        body, err := io.ReadAll(r.Body)
+        body, err := ioutil.ReadAll(r.Body)
         if err != nil {
             http.Error(w, "failed to read body", http.StatusBadRequest)
             return
