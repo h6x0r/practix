@@ -504,6 +504,159 @@ rm -rf server/prisma/seeds/courses/c_python_fundamentals/modules/strings
 
 ---
 
+## Админ-панель v2 (Планируемый функционал)
+
+### Текущее состояние
+
+Админ-панель (`/admin`) имеет базовый функционал:
+- Просмотр пользователей
+- Управление подписками
+- Bug reports
+
+### Планируемая архитектура
+
+```
+/admin
+├── /dashboard          # Общая статистика
+├── /analytics          # Детальная аналитика
+│   ├── /users          # DAU/MAU, retention, cohorts
+│   ├── /courses        # Популярность курсов, completion rate
+│   ├── /tasks          # Статистика решений, сложность
+│   └── /revenue        # Доходы, подписки, конверсии
+├── /limits             # Управление лимитами
+│   ├── /ai             # AI Tutor лимиты
+│   ├── /courses        # Доступ к курсам
+│   └── /api            # Rate limiting API
+├── /users              # Управление пользователями
+│   ├── /list           # Список с фильтрами
+│   ├── /[id]           # Профиль пользователя
+│   └── /bans           # Заблокированные
+├── /content            # Управление контентом
+│   ├── /courses        # Курсы (вкл/выкл, premium)
+│   ├── /tasks          # Задачи (редактирование)
+│   └── /bug-reports    # Bug reports от пользователей
+├── /payments           # Финансы
+│   ├── /transactions   # История транзакций
+│   ├── /refunds        # Возвраты
+│   └── /subscriptions  # Активные подписки
+└── /settings           # Настройки платформы
+    ├── /feature-flags  # Feature toggles
+    ├── /maintenance    # Режим обслуживания
+    └── /notifications  # Системные уведомления
+```
+
+### NR-4. Управление лимитами из админки
+
+**Статус:** 🔴 TODO
+
+**Требования:**
+
+#### 4.1 AI Tutor лимиты (`/admin/limits/ai`)
+
+| Настройка | Описание | Тип |
+|-----------|----------|-----|
+| `ai.enabled` | Глобальное вкл/выкл AI Tutor | toggle |
+| `ai.limits.free` | Лимит для бесплатных пользователей | number (default: 5) |
+| `ai.limits.subscription` | Лимит для подписчиков | number (default: 30) |
+| `ai.limits.premium` | Лимит для premium | number (default: 100) |
+| `ai.limits.promptEngineering` | Лимит для курса Prompt Engineering | number (default: 100) |
+| `ai.cooldown` | Задержка между запросами (сек) | number (default: 5) |
+| `ai.maxTokens` | Максимум токенов в ответе | number (default: 2048) |
+
+#### 4.2 Rate Limiting API (`/admin/limits/api`)
+
+| Настройка | Описание | Тип |
+|-----------|----------|-----|
+| `api.rateLimit.enabled` | Включить rate limiting | toggle |
+| `api.rateLimit.submissions` | Лимит submissions/мин | number (default: 10) |
+| `api.rateLimit.playground` | Лимит playground запросов/мин | number (default: 20) |
+| `api.rateLimit.auth` | Лимит auth запросов/мин | number (default: 5) |
+| `api.rateLimit.global` | Глобальный лимит/мин | number (default: 100) |
+
+#### 4.3 Доступ к курсам (`/admin/limits/courses`)
+
+| Настройка | Описание | Тип |
+|-----------|----------|-----|
+| `courses.[slug].enabled` | Вкл/выкл курс | toggle |
+| `courses.[slug].premium` | Курс только для premium | toggle |
+| `courses.[slug].freeTasksLimit` | Бесплатных задач в курсе | number |
+
+**Хранение настроек:**
+- Redis для быстрого доступа: `settings:{category}:{key}`
+- PostgreSQL для персистентности: таблица `PlatformSettings`
+
+**Схема Prisma:**
+```prisma
+model PlatformSetting {
+  id        String   @id @default(cuid())
+  category  String   // 'ai', 'api', 'courses'
+  key       String   // 'limits.free', 'rateLimit.enabled'
+  value     String   // JSON serialized value
+  updatedBy String?  // Admin user ID
+  updatedAt DateTime @updatedAt
+  
+  @@unique([category, key])
+  @@index([category])
+}
+```
+
+**API Endpoints:**
+
+| Endpoint | Метод | Описание |
+|----------|-------|----------|
+| `GET /admin/settings` | GET | Все настройки |
+| `GET /admin/settings/:category` | GET | Настройки категории |
+| `PUT /admin/settings/:category/:key` | PUT | Обновить настройку |
+| `POST /admin/settings/bulk` | POST | Массовое обновление |
+
+**Файлы для создания:**
+
+| Файл | Описание |
+|------|----------|
+| `server/src/admin/settings/settings.service.ts` | Сервис настроек |
+| `server/src/admin/settings/settings.controller.ts` | API контроллер |
+| `server/src/admin/settings/dto/settings.dto.ts` | DTO для валидации |
+| `src/features/admin/pages/LimitsPage.tsx` | UI страница лимитов |
+| `src/features/admin/components/LimitToggle.tsx` | Компонент toggle |
+| `src/features/admin/components/LimitInput.tsx` | Компонент числового ввода |
+
+---
+
+### NR-5. Аналитика в админке
+
+**Статус:** 🟡 TODO (средний приоритет)
+
+**Метрики для отслеживания:**
+
+#### Users Analytics
+- DAU/WAU/MAU (Daily/Weekly/Monthly Active Users)
+- New registrations per day
+- Retention rate (D1, D7, D30)
+- Churn rate
+- User cohort analysis
+
+#### Courses Analytics
+- Course completion rate
+- Average time to complete
+- Most popular courses
+- Drop-off points (какие задачи бросают)
+- Task difficulty vs completion
+
+#### Revenue Analytics
+- MRR (Monthly Recurring Revenue)
+- New subscriptions per day
+- Cancellation rate
+- Average revenue per user (ARPU)
+- Conversion rate (free → paid)
+
+#### System Analytics
+- Code execution stats (by language)
+- AI Tutor usage
+- Error rates
+- Response times
+
+---
+
 ## Legacy код для удаления
 
 ### 8.1 repository.ts (Roadmap)
@@ -538,6 +691,7 @@ rm -rf server/prisma/seeds/courses/c_python_fundamentals/modules/strings
 - [ ] **#4** Интегрировать one-time purchases для регенерации
 - [ ] **#5** Добавить rate limiting для AI запросов
 - [ ] **#2** Добавить валидацию interests на frontend (min 1)
+- [ ] **NR-4** Управление лимитами из админки (AI, API, курсы)
 
 ### 🟡 Средний приоритет
 
@@ -545,6 +699,7 @@ rm -rf server/prisma/seeds/courses/c_python_fundamentals/modules/strings
 - [ ] **#7** Code splitting (Monaco, Recharts)
 - [ ] **#8** Wizard state в localStorage
 - [x] **NR-3** Очистка мусорных папок в Python Fundamentals ✅ 2026-01-17
+- [ ] **NR-5** Аналитика в админке (DAU/MAU, revenue, courses)
 
 ### 🟢 Низкий приоритет (Backlog)
 
@@ -552,6 +707,7 @@ rm -rf server/prisma/seeds/courses/c_python_fundamentals/modules/strings
 - [ ] **#10** Обновить Prisma 5.22 → 7.x
 - [ ] **#11** Параметризировать salary ranges
 - [ ] **#13** IP whitelist для webhooks
+- [ ] **#14** Админ-панель v2 — полная реорганизация
 
 ### ✅ Выполнено
 
@@ -565,6 +721,10 @@ rm -rf server/prisma/seeds/courses/c_python_fundamentals/modules/strings
 
 | Дата | Изменение |
 |------|-----------|
+| 2026-02-04 | 🆕 NR-4: Добавлен план управления лимитами из админки |
+| 2026-02-04 | 🆕 NR-5: Добавлен план аналитики в админке |
+| 2026-02-04 | 🆕 Добавлена архитектура Админ-панели v2 |
+| 2026-02-04 | ✅ Java E2E тесты работают (259 задач, Judge0 настроен) |
 | 2026-01-17 | ✅ NR-2: Курс Application Security завершён — 44 задачи (7 модулей) |
 | 2026-01-17 | ✅ NR-3: Удалены пустые папки error-handling и strings в Python Fundamentals |
 | 2026-01-17 | 🆕 NR-2: Создана структура курса Application Security (7 модулей, 2 задачи, остальные TODO) |

@@ -1,21 +1,23 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { HealthController } from './health.controller';
+import { Test, TestingModule } from "@nestjs/testing";
+import { HealthController } from "./health.controller";
 import {
   HealthCheckService,
   DiskHealthIndicator,
   MemoryHealthIndicator,
   HealthCheckResult,
-} from '@nestjs/terminus';
-import { PrismaHealthIndicator } from './prisma.health';
-import { RedisHealthIndicator } from './redis.health';
-import { MetricsService } from './metrics.service';
-import { Response } from 'express';
+} from "@nestjs/terminus";
+import { PrismaHealthIndicator } from "./prisma.health";
+import { RedisHealthIndicator } from "./redis.health";
+import { Judge0HealthIndicator } from "./judge0.health";
+import { MetricsService } from "./metrics.service";
+import { Response } from "express";
 
-describe('HealthController', () => {
+describe("HealthController", () => {
   let controller: HealthController;
   let healthCheckService: jest.Mocked<HealthCheckService>;
   let prismaHealth: jest.Mocked<PrismaHealthIndicator>;
   let redisHealth: jest.Mocked<RedisHealthIndicator>;
+  let judge0Health: jest.Mocked<Judge0HealthIndicator>;
   let diskHealth: jest.Mocked<DiskHealthIndicator>;
   let memoryHealth: jest.Mocked<MemoryHealthIndicator>;
   let metricsService: jest.Mocked<MetricsService>;
@@ -29,6 +31,10 @@ describe('HealthController', () => {
   };
 
   const mockRedisHealth = {
+    isHealthy: jest.fn(),
+  };
+
+  const mockJudge0Health = {
     isHealthy: jest.fn(),
   };
 
@@ -46,15 +52,15 @@ describe('HealthController', () => {
   };
 
   const mockHealthyResult: HealthCheckResult = {
-    status: 'ok',
+    status: "ok",
     info: {
-      database: { status: 'up' },
-      redis: { status: 'up' },
+      database: { status: "up" },
+      redis: { status: "up" },
     },
     error: {},
     details: {
-      database: { status: 'up' },
-      redis: { status: 'up' },
+      database: { status: "up" },
+      redis: { status: "up" },
     },
   };
 
@@ -67,6 +73,7 @@ describe('HealthController', () => {
         { provide: HealthCheckService, useValue: mockHealthCheckService },
         { provide: PrismaHealthIndicator, useValue: mockPrismaHealth },
         { provide: RedisHealthIndicator, useValue: mockRedisHealth },
+        { provide: Judge0HealthIndicator, useValue: mockJudge0Health },
         { provide: DiskHealthIndicator, useValue: mockDiskHealth },
         { provide: MemoryHealthIndicator, useValue: mockMemoryHealth },
         { provide: MetricsService, useValue: mockMetricsService },
@@ -77,28 +84,29 @@ describe('HealthController', () => {
     healthCheckService = module.get(HealthCheckService);
     prismaHealth = module.get(PrismaHealthIndicator);
     redisHealth = module.get(RedisHealthIndicator);
+    judge0Health = module.get(Judge0HealthIndicator);
     diskHealth = module.get(DiskHealthIndicator);
     memoryHealth = module.get(MemoryHealthIndicator);
     metricsService = module.get(MetricsService);
   });
 
-  it('should be defined', () => {
+  it("should be defined", () => {
     expect(controller).toBeDefined();
   });
 
   // ============================================
   // live() - Liveness probe
   // ============================================
-  describe('live()', () => {
-    it('should return status ok with timestamp', () => {
+  describe("live()", () => {
+    it("should return status ok with timestamp", () => {
       const result = controller.live();
 
-      expect(result.status).toBe('ok');
+      expect(result.status).toBe("ok");
       expect(result.timestamp).toBeDefined();
       expect(new Date(result.timestamp)).toBeInstanceOf(Date);
     });
 
-    it('should return valid ISO timestamp', () => {
+    it("should return valid ISO timestamp", () => {
       const result = controller.live();
 
       // Validate ISO 8601 format
@@ -110,8 +118,8 @@ describe('HealthController', () => {
   // ============================================
   // ready() - Readiness probe
   // ============================================
-  describe('ready()', () => {
-    it('should check database and redis health', async () => {
+  describe("ready()", () => {
+    it("should check database and redis health", async () => {
       mockHealthCheckService.check.mockResolvedValue(mockHealthyResult);
 
       const result = await controller.ready();
@@ -123,9 +131,11 @@ describe('HealthController', () => {
       ]);
     });
 
-    it('should call prisma health indicator', async () => {
-      mockPrismaHealth.isHealthy.mockResolvedValue({ database: { status: 'up' } });
-      mockRedisHealth.isHealthy.mockResolvedValue({ redis: { status: 'up' } });
+    it("should call prisma health indicator", async () => {
+      mockPrismaHealth.isHealthy.mockResolvedValue({
+        database: { status: "up" },
+      });
+      mockRedisHealth.isHealthy.mockResolvedValue({ redis: { status: "up" } });
       mockHealthCheckService.check.mockImplementation(async (checks) => {
         for (const check of checks) {
           await check();
@@ -135,12 +145,14 @@ describe('HealthController', () => {
 
       await controller.ready();
 
-      expect(mockPrismaHealth.isHealthy).toHaveBeenCalledWith('database');
+      expect(mockPrismaHealth.isHealthy).toHaveBeenCalledWith("database");
     });
 
-    it('should call redis health indicator', async () => {
-      mockPrismaHealth.isHealthy.mockResolvedValue({ database: { status: 'up' } });
-      mockRedisHealth.isHealthy.mockResolvedValue({ redis: { status: 'up' } });
+    it("should call redis health indicator", async () => {
+      mockPrismaHealth.isHealthy.mockResolvedValue({
+        database: { status: "up" },
+      });
+      mockRedisHealth.isHealthy.mockResolvedValue({ redis: { status: "up" } });
       mockHealthCheckService.check.mockImplementation(async (checks) => {
         for (const check of checks) {
           await check();
@@ -150,49 +162,49 @@ describe('HealthController', () => {
 
       await controller.ready();
 
-      expect(mockRedisHealth.isHealthy).toHaveBeenCalledWith('redis');
+      expect(mockRedisHealth.isHealthy).toHaveBeenCalledWith("redis");
     });
 
-    it('should handle unhealthy state', async () => {
+    it("should handle unhealthy state", async () => {
       const unhealthyResult: HealthCheckResult = {
-        status: 'error',
+        status: "error",
         info: {},
         error: {
-          database: { status: 'down', message: 'Connection refused' },
+          database: { status: "down", message: "Connection refused" },
         },
         details: {
-          database: { status: 'down', message: 'Connection refused' },
+          database: { status: "down", message: "Connection refused" },
         },
       };
       mockHealthCheckService.check.mockResolvedValue(unhealthyResult);
 
       const result = await controller.ready();
 
-      expect(result.status).toBe('error');
+      expect(result.status).toBe("error");
     });
   });
 
   // ============================================
   // check() - Full health check
   // ============================================
-  describe('check()', () => {
-    it('should check all health indicators', async () => {
+  describe("check()", () => {
+    it("should check all health indicators", async () => {
       const fullHealthResult: HealthCheckResult = {
-        status: 'ok',
+        status: "ok",
         info: {
-          database: { status: 'up' },
-          redis: { status: 'up' },
-          storage: { status: 'up' },
-          memory_heap: { status: 'up' },
-          memory_rss: { status: 'up' },
+          database: { status: "up" },
+          redis: { status: "up" },
+          storage: { status: "up" },
+          memory_heap: { status: "up" },
+          memory_rss: { status: "up" },
         },
         error: {},
         details: {
-          database: { status: 'up' },
-          redis: { status: 'up' },
-          storage: { status: 'up' },
-          memory_heap: { status: 'up' },
-          memory_rss: { status: 'up' },
+          database: { status: "up" },
+          redis: { status: "up" },
+          storage: { status: "up" },
+          memory_heap: { status: "up" },
+          memory_rss: { status: "up" },
         },
       };
       mockHealthCheckService.check.mockResolvedValue(fullHealthResult);
@@ -209,8 +221,10 @@ describe('HealthController', () => {
       ]);
     });
 
-    it('should check disk storage', async () => {
-      mockDiskHealth.checkStorage.mockResolvedValue({ storage: { status: 'up' } });
+    it("should check disk storage", async () => {
+      mockDiskHealth.checkStorage.mockResolvedValue({
+        storage: { status: "up" },
+      });
       mockHealthCheckService.check.mockImplementation(async (checks) => {
         for (const check of checks) {
           await check();
@@ -220,14 +234,16 @@ describe('HealthController', () => {
 
       await controller.check();
 
-      expect(mockDiskHealth.checkStorage).toHaveBeenCalledWith('storage', {
-        path: '/',
+      expect(mockDiskHealth.checkStorage).toHaveBeenCalledWith("storage", {
+        path: "/",
         thresholdPercent: 0.9,
       });
     });
 
-    it('should check memory heap', async () => {
-      mockMemoryHealth.checkHeap.mockResolvedValue({ memory_heap: { status: 'up' } });
+    it("should check memory heap", async () => {
+      mockMemoryHealth.checkHeap.mockResolvedValue({
+        memory_heap: { status: "up" },
+      });
       mockHealthCheckService.check.mockImplementation(async (checks) => {
         for (const check of checks) {
           await check();
@@ -238,13 +254,15 @@ describe('HealthController', () => {
       await controller.check();
 
       expect(mockMemoryHealth.checkHeap).toHaveBeenCalledWith(
-        'memory_heap',
-        300 * 1024 * 1024
+        "memory_heap",
+        300 * 1024 * 1024,
       );
     });
 
-    it('should check memory RSS', async () => {
-      mockMemoryHealth.checkRSS.mockResolvedValue({ memory_rss: { status: 'up' } });
+    it("should check memory RSS", async () => {
+      mockMemoryHealth.checkRSS.mockResolvedValue({
+        memory_rss: { status: "up" },
+      });
       mockHealthCheckService.check.mockImplementation(async (checks) => {
         for (const check of checks) {
           await check();
@@ -255,41 +273,41 @@ describe('HealthController', () => {
       await controller.check();
 
       expect(mockMemoryHealth.checkRSS).toHaveBeenCalledWith(
-        'memory_rss',
-        500 * 1024 * 1024
+        "memory_rss",
+        500 * 1024 * 1024,
       );
     });
 
-    it('should handle partial failure', async () => {
+    it("should handle partial failure", async () => {
       const partialResult: HealthCheckResult = {
-        status: 'error',
+        status: "error",
         info: {
-          database: { status: 'up' },
-          redis: { status: 'up' },
+          database: { status: "up" },
+          redis: { status: "up" },
         },
         error: {
-          storage: { status: 'down', message: 'Disk full' },
+          storage: { status: "down", message: "Disk full" },
         },
         details: {
-          database: { status: 'up' },
-          redis: { status: 'up' },
-          storage: { status: 'down', message: 'Disk full' },
+          database: { status: "up" },
+          redis: { status: "up" },
+          storage: { status: "down", message: "Disk full" },
         },
       };
       mockHealthCheckService.check.mockResolvedValue(partialResult);
 
       const result = await controller.check();
 
-      expect(result.status).toBe('error');
-      expect(result.error).toHaveProperty('storage');
+      expect(result.status).toBe("error");
+      expect(result.error).toHaveProperty("storage");
     });
   });
 
   // ============================================
   // metrics() - Prometheus metrics
   // ============================================
-  describe('metrics()', () => {
-    it('should return prometheus metrics', async () => {
+  describe("metrics()", () => {
+    it("should return prometheus metrics", async () => {
       const metricsOutput = `
 # HELP http_requests_total Total HTTP requests
 # TYPE http_requests_total counter
@@ -305,12 +323,12 @@ http_requests_total{method="GET",path="/api/health"} 100
       await controller.metrics(mockRes);
 
       expect(mockMetricsService.getMetrics).toHaveBeenCalled();
-      expect(mockRes.set).toHaveBeenCalledWith('Content-Type', 'text/plain');
+      expect(mockRes.set).toHaveBeenCalledWith("Content-Type", "text/plain");
       expect(mockRes.send).toHaveBeenCalledWith(metricsOutput);
     });
 
-    it('should handle empty metrics', async () => {
-      mockMetricsService.getMetrics.mockResolvedValue('');
+    it("should handle empty metrics", async () => {
+      mockMetricsService.getMetrics.mockResolvedValue("");
 
       const mockRes = {
         set: jest.fn(),
@@ -319,11 +337,11 @@ http_requests_total{method="GET",path="/api/health"} 100
 
       await controller.metrics(mockRes);
 
-      expect(mockRes.send).toHaveBeenCalledWith('');
+      expect(mockRes.send).toHaveBeenCalledWith("");
     });
 
-    it('should set correct content type', async () => {
-      mockMetricsService.getMetrics.mockResolvedValue('metric 1');
+    it("should set correct content type", async () => {
+      mockMetricsService.getMetrics.mockResolvedValue("metric 1");
 
       const mockRes = {
         set: jest.fn(),
@@ -332,7 +350,7 @@ http_requests_total{method="GET",path="/api/health"} 100
 
       await controller.metrics(mockRes);
 
-      expect(mockRes.set).toHaveBeenCalledWith('Content-Type', 'text/plain');
+      expect(mockRes.set).toHaveBeenCalledWith("Content-Type", "text/plain");
     });
   });
 });

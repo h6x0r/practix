@@ -38,15 +38,28 @@ export class CodeExecutionService implements OnModuleInit, OnModuleDestroy {
     const redisUrl = this.configService.get("REDIS_URL");
     let connection: any;
 
-    if (redisUrl) {
-      const url = new URL(redisUrl);
-      connection = {
-        host: url.hostname,
-        port: parseInt(url.port || "6379", 10),
-        password: url.password || undefined,
-        username: url.username || undefined,
-        db: url.pathname ? parseInt(url.pathname.slice(1), 10) : 0,
-      };
+    // Check if REDIS_URL is a valid URL (must have scheme like redis://)
+    if (redisUrl && redisUrl.includes("://")) {
+      try {
+        const url = new URL(redisUrl);
+        connection = {
+          host: url.hostname,
+          port: parseInt(url.port || "6379", 10),
+          password: url.password || undefined,
+          username: url.username || undefined,
+          db: url.pathname ? parseInt(url.pathname.slice(1), 10) : 0,
+        };
+      } catch {
+        // If URL parsing fails, fall back to individual config
+        this.logger.warn(
+          "Invalid REDIS_URL format, falling back to REDIS_HOST/PORT",
+        );
+        connection = {
+          host: this.configService.get("REDIS_HOST") || "redis",
+          port: parseInt(this.configService.get("REDIS_PORT") || "6379", 10),
+          password: this.configService.get("REDIS_PASSWORD") || undefined,
+        };
+      }
     } else {
       connection = {
         host: this.configService.get("REDIS_HOST") || "redis",

@@ -1,5 +1,4 @@
 import { Page, Locator, expect } from "@playwright/test";
-import { BasePage } from "./base.page";
 
 export type BugCategory =
   | "description"
@@ -10,7 +9,8 @@ export type BugCategory =
   | "other";
 export type BugSeverity = "low" | "medium" | "high";
 
-export class BugReportPage extends BasePage {
+export class BugReportPage {
+  readonly page: Page;
   // Modal elements
   readonly modal: Locator;
   readonly closeButton: Locator;
@@ -22,13 +22,22 @@ export class BugReportPage extends BasePage {
   readonly descriptionTextarea: Locator;
 
   constructor(page: Page) {
-    super(page);
+    this.page = page;
     this.modal = page.locator('[class*="fixed"][class*="z-50"]').filter({
-      has: page.locator('text="Report a Bug"').or(page.locator('text="Сообщить об ошибке"')),
+      has: page
+        .locator('text="Report a Bug"')
+        .or(page.locator('text="Сообщить об ошибке"')),
     });
-    this.closeButton = this.modal.locator('button').filter({ has: page.locator('svg') }).first();
-    this.submitButton = this.modal.locator('button').filter({ hasText: /submit|отправить/i });
-    this.cancelButton = this.modal.locator('button').filter({ hasText: /cancel|отмена/i });
+    this.closeButton = this.modal
+      .locator("button")
+      .filter({ has: page.locator("svg") })
+      .first();
+    this.submitButton = this.modal
+      .locator("button")
+      .filter({ hasText: /submit|отправить/i });
+    this.cancelButton = this.modal
+      .locator("button")
+      .filter({ hasText: /cancel|отмена/i });
     this.titleInput = this.modal.locator('input[type="text"]');
     this.descriptionTextarea = this.modal.locator("textarea");
   }
@@ -58,7 +67,9 @@ export class BugReportPage extends BasePage {
   }
 
   async selectSeverity(severity: BugSeverity): Promise<void> {
-    const radio = this.modal.locator(`input[type="radio"][value="${severity}"]`);
+    const radio = this.modal.locator(
+      `input[type="radio"][value="${severity}"]`,
+    );
     await radio.check();
   }
 
