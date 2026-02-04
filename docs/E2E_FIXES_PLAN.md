@@ -124,54 +124,84 @@ const hintButton = page
 
 ---
 
-## ⏳ Требуется выполнить
+## ✅ Выполнено (продолжение)
 
-### 4. Деплой кастомного Judge0 образа на production
+### 4. Деплой Judge0 с numpy на production — ГОТОВО
 
-**Шаги:**
+**Результат:**
+- Собран кастомный образ `practix/judge0:1.13.1-ml` на сервере
+- Judge0 перезапущен с новым образом
+- NumPy 1.24.4 работает в sandbox
 
-1. **SSH на production сервер:**
-   ```bash
-   ssh user@5.189.182.153
-   ```
-
-2. **Обновить репозиторий:**
-   ```bash
-   cd /path/to/practix
-   git pull origin master
-   ```
-
-3. **Собрать Docker образ:**
-   ```bash
-   cd docker/judge0
-   ./build-and-deploy.sh
-   ```
-
-4. **Обновить Judge0 стек в Coolify:**
-   - Открыть Coolify Dashboard
-   - Найти Judge0 Stack
-   - Изменить image на `practix/judge0:1.13.1-ml`
-   - Redeploy
-
-5. **Проверить работу:**
-   ```bash
-   docker exec -it judge0-workers /usr/local/python-3.8.1/bin/python3 -c "import numpy; print(numpy.__version__)"
-   ```
+**Проверка:**
+```bash
+curl -s -X POST "http://5.189.182.153:2358/submissions?base64_encoded=false&wait=true" \
+  -H "Content-Type: application/json" \
+  -d '{"source_code": "import numpy as np\nprint(np.__version__)", "language_id": 71, "cpu_time_limit": 10, "wall_time_limit": 15}'
+# stdout: "1.24.4"
+```
 
 ---
 
-### 5. Запустить E2E тесты после деплоя
+### 5. Python setUp() fix — ГОТОВО
 
-После деплоя Judge0 с numpy:
+**Проблема:** Python test runner не вызывал `setUp()` перед каждым тестом
+
+**Файл:** `server/src/judge0/judge0.service.ts`
+
+**Решение:**
+```typescript
+for method_name in methods:
+    test_result = {"name": method_name, "passed": False}
+    # Call setUp() before each test if it exists
+    if hasattr(instance, 'setUp'):
+        instance.setUp()
+    method = getattr(instance, method_name)
+```
+
+**Коммит:** `01e1018`
+
+---
+
+## ⏳ Требуется выполнить
+
+### 6. Redeploy backend через Coolify
+
+**Проблема:** Код исправлен и запушен, но Coolify backend ещё использует старую версию.
+
+**Варианты:**
+
+1. **Через Coolify Dashboard:**
+   - Открыть https://5.189.182.153:8000
+   - Найти Backend application
+   - Нажать "Redeploy"
+
+2. **Через webhook (если настроен):**
+   - Push в master автоматически триггерит redeploy
+
+3. **Вручную (временное решение):**
+   ```bash
+   ssh root@5.189.182.153
+   cd ~/kodla-starter
+   docker compose up -d backend
+   ```
+   Примечание: Запущен на порту 8082, не интегрирован с Coolify proxy.
+
+---
+
+### 7. Запустить E2E тесты после redeploy
+
+После redeploy backend через Coolify:
 
 ```bash
-# Полный прогон Python тестов
 E2E_API_URL=https://wsggcg0s80cccw044s4k884c.5.189.182.153.sslip.io \
 E2E_BASE_URL=https://nwk0wwo0gw0g0oso0g04gwwc.5.189.182.153.sslip.io \
 npx playwright test python-tasks.spec.ts
 ```
 
-**Ожидаемый результат:** Все 40 Python ML задач должны пройти.
+**Ожидаемый результат:** 
+- Было: 40 failed (numpy) + 2 failed (setUp)
+- Ожидается: 0 failed
 
 ---
 
@@ -216,10 +246,12 @@ npx playwright test python-tasks.spec.ts
 | 1 | Task Quality тесты | ✅ Готово | - |
 | 2 | Task UI тесты | ✅ Готово | - |
 | 3 | Judge0 конфигурация с numpy | ✅ Готово | - |
-| 4 | Деплой Judge0 на production | ⏳ Ожидает | 🔴 HIGH |
-| 5 | E2E тесты после деплоя | ⏳ Ожидает | 🔴 HIGH |
-| 6 | Java JUnit тесты | 📋 Backlog | 🟡 MEDIUM |
-| 7 | TypeScript Jest тесты | 📋 Backlog | 🟡 MEDIUM |
+| 4 | Деплой Judge0 на production | ✅ Готово | - |
+| 5 | Python setUp() fix | ✅ Готово | - |
+| 6 | Redeploy backend через Coolify | ⏳ Ожидает | 🔴 HIGH |
+| 7 | E2E тесты после деплоя | ⏳ Ожидает | 🔴 HIGH |
+| 8 | Java JUnit тесты | 📋 Backlog | 🟡 MEDIUM |
+| 9 | TypeScript Jest тесты | 📋 Backlog | 🟡 MEDIUM |
 
 ---
 
@@ -232,6 +264,9 @@ npx playwright test python-tasks.spec.ts
    - docker-compose.coolify.judge0.yml
    - e2e/tests/task-validation/*.spec.ts
    - server/prisma/extract-solutions.ts
+
+2. `01e1018` — fix: call setUp() before each Python test method
+   - server/src/judge0/judge0.service.ts
 
 ---
 
