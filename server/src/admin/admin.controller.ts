@@ -336,4 +336,22 @@ export class AdminController {
     }
     return this.adminService.getAnalyticsTimeline(daysNum);
   }
+
+  /**
+   * GET /admin/analytics/retention
+   * Get retention metrics (D1, D7, D30)
+   */
+  @Get("retention")
+  async getRetentionMetrics() {
+    return this.adminService.getRetentionMetrics();
+  }
+
+  /**
+   * GET /admin/analytics/conversion
+   * Get conversion metrics (free to paid, subscription rates)
+   */
+  @Get("conversion")
+  async getConversionMetrics() {
+    return this.adminService.getConversionMetrics();
+  }
 }

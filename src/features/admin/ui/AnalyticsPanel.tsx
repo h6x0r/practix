@@ -16,6 +16,8 @@ import {
   adminService,
   DashboardStats,
   AnalyticsTimelineResponse,
+  RetentionMetrics,
+  ConversionMetrics,
 } from "../api/adminService";
 import { useUITranslation } from "@/contexts/LanguageContext";
 import { createLogger } from "@/lib/logger";
@@ -30,16 +32,27 @@ const AnalyticsPanel = ({ dashboardStats }: AnalyticsPanelProps) => {
   const { tUI } = useUITranslation();
   const [timelineData, setTimelineData] =
     useState<AnalyticsTimelineResponse | null>(null);
+  const [retentionData, setRetentionData] = useState<RetentionMetrics | null>(
+    null,
+  );
+  const [conversionData, setConversionData] =
+    useState<ConversionMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<7 | 14 | 30 | 90>(30);
 
   const loadTimeline = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await adminService.getAnalyticsTimeline(period);
-      setTimelineData(data);
+      const [timeline, retention, conversion] = await Promise.all([
+        adminService.getAnalyticsTimeline(period),
+        adminService.getRetentionMetrics(),
+        adminService.getConversionMetrics(),
+      ]);
+      setTimelineData(timeline);
+      setRetentionData(retention);
+      setConversionData(conversion);
     } catch (error) {
-      log.error("Failed to load analytics timeline", error);
+      log.error("Failed to load analytics", error);
     } finally {
       setLoading(false);
     }
@@ -245,9 +258,23 @@ const AnalyticsPanel = ({ dashboardStats }: AnalyticsPanelProps) => {
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={timelineData.timeline}>
                     <defs>
-                      <linearGradient id="dauGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3} />
-                        <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
+                      <linearGradient
+                        id="dauGradient"
+                        x1="0"
+                        y1="0"
+                        x2="0"
+                        y2="1"
+                      >
+                        <stop
+                          offset="5%"
+                          stopColor="#3B82F6"
+                          stopOpacity={0.3}
+                        />
+                        <stop
+                          offset="95%"
+                          stopColor="#3B82F6"
+                          stopOpacity={0}
+                        />
                       </linearGradient>
                     </defs>
                     <CartesianGrid
@@ -428,6 +455,209 @@ const AnalyticsPanel = ({ dashboardStats }: AnalyticsPanelProps) => {
             {tUI("admin.noData") || "No data available"}
           </div>
         )}
+      </div>
+
+      {/* Retention & Conversion Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Retention Metrics */}
+        <div className="bg-white dark:bg-dark-surface rounded-2xl border border-gray-100 dark:border-dark-border p-6">
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+            <svg
+              className="w-5 h-5 text-amber-500"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+              />
+            </svg>
+            {tUI("admin.retention") || "User Retention"}
+          </h2>
+          {retentionData ? (
+            <div className="space-y-4">
+              {/* D1 Retention */}
+              <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-dark-bg rounded-xl">
+                <div>
+                  <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    D1 Retention
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    Next-day return rate
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div
+                    className={`text-2xl font-bold ${retentionData.d1.rate >= 40 ? "text-green-500" : retentionData.d1.rate >= 20 ? "text-amber-500" : "text-red-500"}`}
+                  >
+                    {retentionData.d1.rate}%
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {retentionData.d1.retained}/{retentionData.d1.cohortSize}
+                  </div>
+                </div>
+              </div>
+
+              {/* D7 Retention */}
+              <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-dark-bg rounded-xl">
+                <div>
+                  <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    D7 Retention
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    Week-1 return rate
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div
+                    className={`text-2xl font-bold ${retentionData.d7.rate >= 25 ? "text-green-500" : retentionData.d7.rate >= 10 ? "text-amber-500" : "text-red-500"}`}
+                  >
+                    {retentionData.d7.rate}%
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {retentionData.d7.retained}/{retentionData.d7.cohortSize}
+                  </div>
+                </div>
+              </div>
+
+              {/* D30 Retention */}
+              <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-dark-bg rounded-xl">
+                <div>
+                  <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    D30 Retention
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    Month-1 return rate
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div
+                    className={`text-2xl font-bold ${retentionData.d30.rate >= 15 ? "text-green-500" : retentionData.d30.rate >= 5 ? "text-amber-500" : "text-red-500"}`}
+                  >
+                    {retentionData.d30.rate}%
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {retentionData.d30.retained}/{retentionData.d30.cohortSize}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="h-40 flex items-center justify-center text-gray-500">
+              {loading ? "Loading..." : "No retention data"}
+            </div>
+          )}
+        </div>
+
+        {/* Conversion Metrics */}
+        <div className="bg-white dark:bg-dark-surface rounded-2xl border border-gray-100 dark:border-dark-border p-6">
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+            <svg
+              className="w-5 h-5 text-green-500"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+              />
+            </svg>
+            {tUI("admin.conversion") || "Conversion Metrics"}
+          </h2>
+          {conversionData ? (
+            <div className="space-y-4">
+              {/* Overall Conversion */}
+              <div className="flex items-center justify-between p-3 bg-gradient-to-r from-brand-500/10 to-purple-500/10 rounded-xl">
+                <div>
+                  <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Overall Conversion
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    Free → Paid (all time)
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-2xl font-bold text-brand-600">
+                    {conversionData.overall.conversionRate}%
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {conversionData.overall.totalPayingUsers.toLocaleString()}/
+                    {conversionData.overall.totalUsers.toLocaleString()}
+                  </div>
+                </div>
+              </div>
+
+              {/* Monthly Conversion */}
+              <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-dark-bg rounded-xl">
+                <div>
+                  <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Monthly Conversion
+                  </div>
+                  <div className="text-xs text-gray-500">Last 30 days</div>
+                </div>
+                <div className="text-right">
+                  <div
+                    className={`text-2xl font-bold ${conversionData.monthly.conversionRate >= 5 ? "text-green-500" : conversionData.monthly.conversionRate >= 2 ? "text-amber-500" : "text-red-500"}`}
+                  >
+                    {conversionData.monthly.conversionRate}%
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {conversionData.monthly.newPaidUsers}/
+                    {conversionData.monthly.newUsers} new users
+                  </div>
+                </div>
+              </div>
+
+              {/* Current Premium */}
+              <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-dark-bg rounded-xl">
+                <div>
+                  <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Active Premium
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    Currently subscribed
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-2xl font-bold text-purple-500">
+                    {conversionData.currentPremium.percentage}%
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {conversionData.currentPremium.count.toLocaleString()} users
+                  </div>
+                </div>
+              </div>
+
+              {/* Subscriptions vs Purchases */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 bg-gray-50 dark:bg-dark-bg rounded-xl text-center">
+                  <div className="text-lg font-bold text-blue-500">
+                    {conversionData.subscriptions.conversionRate}%
+                  </div>
+                  <div className="text-xs text-gray-500">Subscriptions</div>
+                </div>
+                <div className="p-3 bg-gray-50 dark:bg-dark-bg rounded-xl text-center">
+                  <div className="text-lg font-bold text-orange-500">
+                    {conversionData.purchases.conversionRate}%
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    One-time Purchases
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="h-40 flex items-center justify-center text-gray-500">
+              {loading ? "Loading..." : "No conversion data"}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

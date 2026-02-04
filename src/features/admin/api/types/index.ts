@@ -12,6 +12,9 @@ export type {
   TimelineDataPoint,
   AnalyticsTimelineResponse,
   AiUsageStats,
+  RetentionCohort,
+  RetentionMetrics,
+  ConversionMetrics,
 } from "./analytics";
 
 // Users types
@@ -65,8 +68,4 @@ export type {
 } from "./bugReports";
 
 // Settings types
-export type {
-  AiLimits,
-  AiSettings,
-  UpdateAiSettingsDto,
-} from "./settings";
+export type { AiLimits, AiSettings, UpdateAiSettingsDto } from "./settings";

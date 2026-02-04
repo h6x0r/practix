@@ -7,6 +7,8 @@ import type {
   SubscriptionStats,
   AnalyticsTimelineResponse,
   AiUsageStats,
+  RetentionMetrics,
+  ConversionMetrics,
 } from "../types";
 
 export const adminAnalyticsService = {
@@ -23,7 +25,9 @@ export const adminAnalyticsService = {
   },
 
   getSubmissionStats: async (): Promise<SubmissionStatsResponse> => {
-    return await api.get<SubmissionStatsResponse>("/admin/analytics/submissions");
+    return await api.get<SubmissionStatsResponse>(
+      "/admin/analytics/submissions",
+    );
   },
 
   getSubscriptionStats: async (): Promise<SubscriptionStats> => {
@@ -34,7 +38,19 @@ export const adminAnalyticsService = {
     return await api.get<AiUsageStats>("/admin/analytics/ai-usage");
   },
 
-  getAnalyticsTimeline: async (days: number = 30): Promise<AnalyticsTimelineResponse> => {
-    return await api.get<AnalyticsTimelineResponse>(`/admin/analytics/timeline?days=${days}`);
+  getAnalyticsTimeline: async (
+    days: number = 30,
+  ): Promise<AnalyticsTimelineResponse> => {
+    return await api.get<AnalyticsTimelineResponse>(
+      `/admin/analytics/timeline?days=${days}`,
+    );
+  },
+
+  getRetentionMetrics: async (): Promise<RetentionMetrics> => {
+    return await api.get<RetentionMetrics>("/admin/analytics/retention");
+  },
+
+  getConversionMetrics: async (): Promise<ConversionMetrics> => {
+    return await api.get<ConversionMetrics>("/admin/analytics/conversion");
   },
 };

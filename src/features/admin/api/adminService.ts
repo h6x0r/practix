@@ -46,6 +46,8 @@ export const adminService = {
   getSubscriptionStats: adminAnalyticsService.getSubscriptionStats,
   getAiUsageStats: adminAnalyticsService.getAiUsageStats,
   getAnalyticsTimeline: adminAnalyticsService.getAnalyticsTimeline,
+  getRetentionMetrics: adminAnalyticsService.getRetentionMetrics,
+  getConversionMetrics: adminAnalyticsService.getConversionMetrics,
 
   // Users
   searchUsers: adminUsersService.searchUsers,

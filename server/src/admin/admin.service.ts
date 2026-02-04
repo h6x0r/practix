@@ -1350,4 +1350,213 @@ export class AdminService {
       },
     };
   }
+
+  /**
+   * Get retention metrics (D1, D7, D30)
+   * Calculates what percentage of users who registered N days ago
+   * returned to the platform (had activity) after D1/D7/D30 days
+   */
+  async getRetentionMetrics() {
+    const now = new Date();
+
+    // Get users who registered 1, 7, and 30 days ago (with some buffer)
+    const d1Date = new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000);
+    const d7Date = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const d30Date = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    // D1 Retention: Users registered 2 days ago who were active yesterday
+    const d1CohortStart = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000);
+    const d1CohortEnd = new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000);
+
+    const d1Cohort = await this.prisma.user.count({
+      where: {
+        createdAt: {
+          gte: new Date(d1CohortStart.toISOString().split("T")[0]),
+          lt: new Date(d1CohortEnd.toISOString().split("T")[0]),
+        },
+      },
+    });
+
+    const d1Retained = await this.prisma.user.count({
+      where: {
+        createdAt: {
+          gte: new Date(d1CohortStart.toISOString().split("T")[0]),
+          lt: new Date(d1CohortEnd.toISOString().split("T")[0]),
+        },
+        lastActivityAt: {
+          gte: d1Date,
+        },
+      },
+    });
+
+    // D7 Retention: Users registered 8 days ago who were active in last 7 days
+    const d7CohortStart = new Date(now.getTime() - 8 * 24 * 60 * 60 * 1000);
+    const d7CohortEnd = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    const d7Cohort = await this.prisma.user.count({
+      where: {
+        createdAt: {
+          gte: new Date(d7CohortStart.toISOString().split("T")[0]),
+          lt: new Date(d7CohortEnd.toISOString().split("T")[0]),
+        },
+      },
+    });
+
+    const d7Retained = await this.prisma.user.count({
+      where: {
+        createdAt: {
+          gte: new Date(d7CohortStart.toISOString().split("T")[0]),
+          lt: new Date(d7CohortEnd.toISOString().split("T")[0]),
+        },
+        lastActivityAt: {
+          gte: d7Date,
+        },
+      },
+    });
+
+    // D30 Retention: Users registered 31 days ago who were active in last 30 days
+    const d30CohortStart = new Date(now.getTime() - 31 * 24 * 60 * 60 * 1000);
+    const d30CohortEnd = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    const d30Cohort = await this.prisma.user.count({
+      where: {
+        createdAt: {
+          gte: new Date(d30CohortStart.toISOString().split("T")[0]),
+          lt: new Date(d30CohortEnd.toISOString().split("T")[0]),
+        },
+      },
+    });
+
+    const d30Retained = await this.prisma.user.count({
+      where: {
+        createdAt: {
+          gte: new Date(d30CohortStart.toISOString().split("T")[0]),
+          lt: new Date(d30CohortEnd.toISOString().split("T")[0]),
+        },
+        lastActivityAt: {
+          gte: d30Date,
+        },
+      },
+    });
+
+    return {
+      d1: {
+        cohortSize: d1Cohort,
+        retained: d1Retained,
+        rate: d1Cohort > 0 ? Math.round((d1Retained / d1Cohort) * 100) : 0,
+      },
+      d7: {
+        cohortSize: d7Cohort,
+        retained: d7Retained,
+        rate: d7Cohort > 0 ? Math.round((d7Retained / d7Cohort) * 100) : 0,
+      },
+      d30: {
+        cohortSize: d30Cohort,
+        retained: d30Retained,
+        rate: d30Cohort > 0 ? Math.round((d30Retained / d30Cohort) * 100) : 0,
+      },
+    };
+  }
+
+  /**
+   * Get conversion metrics
+   * - Free to Paid conversion rate
+   * - Trial to Subscription conversion
+   */
+  async getConversionMetrics() {
+    // Total users
+    const totalUsers = await this.prisma.user.count();
+
+    // Users with any paid subscription (ever)
+    const usersWithSubscription = await this.prisma.subscription.groupBy({
+      by: ["userId"],
+      where: {
+        OR: [
+          { status: "active" },
+          { status: "cancelled" },
+          { status: "expired" },
+        ],
+      },
+    });
+
+    const paidUsers = usersWithSubscription.length;
+
+    // Users with any purchase
+    const usersWithPurchase = await this.prisma.purchase.groupBy({
+      by: ["userId"],
+      where: { status: "completed" },
+    });
+
+    const purchaseUsers = usersWithPurchase.length;
+
+    // Combined paying users (subscription OR purchase)
+    const allPayingUserIds = new Set([
+      ...usersWithSubscription.map((u) => u.userId),
+      ...usersWithPurchase.map((u) => u.userId),
+    ]);
+
+    const totalPayingUsers = allPayingUserIds.size;
+
+    // Currently active premium users
+    const activePremium = await this.prisma.user.count({
+      where: { isPremium: true },
+    });
+
+    // Monthly conversion (last 30 days)
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+    const newUsersLast30Days = await this.prisma.user.count({
+      where: { createdAt: { gte: thirtyDaysAgo } },
+    });
+
+    const newPaidUsersLast30Days = await this.prisma.subscription.groupBy({
+      by: ["userId"],
+      where: {
+        createdAt: { gte: thirtyDaysAgo },
+        status: { in: ["active", "cancelled", "expired"] },
+      },
+    });
+
+    return {
+      overall: {
+        totalUsers,
+        totalPayingUsers,
+        conversionRate:
+          totalUsers > 0
+            ? Math.round((totalPayingUsers / totalUsers) * 10000) / 100
+            : 0,
+      },
+      subscriptions: {
+        totalWithSubscription: paidUsers,
+        conversionRate:
+          totalUsers > 0
+            ? Math.round((paidUsers / totalUsers) * 10000) / 100
+            : 0,
+      },
+      purchases: {
+        totalWithPurchase: purchaseUsers,
+        conversionRate:
+          totalUsers > 0
+            ? Math.round((purchaseUsers / totalUsers) * 10000) / 100
+            : 0,
+      },
+      currentPremium: {
+        count: activePremium,
+        percentage:
+          totalUsers > 0
+            ? Math.round((activePremium / totalUsers) * 10000) / 100
+            : 0,
+      },
+      monthly: {
+        newUsers: newUsersLast30Days,
+        newPaidUsers: newPaidUsersLast30Days.length,
+        conversionRate:
+          newUsersLast30Days > 0
+            ? Math.round(
+                (newPaidUsersLast30Days.length / newUsersLast30Days) * 10000,
+              ) / 100
+            : 0,
+      },
+    };
+  }
 }
