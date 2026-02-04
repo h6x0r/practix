@@ -61,6 +61,7 @@ model User {
   subscriptions    Subscription[]
   purchases        Purchase[]
   badges           UserBadge[]
+  promoCodeUsages  PromoCodeUsage[]
   courses          UserCourse[]
   sessions         Session[]
   taskCompletions  TaskCompletion[]
@@ -522,4 +523,63 @@ model PlatformSetting {
 
   @@unique([category, key])
   @@index([category])
+}
+
+// === PROMO CODE SYSTEM ===
+// Promotional codes for discounts on subscriptions and purchases
+
+enum PromoCodeType {
+  PERCENTAGE  // Discount as percentage (e.g., 20% off)
+  FIXED       // Fixed amount discount in tiyn
+  FREE_TRIAL  // Free trial days for subscriptions
+}
+
+enum PromoCodeApplicableTo {
+  ALL           // Applies to all purchases
+  SUBSCRIPTIONS // Only for subscription payments
+  PURCHASES     // Only for one-time purchases
+  COURSES       // Only for course access purchases
+}
+
+model PromoCode {
+  id                String                 @id @default(uuid())
+  code              String                 @unique // 'SUMMER2026', 'WELCOME50'
+  type              PromoCodeType
+  discount          Int                    // % for PERCENTAGE, tiyn for FIXED, days for FREE_TRIAL
+  maxUses           Int?                   // null = unlimited
+  usesCount         Int                    @default(0)
+  maxUsesPerUser    Int                    @default(1) // How many times one user can use
+  minPurchaseAmount Int?                   // Minimum purchase amount in tiyn (null = no minimum)
+  validFrom         DateTime
+  validUntil        DateTime
+  isActive          Boolean                @default(true)
+  applicableTo      PromoCodeApplicableTo  @default(ALL)
+  courseIds         String[]               // If applicableTo = COURSES, restrict to these course IDs
+  description       String?                // Internal note for admins
+  createdBy         String                 // Admin user ID
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+
+  usages PromoCodeUsage[]
+
+  @@index([code])
+  @@index([isActive])
+  @@index([validFrom, validUntil])
+}
+
+model PromoCodeUsage {
+  id           String   @id @default(uuid())
+  promoCodeId  String
+  userId       String
+  orderId      String   // Payment or Purchase ID
+  orderType    String   // 'subscription' | 'purchase'
+  discountAmount Int    // Actual discount applied in tiyn
+  createdAt    DateTime @default(now())
+
+  promoCode PromoCode @relation(fields: [promoCodeId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([promoCodeId])
+  @@index([userId])
+  @@index([orderId])
 }

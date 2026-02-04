@@ -331,6 +331,78 @@ export interface PaymentDetails extends PaymentItem {
   transactions: PaymentTransaction[];
 }
 
+// ============================================
+// PROMO CODES (Admin Panel Phase 2.3)
+// ============================================
+
+export type PromoCodeType = "PERCENTAGE" | "FIXED" | "FREE_TRIAL";
+export type PromoCodeApplicableTo =
+  | "ALL"
+  | "SUBSCRIPTIONS"
+  | "PURCHASES"
+  | "COURSES";
+
+export interface PromoCodeItem {
+  id: string;
+  code: string;
+  type: PromoCodeType;
+  discount: number;
+  maxUses: number | null;
+  maxUsesPerUser: number;
+  usesCount: number;
+  minPurchaseAmount: number | null;
+  validFrom: string;
+  validUntil: string;
+  isActive: boolean;
+  applicableTo: PromoCodeApplicableTo;
+  courseIds: string[];
+  description: string | null;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+  _count?: { usages: number };
+}
+
+export interface PromoCodesListResponse {
+  promoCodes: PromoCodeItem[];
+  total: number;
+}
+
+export interface PromoCodeUsageItem {
+  id: string;
+  orderId: string;
+  orderType: string;
+  discountAmount: number;
+  createdAt: string;
+  user: { id: string; email: string; name: string | null };
+}
+
+export interface PromoCodeDetails extends PromoCodeItem {
+  usages: PromoCodeUsageItem[];
+}
+
+export interface PromoCodeStats {
+  total: number;
+  active: number;
+  expired: number;
+  totalUsages: number;
+  totalDiscountGiven: number;
+}
+
+export interface CreatePromoCodeDto {
+  code: string;
+  type: PromoCodeType;
+  discount: number;
+  maxUses?: number;
+  maxUsesPerUser?: number;
+  minPurchaseAmount?: number;
+  validFrom: string;
+  validUntil: string;
+  applicableTo?: PromoCodeApplicableTo;
+  courseIds?: string[];
+  description?: string;
+}
+
 /**
  * Admin Analytics Service - Connected to Backend Admin API
  *
@@ -620,6 +692,100 @@ export const adminService = {
     return await api.post<SubscriptionItem>(
       `/admin/analytics/subscriptions/${subscriptionId}/cancel`,
       {},
+    );
+  },
+
+  // ============================================
+  // PROMO CODES (Admin Panel Phase 2.3)
+  // ============================================
+
+  /**
+   * Get all promo codes
+   * GET /admin/promocodes
+   */
+  getPromoCodes: async (params?: {
+    isActive?: boolean;
+    limit?: number;
+    offset?: number;
+  }): Promise<PromoCodesListResponse> => {
+    const searchParams = new URLSearchParams();
+    if (params?.isActive !== undefined)
+      searchParams.append("isActive", params.isActive.toString());
+    if (params?.limit) searchParams.append("limit", params.limit.toString());
+    if (params?.offset) searchParams.append("offset", params.offset.toString());
+    const query = searchParams.toString() ? `?${searchParams.toString()}` : "";
+    return await api.get<PromoCodesListResponse>(`/admin/promocodes${query}`);
+  },
+
+  /**
+   * Get promo code stats
+   * GET /admin/promocodes/stats
+   */
+  getPromoCodeStats: async (): Promise<PromoCodeStats> => {
+    return await api.get<PromoCodeStats>("/admin/promocodes/stats");
+  },
+
+  /**
+   * Get promo code by ID
+   * GET /admin/promocodes/:id
+   */
+  getPromoCodeById: async (promoCodeId: string): Promise<PromoCodeDetails> => {
+    return await api.get<PromoCodeDetails>(`/admin/promocodes/${promoCodeId}`);
+  },
+
+  /**
+   * Create promo code
+   * POST /admin/promocodes
+   */
+  createPromoCode: async (dto: CreatePromoCodeDto): Promise<PromoCodeItem> => {
+    return await api.post<PromoCodeItem>("/admin/promocodes", dto);
+  },
+
+  /**
+   * Update promo code
+   * POST /admin/promocodes/:id/update
+   */
+  updatePromoCode: async (
+    promoCodeId: string,
+    updates: Partial<Omit<CreatePromoCodeDto, "code">>,
+  ): Promise<PromoCodeItem> => {
+    return await api.post<PromoCodeItem>(
+      `/admin/promocodes/${promoCodeId}/update`,
+      updates,
+    );
+  },
+
+  /**
+   * Activate promo code
+   * POST /admin/promocodes/:id/activate
+   */
+  activatePromoCode: async (promoCodeId: string): Promise<PromoCodeItem> => {
+    return await api.post<PromoCodeItem>(
+      `/admin/promocodes/${promoCodeId}/activate`,
+      {},
+    );
+  },
+
+  /**
+   * Deactivate promo code
+   * POST /admin/promocodes/:id/deactivate
+   */
+  deactivatePromoCode: async (promoCodeId: string): Promise<PromoCodeItem> => {
+    return await api.post<PromoCodeItem>(
+      `/admin/promocodes/${promoCodeId}/deactivate`,
+      {},
+    );
+  },
+
+  /**
+   * Delete promo code (only if never used)
+   * DELETE /admin/promocodes/:id
+   */
+  deletePromoCode: async (
+    promoCodeId: string,
+  ): Promise<{ success: boolean }> => {
+    return await api.delete<{ success: boolean }>(
+      `/admin/promocodes/${promoCodeId}`,
     );
   },
 };
