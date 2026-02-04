@@ -1,12 +1,14 @@
-import { Task } from '../../../../types';
+import { Task } from "../../../../types";
 
 export const task: Task = {
-	slug: 'go-logging-request-id',
-	title: 'Context-Aware Logging with Request ID',
-	difficulty: 'easy',	tags: ['go', 'logging', 'context', 'observability'],
-	estimatedTime: '20m',	isPremium: false,
-	youtubeUrl: '',
-	description: `Implement context-aware logging functions that track request IDs across your application.
+  slug: "go-logging-request-id",
+  title: "Context-Aware Logging with Request ID",
+  difficulty: "easy",
+  tags: ["go", "logging", "context", "observability"],
+  estimatedTime: "20m",
+  isPremium: false,
+  youtubeUrl: "",
+  description: `Implement context-aware logging functions that track request IDs across your application.
 
 **Requirements:**
 1. **WithRequestID**: Store request ID in context using \`context.WithValue\`
@@ -56,7 +58,7 @@ func HandleRequest(w http.ResponseWriter, r *http.Request) {
 - Handle nil context by returning \`context.Background()\`
 - Empty request ID should not add prefix
 - Use \`log.Printf\` for output`,
-	initialCode: `package loggingx
+  initialCode: `package loggingx
 
 import (
 	"context"
@@ -90,7 +92,7 @@ func RequestID(ctx context.Context) string {
 func Logf(ctx context.Context, format string, args ...interface{}) {
 	// TODO: Implement
 }`,
-	solutionCode: `package loggingx
+  solutionCode: `package loggingx
 
 import (
 	"context"
@@ -122,12 +124,12 @@ func RequestID(ctx context.Context) string {
 func Logf(ctx context.Context, format string, args ...interface{}) {
 	rid := RequestID(ctx) // fetch request identifier if present
 	if rid != "" {        // include request id prefix when available
-		log.Printf("[rid=%s] "+format, append([]any{rid}, args...)...) // prefix message with rid before formatting
+		log.Printf("[rid=%s] "+format, append([]interface{}{rid}, args...)...) // prefix message with rid before formatting
 		return
 	}
 	log.Printf(format, args...) // log without prefix when request id absent
 }`,
-	testCode: `package loggingx
+  testCode: `package loggingx
 
 import (
 	"context"
@@ -204,9 +206,9 @@ func Test10(t *testing.T) {
 	}
 }
 `,
-			hint1: `Use context.WithValue(ctx, KeyRequestID, rid) to store the request ID.`,
-			hint2: `In RequestID, use ctx.Value(KeyRequestID).(string) with comma-ok for safe extraction.`,
-			whyItMatters: `Request ID tracking is essential for distributed system observability and debugging production issues.
+  hint1: `Use context.WithValue(ctx, KeyRequestID, rid) to store the request ID.`,
+  hint2: `In RequestID, use ctx.Value(KeyRequestID).(string) with comma-ok for safe extraction.`,
+  whyItMatters: `Request ID tracking is essential for distributed system observability and debugging production issues.
 
 **Why This Matters:**
 
@@ -303,11 +305,12 @@ A payment processing company tracks requests from mobile app → API → payment
 - Mean time to resolution: -75%
 - Customer satisfaction: +40%
 
-Without request IDs, they had to correlate logs manually across 12 services using timestamps - often impossible for high-traffic periods.`,	order: 0,
-	translations: {
-		ru: {
-			title: 'Логирование с Request ID',
-			solutionCode: `package loggingx
+Without request IDs, they had to correlate logs manually across 12 services using timestamps - often impossible for high-traffic periods.`,
+  order: 0,
+  translations: {
+    ru: {
+      title: "Логирование с Request ID",
+      solutionCode: `package loggingx
 
 import (
 	"context"
@@ -339,12 +342,12 @@ func RequestID(ctx context.Context) string {
 func Logf(ctx context.Context, format string, args ...interface{}) {
 	rid := RequestID(ctx) // получаем идентификатор запроса если есть
 	if rid != "" {        // включаем префикс request id когда доступен
-		log.Printf("[rid=%s] "+format, append([]any{rid}, args...)...) // префиксим сообщение rid перед форматированием
+		log.Printf("[rid=%s] "+format, append([]interface{}{rid}, args...)...) // префиксим сообщение rid перед форматированием
 		return
 	}
 	log.Printf(format, args...) // логируем без префикса когда request id отсутствует
 }`,
-			description: `Реализуйте функции контекстного логирования, отслеживающие request ID по всему приложению.
+      description: `Реализуйте функции контекстного логирования, отслеживающие request ID по всему приложению.
 
 **Требования:**
 1. **WithRequestID**: Сохранить request ID в контексте через \`context.WithValue\`
@@ -374,9 +377,9 @@ rid := RequestID(ctx)  // Возвращает "req-123"
 - Обрабатывайте nil context через \`context.Background()\`
 - Пустой request ID не должен добавлять префикс
 - Используйте \`log.Printf\` для вывода`,
-			hint1: `Используйте context.WithValue(ctx, KeyRequestID, rid) для сохранения request ID.`,
-			hint2: `В RequestID используйте ctx.Value(KeyRequestID).(string) с comma-ok для безопасности.`,
-			whyItMatters: `Request ID tracking критичен для observability распределенных систем и debugging production проблем.
+      hint1: `Используйте context.WithValue(ctx, KeyRequestID, rid) для сохранения request ID.`,
+      hint2: `В RequestID используйте ctx.Value(KeyRequestID).(string) с comma-ok для безопасности.`,
+      whyItMatters: `Request ID tracking критичен для observability распределенных систем и debugging production проблем.
 
 **Почему важно:**
 
@@ -473,11 +476,11 @@ const KeyRequestID CtxKey = "rid"  // Уникальный тип = уникал
 - Mean time to resolution: -75%
 - Customer satisfaction: +40%
 
-Без request ID им пришлось бы вручную сопоставлять логи по 12 сервисам используя timestamp - часто невозможно для периодов высокого трафика.`
-		},
-		uz: {
-			title: `Request ID bilan loglash`,
-			solutionCode: `package loggingx
+Без request ID им пришлось бы вручную сопоставлять логи по 12 сервисам используя timestamp - часто невозможно для периодов высокого трафика.`,
+    },
+    uz: {
+      title: `Request ID bilan loglash`,
+      solutionCode: `package loggingx
 
 import (
 	"context"
@@ -509,12 +512,12 @@ func RequestID(ctx context.Context) string {
 func Logf(ctx context.Context, format string, args ...interface{}) {
 	rid := RequestID(ctx) // mavjud bo'lsa so'rov identifikatorini olamiz
 	if rid != "" {        // mavjud bo'lganda request id prefiksini qo'shamiz
-		log.Printf("[rid=%s] "+format, append([]any{rid}, args...)...) // formatlashdan oldin xabarni rid bilan prefikslaymiz
+		log.Printf("[rid=%s] "+format, append([]interface{}{rid}, args...)...) // formatlashdan oldin xabarni rid bilan prefikslaymiz
 		return
 	}
 	log.Printf(format, args...) // request id mavjud bo'lmaganda prefikssiz log qilamiz
 }`,
-			description: `Ilova bo'ylab request ID larni kuzatuvchi kontekstga oid logging funksiyalarini amalga oshiring.
+      description: `Ilova bo'ylab request ID larni kuzatuvchi kontekstga oid logging funksiyalarini amalga oshiring.
 
 **Talablar:**
 1. **WithRequestID**: Request ID ni kontekstda \`context.WithValue\` orqali saqlash
@@ -544,9 +547,9 @@ rid := RequestID(ctx)  // "req-123" qaytaradi
 - nil kontekstni \`context.Background()\` orqali qayta ishlang
 - Bo'sh request ID prefiks qo'shmasligi kerak
 - Chiqish uchun \`log.Printf\` dan foydalaning`,
-			hint1: `Request ID ni saqlash uchun context.WithValue(ctx, KeyRequestID, rid) dan foydalaning.`,
-			hint2: `RequestID da xavfsizlik uchun ctx.Value(KeyRequestID).(string) ni comma-ok bilan ishlating.`,
-			whyItMatters: `Request ID kuzatish taqsimlangan tizimlar observability va production muammolarni debugging uchun muhimdir.
+      hint1: `Request ID ni saqlash uchun context.WithValue(ctx, KeyRequestID, rid) dan foydalaning.`,
+      hint2: `RequestID da xavfsizlik uchun ctx.Value(KeyRequestID).(string) ni comma-ok bilan ishlating.`,
+      whyItMatters: `Request ID kuzatish taqsimlangan tizimlar observability va production muammolarni debugging uchun muhimdir.
 
 **Nima uchun bu muhim:**
 
@@ -643,9 +646,9 @@ To'lov qayta ishlash kompaniyasi so'rovlarni mobil ilova → API → to'lov xizm
 - O'rtacha hal qilish vaqti: -75%
 - Mijoz qoniqishi: +40%
 
-Request ID siz ularga timestamp yordamida 12 xizmat bo'ylab loglarni qo'lda bog'lashga to'g'ri kelardi - yuqori trafik davrlari uchun ko'pincha imkonsiz.`
-		}
-	}
+Request ID siz ularga timestamp yordamida 12 xizmat bo'ylab loglarni qo'lda bog'lashga to'g'ri kelardi - yuqori trafik davrlari uchun ko'pincha imkonsiz.`,
+    },
+  },
 };
 
 export default task;

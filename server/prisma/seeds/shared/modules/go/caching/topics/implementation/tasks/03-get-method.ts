@@ -9,7 +9,7 @@ export const task: Task = {
 	description: `Implement thread-safe **Get** method that returns values only if not expired.
 
 **Requirements:**
-1. Implement \`Get(key string) (any, bool)\` method on TTLCache
+1. Implement \`Get(key string) (interface{}, bool)\` method on TTLCache
 2. Return \`(nil, false)\` if cache is nil or key not found
 3. Use RLock for initial lookup (optimistic read)
 4. Check if entry is expired: \`!ent.exp.IsZero() && time.Now().After(ent.exp)\`
@@ -72,7 +72,7 @@ func (c *TTLCache) Set(key string, v any) {
 // 3. Check if key exists and if entry is expired
 // 4. If expired, upgrade to Lock and delete (with double-check)
 // 5. Return value and existence status
-func (c *TTLCache) Get(key string) (any, bool) {
+func (c *TTLCache) Get(key string) (interface{}, bool) {
 	// TODO: Implement
 }`,
 	solutionCode: `package cache
@@ -110,7 +110,7 @@ func (c *TTLCache) Set(key string, v any) {
 	c.m[key] = entry{v: v, exp: expire}
 }
 
-func (c *TTLCache) Get(key string) (any, bool) {
+func (c *TTLCache) Get(key string) (interface{}, bool) {
 	if c == nil {	// Nil cache never stores values
 		return nil, false
 	}
@@ -357,7 +357,7 @@ type TTLCache struct {
 	ttl time.Duration
 }
 
-func (c *TTLCache) Get(key string) (any, bool) {
+func (c *TTLCache) Get(key string) (interface{}, bool) {
 	if c == nil {	// Nil cache никогда не хранит значений
 		return nil, false
 	}
@@ -380,7 +380,7 @@ func (c *TTLCache) Get(key string) (any, bool) {
 			description: `Реализуйте потокобезопасный метод **Get**, возвращающий значения только если не истекли.
 
 **Требования:**
-1. Реализуйте метод \`Get(key string) (any, bool)\` для TTLCache
+1. Реализуйте метод \`Get(key string) (interface{}, bool)\` для TTLCache
 2. Верните \`(nil, false)\` если cache nil или ключ не найден
 3. Используйте RLock для начального поиска (оптимистичное чтение)
 4. Проверьте истечение: \`!ent.exp.IsZero() && time.Now().After(ent.exp)\`
@@ -497,7 +497,7 @@ type TTLCache struct {
 	ttl time.Duration
 }
 
-func (c *TTLCache) Get(key string) (any, bool) {
+func (c *TTLCache) Get(key string) (interface{}, bool) {
 	if c == nil {	// Nil cache hech qachon qiymat saqlamaydi
 		return nil, false
 	}
@@ -520,7 +520,7 @@ func (c *TTLCache) Get(key string) (any, bool) {
 			description: `Faqat muddati o'tmagan qiymatlarni qaytaradigan thread-safe **Get** metodini amalga oshiring.
 
 **Talablar:**
-1. TTLCache uchun \`Get(key string) (any, bool)\` metodini amalga oshiring
+1. TTLCache uchun \`Get(key string) (interface{}, bool)\` metodini amalga oshiring
 2. cache nil yoki kalit topilmasa \`(nil, false)\` qaytaring
 3. Dastlabki qidirish uchun RLock dan foydalaning (optimistik o'qish)
 4. Muddati o'tganligini tekshiring: \`!ent.exp.IsZero() && time.Now().After(ent.exp)\`

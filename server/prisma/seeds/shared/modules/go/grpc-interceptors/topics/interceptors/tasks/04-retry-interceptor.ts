@@ -21,7 +21,7 @@ export const task: Task = {
 **Example:**
 \`\`\`go
 attempts := 0
-handler := func(ctx context.Context, req any) (any, error) {
+handler := func(ctx context.Context, req interface{}) (interface{}, error) {
     attempts++
     if attempts < 3 {
         return nil, errors.New("temporary error")
@@ -50,9 +50,9 @@ import (
 	"time"
 )
 
-type Handler func(ctx context.Context, req any) (any, error)
+type Handler func(ctx context.Context, req interface{}) (interface{}, error)
 
-type UnaryServerInterceptor func(ctx context.Context, req any, next Handler) (any, error)
+type UnaryServerInterceptor func(ctx context.Context, req interface{}, next Handler) (interface{}, error)
 
 // TODO: Implement RetryInterceptor
 func RetryInterceptor(maxRetries int, backoff func(int) time.Duration) UnaryServerInterceptor {
@@ -65,20 +65,20 @@ import (
 	"time"
 )
 
-type Handler func(ctx context.Context, req any) (any, error)
+type Handler func(ctx context.Context, req interface{}) (interface{}, error)
 
-type UnaryServerInterceptor func(ctx context.Context, req any, next Handler) (any, error)
+type UnaryServerInterceptor func(ctx context.Context, req interface{}, next Handler) (interface{}, error)
 
 func RetryInterceptor(maxRetries int, backoff func(int) time.Duration) UnaryServerInterceptor {
 	if maxRetries < 0 {	// Validate maxRetries
 		maxRetries = 0	// Default to 0 retries
 	}
-	return func(ctx context.Context, req any, handler Handler) (any, error) {
+	return func(ctx context.Context, req interface{}, handler Handler) (interface{}, error) {
 		if handler == nil {	// Check if handler is nil
-			handler = func(context.Context, any) (any, error) { return nil, nil }	// Use no-op handler
+			handler = func(context.Context, interface{}) (interface{}, error) { return nil, nil }	// Use no-op handler
 		}
 		var (
-			resp any
+			resp interface{}
 			err  error
 		)
 		for i := 0; i <= maxRetries; i++ {	// Try maxRetries + 1 times
@@ -126,7 +126,7 @@ func Test1(t *testing.T) {
 	// Test success on first try (no retry)
 	interceptor := RetryInterceptor(3, nil)
 	callCount := 0
-	handler := func(ctx context.Context, req any) (any, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		callCount++
 		return "success", nil
 	}
@@ -140,7 +140,7 @@ func Test2(t *testing.T) {
 	// Test retry on error then success
 	callCount := 0
 	interceptor := RetryInterceptor(3, nil)
-	handler := func(ctx context.Context, req any) (any, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		callCount++
 		if callCount < 2 {
 			return nil, errors.New("fail")
@@ -157,7 +157,7 @@ func Test3(t *testing.T) {
 	// Test max retries exceeded
 	callCount := 0
 	interceptor := RetryInterceptor(2, nil)
-	handler := func(ctx context.Context, req any) (any, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		callCount++
 		return nil, errors.New("always fail")
 	}
@@ -174,7 +174,7 @@ func Test4(t *testing.T) {
 	// Test negative maxRetries defaults to 0
 	callCount := 0
 	interceptor := RetryInterceptor(-5, nil)
-	handler := func(ctx context.Context, req any) (any, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		callCount++
 		return nil, errors.New("fail")
 	}
@@ -191,7 +191,7 @@ func Test5(t *testing.T) {
 	interceptor := RetryInterceptor(10, func(i int) time.Duration {
 		return 50 * time.Millisecond
 	})
-	handler := func(c context.Context, req any) (any, error) {
+	handler := func(c context.Context, req interface{}) (interface{}, error) {
 		callCount++
 		if callCount == 2 {
 			cancel()
@@ -211,7 +211,7 @@ func Test6(t *testing.T) {
 		backoffCalls = append(backoffCalls, attempt)
 		return time.Millisecond
 	})
-	handler := func(ctx context.Context, req any) (any, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return nil, errors.New("fail")
 	}
 	interceptor(context.Background(), nil, handler)
@@ -223,7 +223,7 @@ func Test6(t *testing.T) {
 func Test7(t *testing.T) {
 	// Test nil backoff works
 	interceptor := RetryInterceptor(2, nil)
-	handler := func(ctx context.Context, req any) (any, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return "success", nil
 	}
 	resp, err := interceptor(context.Background(), nil, handler)
@@ -243,9 +243,9 @@ func Test8(t *testing.T) {
 
 func Test9(t *testing.T) {
 	// Test request is passed to handler
-	var receivedReq any
+	var receivedReq interface{}
 	interceptor := RetryInterceptor(1, nil)
-	handler := func(ctx context.Context, req any) (any, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		receivedReq = req
 		return nil, nil
 	}
@@ -259,7 +259,7 @@ func Test10(t *testing.T) {
 	// Test zero maxRetries means single attempt
 	callCount := 0
 	interceptor := RetryInterceptor(0, nil)
-	handler := func(ctx context.Context, req any) (any, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		callCount++
 		return nil, errors.New("fail")
 	}
@@ -303,8 +303,8 @@ func JitteredBackoff(base time.Duration) func(int) time.Duration {
 
 // Conditional retry (only retry specific errors)
 func RetryOnTransientErrors(maxRetries int, backoff func(int) time.Duration) UnaryServerInterceptor {
-    return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler Handler) (any, error) {
-        var resp any
+    return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler Handler) (interface{}, error) {
+        var resp interface{}
         var err error
 
         for i := 0; i <= maxRetries; i++ {
@@ -370,7 +370,7 @@ func MethodRetryInterceptor() UnaryServerInterceptor {
         },
     }
 
-    return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler Handler) (any, error) {
+    return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler Handler) (interface{}, error) {
         config, ok := configs[info.FullMethod]
         if !ok {
             // Default retry config
@@ -384,8 +384,8 @@ func MethodRetryInterceptor() UnaryServerInterceptor {
 
 // Retry with metrics
 func RetryWithMetrics(maxRetries int, backoff func(int) time.Duration) UnaryServerInterceptor {
-    return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler Handler) (any, error) {
-        var resp any
+    return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler Handler) (interface{}, error) {
+        var resp interface{}
         var err error
         attempts := 0
 
@@ -453,7 +453,7 @@ func NewCircuitBreaker(maxFailures int, resetTimeout time.Duration) *CircuitBrea
     }
 }
 
-func (cb *CircuitBreaker) Call(ctx context.Context, req any, handler Handler) (any, error) {
+func (cb *CircuitBreaker) Call(ctx context.Context, req interface{}, handler Handler) (interface{}, error) {
     cb.mu.Lock()
 
     // Check if circuit should be reset
@@ -569,7 +569,7 @@ Without RetryInterceptor, clients must implement retry logic themselves—duplic
 **Пример:**
 \`\`\`go
 attempts := 0
-handler := func(ctx context.Context, req any) (any, error) {
+handler := func(ctx context.Context, req interface{}) (interface{}, error) {
     attempts++
     if attempts < 3 {
         return nil, errors.New("temporary error")
@@ -633,8 +633,8 @@ func JitteredBackoff(base time.Duration) func(int) time.Duration {
 **Conditional Retry (Только Определённые Ошибки):**
 \`\`\`go
 func RetryOnTransientErrors(maxRetries int, backoff func(int) time.Duration) UnaryServerInterceptor {
-    return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler Handler) (any, error) {
-        var resp any
+    return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler Handler) (interface{}, error) {
+        var resp interface{}
         var err error
 
         for i := 0; i <= maxRetries; i++ {
@@ -701,7 +701,7 @@ func MethodRetryInterceptor() UnaryServerInterceptor {
         },
     }
 
-    return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler Handler) (any, error) {
+    return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler Handler) (interface{}, error) {
         config, ok := configs[info.FullMethod]
         if !ok {
             // Конфигурация retry по умолчанию
@@ -717,8 +717,8 @@ func MethodRetryInterceptor() UnaryServerInterceptor {
 **Retry с Метриками:**
 \`\`\`go
 func RetryWithMetrics(maxRetries int, backoff func(int) time.Duration) UnaryServerInterceptor {
-    return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler Handler) (any, error) {
-        var resp any
+    return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler Handler) (interface{}, error) {
+        var resp interface{}
         var err error
         attempts := 0
 
@@ -788,7 +788,7 @@ func NewCircuitBreaker(maxFailures int, resetTimeout time.Duration) *CircuitBrea
     }
 }
 
-func (cb *CircuitBreaker) Call(ctx context.Context, req any, handler Handler) (any, error) {
+func (cb *CircuitBreaker) Call(ctx context.Context, req interface{}, handler Handler) (interface{}, error) {
     cb.mu.Lock()
 
     // Проверяем должен ли circuit быть сброшен
@@ -895,20 +895,20 @@ import (
 	"time"
 )
 
-type Handler func(ctx context.Context, req any) (any, error)
+type Handler func(ctx context.Context, req interface{}) (interface{}, error)
 
-type UnaryServerInterceptor func(ctx context.Context, req any, next Handler) (any, error)
+type UnaryServerInterceptor func(ctx context.Context, req interface{}, next Handler) (interface{}, error)
 
 func RetryInterceptor(maxRetries int, backoff func(int) time.Duration) UnaryServerInterceptor {
 	if maxRetries < 0 {	// Валидация maxRetries
 		maxRetries = 0	// По умолчанию 0 повторов
 	}
-	return func(ctx context.Context, req any, handler Handler) (any, error) {
+	return func(ctx context.Context, req interface{}, handler Handler) (interface{}, error) {
 		if handler == nil {	// Проверка на nil handler
-			handler = func(context.Context, any) (any, error) { return nil, nil }	// Используем no-op handler
+			handler = func(context.Context, interface{}) (interface{}, error) { return nil, nil }	// Используем no-op handler
 		}
 		var (
-			resp any
+			resp interface{}
 			err  error
 		)
 		for i := 0; i <= maxRetries; i++ {	// Пытаемся maxRetries + 1 раз
@@ -959,7 +959,7 @@ func RetryInterceptor(maxRetries int, backoff func(int) time.Duration) UnaryServ
 **Misol:**
 \`\`\`go
 attempts := 0
-handler := func(ctx context.Context, req any) (any, error) {
+handler := func(ctx context.Context, req interface{}) (interface{}, error) {
     attempts++
     if attempts < 3 {
         return nil, errors.New("temporary error")
@@ -1023,8 +1023,8 @@ func JitteredBackoff(base time.Duration) func(int) time.Duration {
 **Shartli Retry (Faqat Ma'lum Xatolar):**
 \`\`\`go
 func RetryOnTransientErrors(maxRetries int, backoff func(int) time.Duration) UnaryServerInterceptor {
-    return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler Handler) (any, error) {
-        var resp any
+    return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler Handler) (interface{}, error) {
+        var resp interface{}
         var err error
 
         for i := 0; i <= maxRetries; i++ {
@@ -1091,7 +1091,7 @@ func MethodRetryInterceptor() UnaryServerInterceptor {
         },
     }
 
-    return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler Handler) (any, error) {
+    return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler Handler) (interface{}, error) {
         config, ok := configs[info.FullMethod]
         if !ok {
             // Standart retry konfiguratsiyasi
@@ -1107,8 +1107,8 @@ func MethodRetryInterceptor() UnaryServerInterceptor {
 **Metrikalar Bilan Retry:**
 \`\`\`go
 func RetryWithMetrics(maxRetries int, backoff func(int) time.Duration) UnaryServerInterceptor {
-    return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler Handler) (any, error) {
-        var resp any
+    return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler Handler) (interface{}, error) {
+        var resp interface{}
         var err error
         attempts := 0
 
@@ -1178,7 +1178,7 @@ func NewCircuitBreaker(maxFailures int, resetTimeout time.Duration) *CircuitBrea
     }
 }
 
-func (cb *CircuitBreaker) Call(ctx context.Context, req any, handler Handler) (any, error) {
+func (cb *CircuitBreaker) Call(ctx context.Context, req interface{}, handler Handler) (interface{}, error) {
     cb.mu.Lock()
 
     // Circuit qayta tiklanishi kerakligini tekshiramiz
@@ -1285,20 +1285,20 @@ import (
 	"time"
 )
 
-type Handler func(ctx context.Context, req any) (any, error)
+type Handler func(ctx context.Context, req interface{}) (interface{}, error)
 
-type UnaryServerInterceptor func(ctx context.Context, req any, next Handler) (any, error)
+type UnaryServerInterceptor func(ctx context.Context, req interface{}, next Handler) (interface{}, error)
 
 func RetryInterceptor(maxRetries int, backoff func(int) time.Duration) UnaryServerInterceptor {
 	if maxRetries < 0 {	// maxRetries ni tekshirish
 		maxRetries = 0	// Standart 0 qayta urinish
 	}
-	return func(ctx context.Context, req any, handler Handler) (any, error) {
+	return func(ctx context.Context, req interface{}, handler Handler) (interface{}, error) {
 		if handler == nil {	// Handler nil ekanligini tekshirish
-			handler = func(context.Context, any) (any, error) { return nil, nil }	// No-op handler ishlatamiz
+			handler = func(context.Context, interface{}) (interface{}, error) { return nil, nil }	// No-op handler ishlatamiz
 		}
 		var (
-			resp any
+			resp interface{}
 			err  error
 		)
 		for i := 0; i <= maxRetries; i++ {	// maxRetries + 1 marta urinamiz

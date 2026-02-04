@@ -9,7 +9,7 @@ export const task: Task = {
 	description: `Implement **RunPoolWithPanicHandler** that creates a worker pool with panic recovery, allowing graceful handling of panicking jobs.
 
 **Requirements:**
-1. Create function \`RunPoolWithPanicHandler(ctx context.Context, jobs <-chan Job, workers int, handler func(context.Context, int, any)) error\`
+1. Create function \`RunPoolWithPanicHandler(ctx context.Context, jobs <-chan Job, workers int, handler func(context.Context, int, interface{})) error\`
 2. Handle nil context (return nil)
 3. Handle workers <= 0 (set to 1)
 4. Handle nil handler (use no-op handler)
@@ -22,7 +22,7 @@ export const task: Task = {
 
 **Handler Signature:**
 \`\`\`go
-func(ctx context.Context, workerID int, panicValue any)
+func(ctx context.Context, workerID int, panicValue interface{})
 \`\`\`
 
 **Example:**
@@ -72,7 +72,7 @@ import (
 type Job func(context.Context) error
 
 // TODO: Implement RunPoolWithPanicHandler
-func RunPoolWithPanicHandler(ctx context.Context, jobs <-chan Job, workers int, handler func(context.Context, int, any)) error {
+func RunPoolWithPanicHandler(ctx context.Context, jobs <-chan Job, workers int, handler func(context.Context, int, interface{})) error {
 	// TODO: Implement
 }`,
 	testCode: `package concurrency
@@ -226,7 +226,7 @@ import (
 
 type Job func(context.Context) error
 
-func RunPoolWithPanicHandler(ctx context.Context, jobs <-chan Job, workers int, handler func(context.Context, int, any)) error {
+func RunPoolWithPanicHandler(ctx context.Context, jobs <-chan Job, workers int, handler func(context.Context, int, interface{})) error {
 	if ctx == nil {                                                 // Handle nil context
 		return nil                                              // Return nil for safety
 	}
@@ -234,7 +234,7 @@ func RunPoolWithPanicHandler(ctx context.Context, jobs <-chan Job, workers int, 
 		workers = 1                                             // Set minimum workers
 	}
 	if handler == nil {                                             // Handle nil handler
-		handler = func(context.Context, int, any) {}            // No-op handler
+		handler = func(context.Context, int, interface{}) {}            // No-op handler
 	}
 	ctx, cancel := context.WithCancel(ctx)                          // Create cancellable context
 	defer cancel()                                                  // Always cancel to free resources
@@ -591,7 +591,7 @@ This pattern is critical for building robust production systems that can handle 
 			description: `Реализуйте **RunPoolWithPanicHandler**, который создаёт пул воркеров с восстановлением после паник, позволяя gracefully обрабатывать паникующие задачи.
 
 **Требования:**
-1. Создайте функцию \`RunPoolWithPanicHandler(ctx context.Context, jobs <-chan Job, workers int, handler func(context.Context, int, any)) error\`
+1. Создайте функцию \`RunPoolWithPanicHandler(ctx context.Context, jobs <-chan Job, workers int, handler func(context.Context, int, interface{})) error\`
 2. Обработайте nil context (верните nil)
 3. Обработайте workers <= 0 (установите в 1)
 4. Обработайте nil handler (используйте no-op handler)
@@ -604,7 +604,7 @@ This pattern is critical for building robust production systems that can handle 
 
 **Сигнатура обработчика:**
 \`\`\`go
-func(ctx context.Context, workerID int, panicValue any)
+func(ctx context.Context, workerID int, panicValue interface{})
 \`\`\`
 
 **Пример:**
@@ -950,7 +950,7 @@ import (
 
 type Job func(context.Context) error
 
-func RunPoolWithPanicHandler(ctx context.Context, jobs <-chan Job, workers int, handler func(context.Context, int, any)) error {
+func RunPoolWithPanicHandler(ctx context.Context, jobs <-chan Job, workers int, handler func(context.Context, int, interface{})) error {
 	if ctx == nil {                                                 // Обработка nil контекста
 		return nil                                              // Возврат nil для безопасности
 	}
@@ -958,7 +958,7 @@ func RunPoolWithPanicHandler(ctx context.Context, jobs <-chan Job, workers int, 
 		workers = 1                                             // Установка минимального количества воркеров
 	}
 	if handler == nil {                                             // Обработка nil обработчика
-		handler = func(context.Context, int, any) {}            // No-op обработчик
+		handler = func(context.Context, int, interface{}) {}            // No-op обработчик
 	}
 	ctx, cancel := context.WithCancel(ctx)                          // Создание отменяемого контекста
 	defer cancel()                                                  // Всегда отменять для освобождения ресурсов
@@ -1014,7 +1014,7 @@ func RunPoolWithPanicHandler(ctx context.Context, jobs <-chan Job, workers int, 
 			description: `Panikdan keyingi tiklash bilan worker pulini yaratadigan, panikaga tushgan vazifalarni yaxshi boshqarishga imkon beradigan **RunPoolWithPanicHandler** ni amalga oshiring.
 
 **Talablar:**
-1. \`RunPoolWithPanicHandler(ctx context.Context, jobs <-chan Job, workers int, handler func(context.Context, int, any)) error\` funksiyasini yarating
+1. \`RunPoolWithPanicHandler(ctx context.Context, jobs <-chan Job, workers int, handler func(context.Context, int, interface{})) error\` funksiyasini yarating
 2. nil kontekstni ishlang (nil qaytaring)
 3. workers <= 0 ni ishlang (1 ga o'rnating)
 4. nil handlerni ishlang (no-op handlerdan foydalaning)
@@ -1027,7 +1027,7 @@ func RunPoolWithPanicHandler(ctx context.Context, jobs <-chan Job, workers int, 
 
 **Handler imzosi:**
 \`\`\`go
-func(ctx context.Context, workerID int, panicValue any)
+func(ctx context.Context, workerID int, panicValue interface{})
 \`\`\`
 
 **Misol:**
@@ -1373,7 +1373,7 @@ import (
 
 type Job func(context.Context) error
 
-func RunPoolWithPanicHandler(ctx context.Context, jobs <-chan Job, workers int, handler func(context.Context, int, any)) error {
+func RunPoolWithPanicHandler(ctx context.Context, jobs <-chan Job, workers int, handler func(context.Context, int, interface{})) error {
 	if ctx == nil {                                                 // nil kontekstni ishlash
 		return nil                                              // Xavfsizlik uchun nil qaytarish
 	}
@@ -1381,7 +1381,7 @@ func RunPoolWithPanicHandler(ctx context.Context, jobs <-chan Job, workers int, 
 		workers = 1                                             // Minimal workerlar sonini o'rnatish
 	}
 	if handler == nil {                                             // nil handlerni ishlash
-		handler = func(context.Context, int, any) {}            // No-op handler
+		handler = func(context.Context, int, interface{}) {}            // No-op handler
 	}
 	ctx, cancel := context.WithCancel(ctx)                          // Bekor qilinadigan kontekst yaratish
 	defer cancel()                                                  // Resurslarni ozod qilish uchun doim bekor qilish

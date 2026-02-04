@@ -21,7 +21,7 @@ const RequestIDKey = "request_id"
 
 interceptor := ContextValueInterceptor(RequestIDKey, "12345")
 
-handler := func(ctx context.Context, req any) (any, error) {
+handler := func(ctx context.Context, req interface{}) (interface{}, error) {
     requestID := ctx.Value(RequestIDKey).(string)
     // requestID = "12345"
     return requestID, nil
@@ -40,9 +40,9 @@ import (
 	"context"
 )
 
-type Handler func(ctx context.Context, req any) (any, error)
+type Handler func(ctx context.Context, req interface{}) (interface{}, error)
 
-type UnaryServerInterceptor func(ctx context.Context, req any, next Handler) (any, error)
+type UnaryServerInterceptor func(ctx context.Context, req interface{}, next Handler) (interface{}, error)
 
 // TODO: Implement ContextValueInterceptor
 func ContextValueInterceptor(key any, value any) UnaryServerInterceptor {
@@ -54,14 +54,14 @@ import (
 	"context"
 )
 
-type Handler func(ctx context.Context, req any) (any, error)
+type Handler func(ctx context.Context, req interface{}) (interface{}, error)
 
-type UnaryServerInterceptor func(ctx context.Context, req any, next Handler) (any, error)
+type UnaryServerInterceptor func(ctx context.Context, req interface{}, next Handler) (interface{}, error)
 
 func ContextValueInterceptor(key any, value any) UnaryServerInterceptor {
-	return func(ctx context.Context, req any, handler Handler) (any, error) {
+	return func(ctx context.Context, req interface{}, handler Handler) (interface{}, error) {
 		if handler == nil {	// Check if handler is nil
-			handler = func(context.Context, any) (any, error) { return nil, nil }	// Use no-op handler
+			handler = func(context.Context, interface{}) (interface{}, error) { return nil, nil }	// Use no-op handler
 		}
 		ctx = context.WithValue(ctx, key, value)	// Add value to context
 		return handler(ctx, req)	// Execute handler with modified context
@@ -80,7 +80,7 @@ import (
 func Test1(t *testing.T) {
 	// Test value is added to context
 	interceptor := ContextValueInterceptor("key", "value")
-	handler := func(ctx context.Context, req any) (any, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		if ctx.Value("key") != "value" {
 			t.Error("value not found in context")
 		}
@@ -100,7 +100,7 @@ func Test2(t *testing.T) {
 func Test3(t *testing.T) {
 	// Test response is passed through
 	interceptor := ContextValueInterceptor("key", "value")
-	handler := func(ctx context.Context, req any) (any, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return "response", nil
 	}
 	resp, err := interceptor(context.Background(), nil, handler)
@@ -113,7 +113,7 @@ func Test4(t *testing.T) {
 	// Test error is passed through
 	expectedErr := errors.New("handler error")
 	interceptor := ContextValueInterceptor("key", "value")
-	handler := func(ctx context.Context, req any) (any, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return nil, expectedErr
 	}
 	_, err := interceptor(context.Background(), nil, handler)
@@ -135,7 +135,7 @@ func Test6(t *testing.T) {
 	// Test request is passed to handler
 	var receivedReq any
 	interceptor := ContextValueInterceptor("key", "value")
-	handler := func(ctx context.Context, req any) (any, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		receivedReq = req
 		return nil, nil
 	}
@@ -149,7 +149,7 @@ func Test7(t *testing.T) {
 	// Test existing context values preserved
 	ctx := context.WithValue(context.Background(), "existing", "preserved")
 	interceptor := ContextValueInterceptor("new", "added")
-	handler := func(c context.Context, req any) (any, error) {
+	handler := func(c context.Context, req interface{}) (interface{}, error) {
 		if c.Value("existing") != "preserved" {
 			t.Error("existing value not preserved")
 		}
@@ -165,7 +165,7 @@ func Test8(t *testing.T) {
 	// Test different key types
 	type customKey struct{}
 	interceptor := ContextValueInterceptor(customKey{}, "custom-value")
-	handler := func(ctx context.Context, req any) (any, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		if ctx.Value(customKey{}) != "custom-value" {
 			t.Error("custom key value not found")
 		}
@@ -177,7 +177,7 @@ func Test8(t *testing.T) {
 func Test9(t *testing.T) {
 	// Test nil value can be stored
 	interceptor := ContextValueInterceptor("key", nil)
-	handler := func(ctx context.Context, req any) (any, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		if ctx.Value("key") != nil {
 			t.Error("nil value not stored correctly")
 		}
@@ -190,13 +190,13 @@ func Test10(t *testing.T) {
 	// Test multiple interceptors stack correctly
 	first := ContextValueInterceptor("first", "1")
 	second := ContextValueInterceptor("second", "2")
-	handler := func(ctx context.Context, req any) (any, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		if ctx.Value("first") != "1" || ctx.Value("second") != "2" {
 			t.Error("not all values found")
 		}
 		return nil, nil
 	}
-	innerHandler := func(ctx context.Context, req any) (any, error) {
+	innerHandler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return second(ctx, req, handler)
 	}
 	first(context.Background(), nil, innerHandler)
@@ -213,7 +213,7 @@ func Test10(t *testing.T) {
 \`\`\`go
 // Request ID propagation
 func RequestIDInterceptor() UnaryServerInterceptor {
-    return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler Handler) (any, error) {
+    return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler Handler) (interface{}, error) {
         // Try to get request ID from metadata
         requestID := ""
         md, ok := metadata.FromIncomingContext(ctx)
@@ -240,7 +240,7 @@ func RequestIDInterceptor() UnaryServerInterceptor {
 
 // Authentication context
 func AuthContextInterceptor() UnaryServerInterceptor {
-    return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler Handler) (any, error) {
+    return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler Handler) (interface{}, error) {
         // Extract JWT from metadata
         token := extractToken(ctx)
         if token == "" {
@@ -264,7 +264,7 @@ func AuthContextInterceptor() UnaryServerInterceptor {
 
 // Multi-tenant context
 func TenantContextInterceptor() UnaryServerInterceptor {
-    return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler Handler) (any, error) {
+    return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler Handler) (interface{}, error) {
         // Extract tenant ID from metadata
         tenantID := ""
         md, ok := metadata.FromIncomingContext(ctx)
@@ -294,7 +294,7 @@ func TenantContextInterceptor() UnaryServerInterceptor {
 
 // Distributed tracing context
 func TracingContextInterceptor() UnaryServerInterceptor {
-    return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler Handler) (any, error) {
+    return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler Handler) (interface{}, error) {
         // Extract trace context from metadata
         md, _ := metadata.FromIncomingContext(ctx)
 
@@ -336,7 +336,7 @@ func TracingContextInterceptor() UnaryServerInterceptor {
 
 // Correlation ID for logging
 func CorrelationIDInterceptor() UnaryServerInterceptor {
-    return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler Handler) (any, error) {
+    return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler Handler) (interface{}, error) {
         // Get or generate correlation ID
         correlationID := uuid.New().String()
         md, ok := metadata.FromIncomingContext(ctx)
@@ -489,7 +489,7 @@ const RequestIDKey = "request_id"
 
 interceptor := ContextValueInterceptor(RequestIDKey, "12345")
 
-handler := func(ctx context.Context, req any) (any, error) {
+handler := func(ctx context.Context, req interface{}) (interface{}, error) {
     requestID := ctx.Value(RequestIDKey).(string)
     // requestID = "12345"
     return requestID, nil
@@ -517,7 +517,7 @@ resp, err := interceptor(ctx, "request", handler)
 **Распространение Request ID:**
 \`\`\`go
 func RequestIDInterceptor() UnaryServerInterceptor {
-    return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler Handler) (any, error) {
+    return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler Handler) (interface{}, error) {
         // Пытаемся получить request ID из метаданных
         requestID := ""
         md, ok := metadata.FromIncomingContext(ctx)
@@ -546,7 +546,7 @@ func RequestIDInterceptor() UnaryServerInterceptor {
 **Authentication Контекст:**
 \`\`\`go
 func AuthContextInterceptor() UnaryServerInterceptor {
-    return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler Handler) (any, error) {
+    return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler Handler) (interface{}, error) {
         // Извлекаем JWT из метаданных
         token := extractToken(ctx)
         if token == "" {
@@ -572,7 +572,7 @@ func AuthContextInterceptor() UnaryServerInterceptor {
 **Multi-Tenant Контекст:**
 \`\`\`go
 func TenantContextInterceptor() UnaryServerInterceptor {
-    return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler Handler) (any, error) {
+    return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler Handler) (interface{}, error) {
         // Извлекаем tenant ID из метаданных
         tenantID := ""
         md, ok := metadata.FromIncomingContext(ctx)
@@ -604,7 +604,7 @@ func TenantContextInterceptor() UnaryServerInterceptor {
 **Distributed Tracing Контекст:**
 \`\`\`go
 func TracingContextInterceptor() UnaryServerInterceptor {
-    return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler Handler) (any, error) {
+    return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler Handler) (interface{}, error) {
         // Извлекаем trace context из метаданных
         md, _ := metadata.FromIncomingContext(ctx)
 
@@ -648,7 +648,7 @@ func TracingContextInterceptor() UnaryServerInterceptor {
 **Correlation ID для Логирования:**
 \`\`\`go
 func CorrelationIDInterceptor() UnaryServerInterceptor {
-    return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler Handler) (any, error) {
+    return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler Handler) (interface{}, error) {
         // Получаем или генерируем correlation ID
         correlationID := uuid.New().String()
         md, ok := metadata.FromIncomingContext(ctx)
@@ -797,14 +797,14 @@ import (
 	"context"
 )
 
-type Handler func(ctx context.Context, req any) (any, error)
+type Handler func(ctx context.Context, req interface{}) (interface{}, error)
 
-type UnaryServerInterceptor func(ctx context.Context, req any, next Handler) (any, error)
+type UnaryServerInterceptor func(ctx context.Context, req interface{}, next Handler) (interface{}, error)
 
 func ContextValueInterceptor(key any, value any) UnaryServerInterceptor {
-	return func(ctx context.Context, req any, handler Handler) (any, error) {
+	return func(ctx context.Context, req interface{}, handler Handler) (interface{}, error) {
 		if handler == nil {	// Проверка на nil handler
-			handler = func(context.Context, any) (any, error) { return nil, nil }	// Используем no-op handler
+			handler = func(context.Context, interface{}) (interface{}, error) { return nil, nil }	// Используем no-op handler
 		}
 		ctx = context.WithValue(ctx, key, value)	// Добавляем значение в контекст
 		return handler(ctx, req)	// Выполняем handler с модифицированным контекстом
@@ -828,7 +828,7 @@ const RequestIDKey = "request_id"
 
 interceptor := ContextValueInterceptor(RequestIDKey, "12345")
 
-handler := func(ctx context.Context, req any) (any, error) {
+handler := func(ctx context.Context, req interface{}) (interface{}, error) {
     requestID := ctx.Value(RequestIDKey).(string)
     // requestID = "12345"
     return requestID, nil
@@ -856,7 +856,7 @@ resp, err := interceptor(ctx, "request", handler)
 **Request ID ni Tarqatish:**
 \`\`\`go
 func RequestIDInterceptor() UnaryServerInterceptor {
-    return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler Handler) (any, error) {
+    return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler Handler) (interface{}, error) {
         // Metadatadan request ID ni olishga harakat qilamiz
         requestID := ""
         md, ok := metadata.FromIncomingContext(ctx)
@@ -885,7 +885,7 @@ func RequestIDInterceptor() UnaryServerInterceptor {
 **Authentication Konteksti:**
 \`\`\`go
 func AuthContextInterceptor() UnaryServerInterceptor {
-    return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler Handler) (any, error) {
+    return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler Handler) (interface{}, error) {
         // Metadatadan JWT ni chiqarib olamiz
         token := extractToken(ctx)
         if token == "" {
@@ -911,7 +911,7 @@ func AuthContextInterceptor() UnaryServerInterceptor {
 **Multi-Tenant Konteksti:**
 \`\`\`go
 func TenantContextInterceptor() UnaryServerInterceptor {
-    return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler Handler) (any, error) {
+    return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler Handler) (interface{}, error) {
         // Metadatadan tenant ID ni chiqarib olamiz
         tenantID := ""
         md, ok := metadata.FromIncomingContext(ctx)
@@ -943,7 +943,7 @@ func TenantContextInterceptor() UnaryServerInterceptor {
 **Distributed Tracing Konteksti:**
 \`\`\`go
 func TracingContextInterceptor() UnaryServerInterceptor {
-    return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler Handler) (any, error) {
+    return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler Handler) (interface{}, error) {
         // Metadatadan trace kontekstni chiqarib olamiz
         md, _ := metadata.FromIncomingContext(ctx)
 
@@ -987,7 +987,7 @@ func TracingContextInterceptor() UnaryServerInterceptor {
 **Logging Uchun Correlation ID:**
 \`\`\`go
 func CorrelationIDInterceptor() UnaryServerInterceptor {
-    return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler Handler) (any, error) {
+    return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler Handler) (interface{}, error) {
         // Correlation ID ni olamiz yoki yaratamiz
         correlationID := uuid.New().String()
         md, ok := metadata.FromIncomingContext(ctx)
@@ -1136,14 +1136,14 @@ import (
 	"context"
 )
 
-type Handler func(ctx context.Context, req any) (any, error)
+type Handler func(ctx context.Context, req interface{}) (interface{}, error)
 
-type UnaryServerInterceptor func(ctx context.Context, req any, next Handler) (any, error)
+type UnaryServerInterceptor func(ctx context.Context, req interface{}, next Handler) (interface{}, error)
 
 func ContextValueInterceptor(key any, value any) UnaryServerInterceptor {
-	return func(ctx context.Context, req any, handler Handler) (any, error) {
+	return func(ctx context.Context, req interface{}, handler Handler) (interface{}, error) {
 		if handler == nil {	// Handler nil ekanligini tekshirish
-			handler = func(context.Context, any) (any, error) { return nil, nil }	// No-op handler ishlatamiz
+			handler = func(context.Context, interface{}) (interface{}, error) { return nil, nil }	// No-op handler ishlatamiz
 		}
 		ctx = context.WithValue(ctx, key, value)	// Kontekstga qiymat qo'shamiz
 		return handler(ctx, req)	// O'zgartirilgan kontekst bilan handlerni bajaramiz

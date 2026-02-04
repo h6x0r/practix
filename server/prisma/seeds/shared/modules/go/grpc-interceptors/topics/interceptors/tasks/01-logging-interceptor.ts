@@ -24,7 +24,7 @@ logger := func(ctx context.Context, msg string) {
 }
 
 interceptor := LoggingInterceptor(logger)
-handler := func(ctx context.Context, req any) (any, error) {
+handler := func(ctx context.Context, req interface{}) (interface{}, error) {
     return "response", nil
 }
 
@@ -42,10 +42,10 @@ import (
 )
 
 // Handler simulates grpc.UnaryHandler
-type Handler func(ctx context.Context, req any) (any, error)
+type Handler func(ctx context.Context, req interface{}) (interface{}, error)
 
 // UnaryServerInterceptor wraps a handler
-type UnaryServerInterceptor func(ctx context.Context, req any, next Handler) (any, error)
+type UnaryServerInterceptor func(ctx context.Context, req interface{}, next Handler) (interface{}, error)
 
 // TODO: Implement LoggingInterceptor
 func LoggingInterceptor(logger func(context.Context, string)) UnaryServerInterceptor {
@@ -57,15 +57,15 @@ import (
 	"context"
 )
 
-type Handler func(ctx context.Context, req any) (any, error)
+type Handler func(ctx context.Context, req interface{}) (interface{}, error)
 
-type UnaryServerInterceptor func(ctx context.Context, req any, next Handler) (any, error)
+type UnaryServerInterceptor func(ctx context.Context, req interface{}, next Handler) (interface{}, error)
 
 func LoggingInterceptor(logger func(context.Context, string)) UnaryServerInterceptor {
 	if logger == nil {	// Check if logger is nil
 		logger = func(context.Context, string) {}	// Use no-op logger
 	}
-	return func(ctx context.Context, req any, next Handler) (any, error) {
+	return func(ctx context.Context, req interface{}, next Handler) (interface{}, error) {
 		logger(ctx, "start")	// Log start of execution
 		resp, err := next(ctx, req)	// Execute handler
 		logger(ctx, "finish")	// Log finish of execution
@@ -109,7 +109,7 @@ func Test3(t *testing.T) {
 		logs = append(logs, msg)
 	}
 	interceptor := LoggingInterceptor(logger)
-	handler := func(ctx context.Context, req any) (any, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return "response", nil
 	}
 	interceptor(context.Background(), "request", handler)
@@ -127,7 +127,7 @@ func Test3(t *testing.T) {
 func Test4(t *testing.T) {
 	// Test handler response is returned
 	interceptor := LoggingInterceptor(nil)
-	handler := func(ctx context.Context, req any) (any, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return "test-response", nil
 	}
 	resp, err := interceptor(context.Background(), "request", handler)
@@ -143,7 +143,7 @@ func Test5(t *testing.T) {
 	// Test handler error is returned
 	expectedErr := errors.New("handler error")
 	interceptor := LoggingInterceptor(nil)
-	handler := func(ctx context.Context, req any) (any, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return nil, expectedErr
 	}
 	resp, err := interceptor(context.Background(), "request", handler)
@@ -162,7 +162,7 @@ func Test6(t *testing.T) {
 		logs = append(logs, msg)
 	}
 	interceptor := LoggingInterceptor(logger)
-	handler := func(ctx context.Context, req any) (any, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return nil, errors.New("error")
 	}
 	interceptor(context.Background(), "request", handler)
@@ -178,7 +178,7 @@ func Test7(t *testing.T) {
 		receivedCtx = ctx
 	}
 	interceptor := LoggingInterceptor(logger)
-	handler := func(ctx context.Context, req any) (any, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return nil, nil
 	}
 	ctx := context.WithValue(context.Background(), "key", "value")
@@ -192,7 +192,7 @@ func Test8(t *testing.T) {
 	// Test request is passed to handler
 	var receivedReq any
 	interceptor := LoggingInterceptor(nil)
-	handler := func(ctx context.Context, req any) (any, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		receivedReq = req
 		return nil, nil
 	}
@@ -206,7 +206,7 @@ func Test9(t *testing.T) {
 	// Test handler is called exactly once
 	callCount := 0
 	interceptor := LoggingInterceptor(nil)
-	handler := func(ctx context.Context, req any) (any, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		callCount++
 		return nil, nil
 	}
@@ -223,7 +223,7 @@ func Test10(t *testing.T) {
 		logs = append(logs, msg)
 	}
 	interceptor := LoggingInterceptor(logger)
-	handler := func(ctx context.Context, req any) (any, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return nil, nil
 	}
 	interceptor(context.Background(), "req1", handler)
@@ -244,7 +244,7 @@ func Test10(t *testing.T) {
 \`\`\`go
 // Enhanced logging with method name and timing
 func StructuredLoggingInterceptor() UnaryServerInterceptor {
-    return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, next Handler) (any, error) {
+    return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, next Handler) (interface{}, error) {
         start := time.Now()
 
         // Log request start with metadata
@@ -269,7 +269,7 @@ func StructuredLoggingInterceptor() UnaryServerInterceptor {
 
 // JSON structured logging
 func JSONLoggingInterceptor() UnaryServerInterceptor {
-    return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, next Handler) (any, error) {
+    return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, next Handler) (interface{}, error) {
         start := time.Now()
 
         logEntry := map[string]interface{}{
@@ -301,7 +301,7 @@ func JSONLoggingInterceptor() UnaryServerInterceptor {
 
 // Logging with request/response payloads (be careful with sensitive data!)
 func VerboseLoggingInterceptor() UnaryServerInterceptor {
-    return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, next Handler) (any, error) {
+    return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, next Handler) (interface{}, error) {
         // Log request
         log.Printf("[gRPC] → %s request: %+v", info.FullMethod, req)
 
@@ -320,7 +320,7 @@ func VerboseLoggingInterceptor() UnaryServerInterceptor {
 
 // Conditional logging (only log errors)
 func ErrorLoggingInterceptor() UnaryServerInterceptor {
-    return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, next Handler) (any, error) {
+    return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, next Handler) (interface{}, error) {
         resp, err := next(ctx, req)
 
         if err != nil {
@@ -336,7 +336,7 @@ func ErrorLoggingInterceptor() UnaryServerInterceptor {
 
 // Logging with metrics integration
 func MetricsLoggingInterceptor() UnaryServerInterceptor {
-    return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, next Handler) (any, error) {
+    return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, next Handler) (interface{}, error) {
         start := time.Now()
 
         resp, err := next(ctx, req)
@@ -360,7 +360,7 @@ func MetricsLoggingInterceptor() UnaryServerInterceptor {
 
 // Sampling logging (log only 10% of requests)
 func SampledLoggingInterceptor(sampleRate float64) UnaryServerInterceptor {
-    return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, next Handler) (any, error) {
+    return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, next Handler) (interface{}, error) {
         shouldLog := rand.Float64() < sampleRate
 
         if shouldLog {
@@ -420,7 +420,7 @@ logger := func(ctx context.Context, msg string) {
 }
 
 interceptor := LoggingInterceptor(logger)
-handler := func(ctx context.Context, req any) (any, error) {
+handler := func(ctx context.Context, req interface{}) (interface{}, error) {
     return "response", nil
 }
 
@@ -445,7 +445,7 @@ resp, err := interceptor(ctx, "request", handler)
 \`\`\`go
 // Расширенное логирование с именем метода и временем
 func StructuredLoggingInterceptor() UnaryServerInterceptor {
-    return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, next Handler) (any, error) {
+    return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, next Handler) (interface{}, error) {
         start := time.Now()
 
         // Логируем начало запроса с метаданными
@@ -470,7 +470,7 @@ func StructuredLoggingInterceptor() UnaryServerInterceptor {
 
 // JSON структурированное логирование
 func JSONLoggingInterceptor() UnaryServerInterceptor {
-    return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, next Handler) (any, error) {
+    return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, next Handler) (interface{}, error) {
         start := time.Now()
 
         logEntry := map[string]interface{}{
@@ -502,7 +502,7 @@ func JSONLoggingInterceptor() UnaryServerInterceptor {
 
 // Логирование с request/response payload (осторожно с чувствительными данными!)
 func VerboseLoggingInterceptor() UnaryServerInterceptor {
-    return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, next Handler) (any, error) {
+    return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, next Handler) (interface{}, error) {
         // Логируем запрос
         log.Printf("[gRPC] → %s request: %+v", info.FullMethod, req)
 
@@ -521,7 +521,7 @@ func VerboseLoggingInterceptor() UnaryServerInterceptor {
 
 // Условное логирование (только ошибки)
 func ErrorLoggingInterceptor() UnaryServerInterceptor {
-    return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, next Handler) (any, error) {
+    return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, next Handler) (interface{}, error) {
         resp, err := next(ctx, req)
 
         if err != nil {
@@ -537,7 +537,7 @@ func ErrorLoggingInterceptor() UnaryServerInterceptor {
 
 // Логирование с интеграцией метрик
 func MetricsLoggingInterceptor() UnaryServerInterceptor {
-    return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, next Handler) (any, error) {
+    return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, next Handler) (interface{}, error) {
         start := time.Now()
 
         resp, err := next(ctx, req)
@@ -561,7 +561,7 @@ func MetricsLoggingInterceptor() UnaryServerInterceptor {
 
 // Логирование с сэмплированием (логируем только 10% запросов)
 func SampledLoggingInterceptor(sampleRate float64) UnaryServerInterceptor {
-    return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, next Handler) (any, error) {
+    return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, next Handler) (interface{}, error) {
         shouldLog := rand.Float64() < sampleRate
 
         if shouldLog {
@@ -606,15 +606,15 @@ import (
 	"context"
 )
 
-type Handler func(ctx context.Context, req any) (any, error)
+type Handler func(ctx context.Context, req interface{}) (interface{}, error)
 
-type UnaryServerInterceptor func(ctx context.Context, req any, next Handler) (any, error)
+type UnaryServerInterceptor func(ctx context.Context, req interface{}, next Handler) (interface{}, error)
 
 func LoggingInterceptor(logger func(context.Context, string)) UnaryServerInterceptor {
 	if logger == nil {	// Проверка на nil logger
 		logger = func(context.Context, string) {}	// Используем no-op logger
 	}
-	return func(ctx context.Context, req any, next Handler) (any, error) {
+	return func(ctx context.Context, req interface{}, next Handler) (interface{}, error) {
 		logger(ctx, "start")	// Логируем начало выполнения
 		resp, err := next(ctx, req)	// Выполняем handler
 		logger(ctx, "finish")	// Логируем завершение выполнения
@@ -642,7 +642,7 @@ logger := func(ctx context.Context, msg string) {
 }
 
 interceptor := LoggingInterceptor(logger)
-handler := func(ctx context.Context, req any) (any, error) {
+handler := func(ctx context.Context, req interface{}) (interface{}, error) {
     return "response", nil
 }
 
@@ -667,7 +667,7 @@ resp, err := interceptor(ctx, "request", handler)
 \`\`\`go
 // Metod nomi va vaqt bilan kengaytirilgan loglash
 func StructuredLoggingInterceptor() UnaryServerInterceptor {
-    return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, next Handler) (any, error) {
+    return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, next Handler) (interface{}, error) {
         start := time.Now()
 
         // Request boshlanishini metadata bilan loglash
@@ -692,7 +692,7 @@ func StructuredLoggingInterceptor() UnaryServerInterceptor {
 
 // JSON strukturali loglash
 func JSONLoggingInterceptor() UnaryServerInterceptor {
-    return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, next Handler) (any, error) {
+    return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, next Handler) (interface{}, error) {
         start := time.Now()
 
         logEntry := map[string]interface{}{
@@ -724,7 +724,7 @@ func JSONLoggingInterceptor() UnaryServerInterceptor {
 
 // Request/response payload bilan loglash (maxfiy ma'lumotlarga ehtiyot bo'ling!)
 func VerboseLoggingInterceptor() UnaryServerInterceptor {
-    return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, next Handler) (any, error) {
+    return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, next Handler) (interface{}, error) {
         // Requestni loglash
         log.Printf("[gRPC] → %s request: %+v", info.FullMethod, req)
 
@@ -743,7 +743,7 @@ func VerboseLoggingInterceptor() UnaryServerInterceptor {
 
 // Shartli loglash (faqat xatolar)
 func ErrorLoggingInterceptor() UnaryServerInterceptor {
-    return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, next Handler) (any, error) {
+    return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, next Handler) (interface{}, error) {
         resp, err := next(ctx, req)
 
         if err != nil {
@@ -759,7 +759,7 @@ func ErrorLoggingInterceptor() UnaryServerInterceptor {
 
 // Metrikalar integratsiyasi bilan loglash
 func MetricsLoggingInterceptor() UnaryServerInterceptor {
-    return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, next Handler) (any, error) {
+    return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, next Handler) (interface{}, error) {
         start := time.Now()
 
         resp, err := next(ctx, req)
@@ -783,7 +783,7 @@ func MetricsLoggingInterceptor() UnaryServerInterceptor {
 
 // Sampling bilan loglash (faqat 10% requestlarni loglash)
 func SampledLoggingInterceptor(sampleRate float64) UnaryServerInterceptor {
-    return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, next Handler) (any, error) {
+    return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, next Handler) (interface{}, error) {
         shouldLog := rand.Float64() < sampleRate
 
         if shouldLog {
@@ -828,15 +828,15 @@ import (
 	"context"
 )
 
-type Handler func(ctx context.Context, req any) (any, error)
+type Handler func(ctx context.Context, req interface{}) (interface{}, error)
 
-type UnaryServerInterceptor func(ctx context.Context, req any, next Handler) (any, error)
+type UnaryServerInterceptor func(ctx context.Context, req interface{}, next Handler) (interface{}, error)
 
 func LoggingInterceptor(logger func(context.Context, string)) UnaryServerInterceptor {
 	if logger == nil {	// Logger nil ekanligini tekshirish
 		logger = func(context.Context, string) {}	// No-op logger ishlatamiz
 	}
-	return func(ctx context.Context, req any, next Handler) (any, error) {
+	return func(ctx context.Context, req interface{}, next Handler) (interface{}, error) {
 		logger(ctx, "start")	// Bajarilish boshlanishini loglash
 		resp, err := next(ctx, req)	// Handlerni bajarish
 		logger(ctx, "finish")	// Bajarilish tugashini loglash

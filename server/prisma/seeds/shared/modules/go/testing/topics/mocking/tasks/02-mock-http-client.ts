@@ -124,7 +124,7 @@ func (s *WeatherService) GetTemperature(city string) (string, error) {
 // MockFetcher is a test double for DataFetcher
 type MockFetcher struct {
 	Response      string  // What to return
-	Err           error   // Error to return (if any)
+	Err           error   // Error to return (if interface{})
 	CapturedQuery string  // Capture what was requested
 }
 

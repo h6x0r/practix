@@ -92,7 +92,7 @@ const keyFields CtxKey = "fields"
 
 // TODO: Implement WithFields
 // 1. Create new map to hold merged fields
-// 2. Copy existing fields from context (if any)
+// 2. Copy existing fields from context (if interface{})
 // 3. Copy new fields, overriding existing keys
 // 4. Store merged map in context under keyFields key
 func WithFields(ctx context.Context, fields map[string]string) context.Context {

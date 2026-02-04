@@ -20,7 +20,7 @@ export const task: Task = {
 \`\`\`go
 interceptor := TimeoutInterceptor(2 * time.Second)
 
-handler := func(ctx context.Context, req any) (any, error) {
+handler := func(ctx context.Context, req interface{}) (interface{}, error) {
     select {
     case <-time.After(3 * time.Second):
         return "never", nil
@@ -44,9 +44,9 @@ import (
 	"time"
 )
 
-type Handler func(ctx context.Context, req any) (any, error)
+type Handler func(ctx context.Context, req interface{}) (interface{}, error)
 
-type UnaryServerInterceptor func(ctx context.Context, req any, next Handler) (any, error)
+type UnaryServerInterceptor func(ctx context.Context, req interface{}, next Handler) (interface{}, error)
 
 // TODO: Implement TimeoutInterceptor
 func TimeoutInterceptor(d time.Duration) UnaryServerInterceptor {
@@ -59,15 +59,15 @@ import (
 	"time"
 )
 
-type Handler func(ctx context.Context, req any) (any, error)
+type Handler func(ctx context.Context, req interface{}) (interface{}, error)
 
-type UnaryServerInterceptor func(ctx context.Context, req any, next Handler) (any, error)
+type UnaryServerInterceptor func(ctx context.Context, req interface{}, next Handler) (interface{}, error)
 
 func TimeoutInterceptor(d time.Duration) UnaryServerInterceptor {
 	if d <= 0 {	// Check if duration is valid
 		d = time.Second	// Default to 1 second
 	}
-	return func(ctx context.Context, req any, next Handler) (any, error) {
+	return func(ctx context.Context, req interface{}, next Handler) (interface{}, error) {
 		ctx, cancel := context.WithTimeout(ctx, d)	// Create timeout context
 		defer cancel()	// Always cancel to prevent leak
 		return next(ctx, req)	// Execute handler with timeout context
@@ -94,7 +94,7 @@ func Test1(t *testing.T) {
 func Test2(t *testing.T) {
 	// Test default 1 second when duration is 0
 	interceptor := TimeoutInterceptor(0)
-	handler := func(ctx context.Context, req any) (any, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		deadline, ok := ctx.Deadline()
 		if !ok {
 			t.Error("context should have deadline")
@@ -111,7 +111,7 @@ func Test2(t *testing.T) {
 func Test3(t *testing.T) {
 	// Test default 1 second when duration is negative
 	interceptor := TimeoutInterceptor(-5 * time.Second)
-	handler := func(ctx context.Context, req any) (any, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		_, ok := ctx.Deadline()
 		if !ok {
 			t.Error("context should have deadline")
@@ -124,7 +124,7 @@ func Test3(t *testing.T) {
 func Test4(t *testing.T) {
 	// Test response is passed through
 	interceptor := TimeoutInterceptor(time.Second)
-	handler := func(ctx context.Context, req any) (any, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return "test-response", nil
 	}
 	resp, err := interceptor(context.Background(), nil, handler)
@@ -140,7 +140,7 @@ func Test5(t *testing.T) {
 	// Test error is passed through
 	expectedErr := context.DeadlineExceeded
 	interceptor := TimeoutInterceptor(time.Second)
-	handler := func(ctx context.Context, req any) (any, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return nil, expectedErr
 	}
 	_, err := interceptor(context.Background(), nil, handler)
@@ -152,7 +152,7 @@ func Test5(t *testing.T) {
 func Test6(t *testing.T) {
 	// Test context times out with short duration
 	interceptor := TimeoutInterceptor(50 * time.Millisecond)
-	handler := func(ctx context.Context, req any) (any, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		select {
 		case <-time.After(200 * time.Millisecond):
 			return "completed", nil
@@ -170,7 +170,7 @@ func Test7(t *testing.T) {
 	// Test request is passed to handler
 	var receivedReq any
 	interceptor := TimeoutInterceptor(time.Second)
-	handler := func(ctx context.Context, req any) (any, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		receivedReq = req
 		return nil, nil
 	}
@@ -183,7 +183,7 @@ func Test7(t *testing.T) {
 func Test8(t *testing.T) {
 	// Test parent context values are preserved
 	interceptor := TimeoutInterceptor(time.Second)
-	handler := func(ctx context.Context, req any) (any, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		if ctx.Value("key") != "value" {
 			t.Error("context value not preserved")
 		}
@@ -196,7 +196,7 @@ func Test8(t *testing.T) {
 func Test9(t *testing.T) {
 	// Test custom timeout duration
 	interceptor := TimeoutInterceptor(500 * time.Millisecond)
-	handler := func(ctx context.Context, req any) (any, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		deadline, ok := ctx.Deadline()
 		if !ok {
 			t.Error("context should have deadline")
@@ -214,7 +214,7 @@ func Test10(t *testing.T) {
 	// Test multiple calls are independent
 	interceptor := TimeoutInterceptor(time.Second)
 	callCount := 0
-	handler := func(ctx context.Context, req any) (any, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		callCount++
 		return callCount, nil
 	}
@@ -242,7 +242,7 @@ func MethodTimeoutInterceptor() UnaryServerInterceptor {
         "/api.ReportService/Generate": 30 * time.Second,  // Long operations
     }
 
-    return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler Handler) (any, error) {
+    return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler Handler) (interface{}, error) {
         timeout, ok := timeouts[info.FullMethod]
         if !ok {
             timeout = 10 * time.Second // Default timeout
@@ -257,7 +257,7 @@ func MethodTimeoutInterceptor() UnaryServerInterceptor {
 
 // Dynamic timeout from client metadata
 func ClientTimeoutInterceptor() UnaryServerInterceptor {
-    return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler Handler) (any, error) {
+    return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler Handler) (interface{}, error) {
         // Check if client specified timeout in metadata
         md, ok := metadata.FromIncomingContext(ctx)
         if ok {
@@ -285,7 +285,7 @@ func ClientTimeoutInterceptor() UnaryServerInterceptor {
 
 // Timeout with graceful degradation
 func GracefulTimeoutInterceptor(requestTimeout, cleanupTimeout time.Duration) UnaryServerInterceptor {
-    return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler Handler) (any, error) {
+    return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler Handler) (interface{}, error) {
         // Request context with timeout
         reqCtx, reqCancel := context.WithTimeout(ctx, requestTimeout)
         defer reqCancel()
@@ -325,7 +325,7 @@ func GracefulTimeoutInterceptor(requestTimeout, cleanupTimeout time.Duration) Un
 
 // Timeout with metrics
 func TimeoutWithMetrics(d time.Duration) UnaryServerInterceptor {
-    return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler Handler) (any, error) {
+    return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler Handler) (interface{}, error) {
         ctx, cancel := context.WithTimeout(ctx, d)
         defer cancel()
 
@@ -373,7 +373,7 @@ func AdaptiveTimeoutInterceptor(baseTimeout time.Duration) UnaryServerIntercepto
         }
     }()
 
-    return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler Handler) (any, error) {
+    return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler Handler) (interface{}, error) {
         loadMutex.RLock()
         multiplier := timeoutMultiplier
         loadMutex.RUnlock()
@@ -389,7 +389,7 @@ func AdaptiveTimeoutInterceptor(baseTimeout time.Duration) UnaryServerIntercepto
 
 // Timeout chain (request timeout + database timeout)
 func TimeoutChain(requestTimeout, dbTimeout time.Duration) UnaryServerInterceptor {
-    return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler Handler) (any, error) {
+    return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler Handler) (interface{}, error) {
         // Request-level timeout
         ctx, cancel := context.WithTimeout(ctx, requestTimeout)
         defer cancel()
@@ -461,7 +461,7 @@ Without TimeoutInterceptor, slow RPCs accumulate, exhausting connections and mem
 \`\`\`go
 interceptor := TimeoutInterceptor(2 * time.Second)
 
-handler := func(ctx context.Context, req any) (any, error) {
+handler := func(ctx context.Context, req interface{}) (interface{}, error) {
     select {
     case <-time.After(3 * time.Second):
         return "never", nil
@@ -498,7 +498,7 @@ func MethodTimeoutInterceptor() UnaryServerInterceptor {
         "/api.ReportService/Generate": 30 * time.Second,  // Долгие операции
     }
 
-    return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler Handler) (any, error) {
+    return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler Handler) (interface{}, error) {
         timeout, ok := timeouts[info.FullMethod]
         if !ok {
             timeout = 10 * time.Second // Таймаут по умолчанию
@@ -513,7 +513,7 @@ func MethodTimeoutInterceptor() UnaryServerInterceptor {
 
 // Динамический таймаут из метаданных клиента
 func ClientTimeoutInterceptor() UnaryServerInterceptor {
-    return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler Handler) (any, error) {
+    return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler Handler) (interface{}, error) {
         // Проверяем указан ли клиентом таймаут в метаданных
         md, ok := metadata.FromIncomingContext(ctx)
         if ok {
@@ -541,7 +541,7 @@ func ClientTimeoutInterceptor() UnaryServerInterceptor {
 
 // Таймаут с graceful degradation
 func GracefulTimeoutInterceptor(requestTimeout, cleanupTimeout time.Duration) UnaryServerInterceptor {
-    return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler Handler) (any, error) {
+    return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler Handler) (interface{}, error) {
         // Контекст запроса с таймаутом
         reqCtx, reqCancel := context.WithTimeout(ctx, requestTimeout)
         defer reqCancel()
@@ -581,7 +581,7 @@ func GracefulTimeoutInterceptor(requestTimeout, cleanupTimeout time.Duration) Un
 
 // Таймаут с метриками
 func TimeoutWithMetrics(d time.Duration) UnaryServerInterceptor {
-    return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler Handler) (any, error) {
+    return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler Handler) (interface{}, error) {
         ctx, cancel := context.WithTimeout(ctx, d)
         defer cancel()
 
@@ -629,7 +629,7 @@ func AdaptiveTimeoutInterceptor(baseTimeout time.Duration) UnaryServerIntercepto
         }
     }()
 
-    return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler Handler) (any, error) {
+    return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler Handler) (interface{}, error) {
         loadMutex.RLock()
         multiplier := timeoutMultiplier
         loadMutex.RUnlock()
@@ -645,7 +645,7 @@ func AdaptiveTimeoutInterceptor(baseTimeout time.Duration) UnaryServerIntercepto
 
 // Цепочка таймаутов (request timeout + database timeout)
 func TimeoutChain(requestTimeout, dbTimeout time.Duration) UnaryServerInterceptor {
-    return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler Handler) (any, error) {
+    return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler Handler) (interface{}, error) {
         // Таймаут уровня запроса
         ctx, cancel := context.WithTimeout(ctx, requestTimeout)
         defer cancel()
@@ -707,15 +707,15 @@ import (
 	"time"
 )
 
-type Handler func(ctx context.Context, req any) (any, error)
+type Handler func(ctx context.Context, req interface{}) (interface{}, error)
 
-type UnaryServerInterceptor func(ctx context.Context, req any, next Handler) (any, error)
+type UnaryServerInterceptor func(ctx context.Context, req interface{}, next Handler) (interface{}, error)
 
 func TimeoutInterceptor(d time.Duration) UnaryServerInterceptor {
 	if d <= 0 {	// Проверка валидности duration
 		d = time.Second	// По умолчанию 1 секунда
 	}
-	return func(ctx context.Context, req any, next Handler) (any, error) {
+	return func(ctx context.Context, req interface{}, next Handler) (interface{}, error) {
 		ctx, cancel := context.WithTimeout(ctx, d)	// Создаём timeout контекст
 		defer cancel()	// Всегда отменяем для предотвращения утечки
 		return next(ctx, req)	// Выполняем handler с timeout контекстом
@@ -738,7 +738,7 @@ func TimeoutInterceptor(d time.Duration) UnaryServerInterceptor {
 \`\`\`go
 interceptor := TimeoutInterceptor(2 * time.Second)
 
-handler := func(ctx context.Context, req any) (any, error) {
+handler := func(ctx context.Context, req interface{}) (interface{}, error) {
     select {
     case <-time.After(3 * time.Second):
         return "never", nil
@@ -775,7 +775,7 @@ func MethodTimeoutInterceptor() UnaryServerInterceptor {
         "/api.ReportService/Generate": 30 * time.Second,  // Uzoq operatsiyalar
     }
 
-    return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler Handler) (any, error) {
+    return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler Handler) (interface{}, error) {
         timeout, ok := timeouts[info.FullMethod]
         if !ok {
             timeout = 10 * time.Second // Standart timeout
@@ -790,7 +790,7 @@ func MethodTimeoutInterceptor() UnaryServerInterceptor {
 
 // Mijoz metadatasidan dinamik timeout
 func ClientTimeoutInterceptor() UnaryServerInterceptor {
-    return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler Handler) (any, error) {
+    return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler Handler) (interface{}, error) {
         // Mijoz metadatada timeout ko'rsatganligini tekshiramiz
         md, ok := metadata.FromIncomingContext(ctx)
         if ok {
@@ -818,7 +818,7 @@ func ClientTimeoutInterceptor() UnaryServerInterceptor {
 
 // Graceful degradation bilan timeout
 func GracefulTimeoutInterceptor(requestTimeout, cleanupTimeout time.Duration) UnaryServerInterceptor {
-    return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler Handler) (any, error) {
+    return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler Handler) (interface{}, error) {
         // So'rov konteksti timeout bilan
         reqCtx, reqCancel := context.WithTimeout(ctx, requestTimeout)
         defer reqCancel()
@@ -858,7 +858,7 @@ func GracefulTimeoutInterceptor(requestTimeout, cleanupTimeout time.Duration) Un
 
 // Metrikalar bilan timeout
 func TimeoutWithMetrics(d time.Duration) UnaryServerInterceptor {
-    return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler Handler) (any, error) {
+    return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler Handler) (interface{}, error) {
         ctx, cancel := context.WithTimeout(ctx, d)
         defer cancel()
 
@@ -906,7 +906,7 @@ func AdaptiveTimeoutInterceptor(baseTimeout time.Duration) UnaryServerIntercepto
         }
     }()
 
-    return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler Handler) (any, error) {
+    return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler Handler) (interface{}, error) {
         loadMutex.RLock()
         multiplier := timeoutMultiplier
         loadMutex.RUnlock()
@@ -922,7 +922,7 @@ func AdaptiveTimeoutInterceptor(baseTimeout time.Duration) UnaryServerIntercepto
 
 // Timeout zanjiri (request timeout + database timeout)
 func TimeoutChain(requestTimeout, dbTimeout time.Duration) UnaryServerInterceptor {
-    return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler Handler) (any, error) {
+    return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler Handler) (interface{}, error) {
         // So'rov darajasi timeout
         ctx, cancel := context.WithTimeout(ctx, requestTimeout)
         defer cancel()
@@ -984,15 +984,15 @@ import (
 	"time"
 )
 
-type Handler func(ctx context.Context, req any) (any, error)
+type Handler func(ctx context.Context, req interface{}) (interface{}, error)
 
-type UnaryServerInterceptor func(ctx context.Context, req any, next Handler) (any, error)
+type UnaryServerInterceptor func(ctx context.Context, req interface{}, next Handler) (interface{}, error)
 
 func TimeoutInterceptor(d time.Duration) UnaryServerInterceptor {
 	if d <= 0 {	// Duration haqiqiyligini tekshirish
 		d = time.Second	// Standart 1 soniya
 	}
-	return func(ctx context.Context, req any, next Handler) (any, error) {
+	return func(ctx context.Context, req interface{}, next Handler) (interface{}, error) {
 		ctx, cancel := context.WithTimeout(ctx, d)	// Timeout kontekstini yaratamiz
 		defer cancel()	// Oqishni oldini olish uchun har doim bekor qilamiz
 		return next(ctx, req)	// Handlerni timeout konteksti bilan bajaramiz

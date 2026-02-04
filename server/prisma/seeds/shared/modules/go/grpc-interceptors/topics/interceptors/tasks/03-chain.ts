@@ -22,7 +22,7 @@ timeout := TimeoutInterceptor(5 * time.Second)
 
 combined := Chain(logging, timeout) // Logging executes first, then timeout
 
-handler := func(ctx context.Context, req any) (any, error) {
+handler := func(ctx context.Context, req interface{}) (interface{}, error) {
     return "response", nil
 }
 
@@ -40,9 +40,9 @@ import (
 	"context"
 )
 
-type Handler func(ctx context.Context, req any) (any, error)
+type Handler func(ctx context.Context, req interface{}) (interface{}, error)
 
-type UnaryServerInterceptor func(ctx context.Context, req any, next Handler) (any, error)
+type UnaryServerInterceptor func(ctx context.Context, req interface{}, next Handler) (interface{}, error)
 
 // TODO: Implement Chain interceptor composer
 func Chain(interceptors ...UnaryServerInterceptor) UnaryServerInterceptor {
@@ -54,14 +54,14 @@ import (
 	"context"
 )
 
-type Handler func(ctx context.Context, req any) (any, error)
+type Handler func(ctx context.Context, req interface{}) (interface{}, error)
 
-type UnaryServerInterceptor func(ctx context.Context, req any, next Handler) (any, error)
+type UnaryServerInterceptor func(ctx context.Context, req interface{}, next Handler) (interface{}, error)
 
 func Chain(interceptors ...UnaryServerInterceptor) UnaryServerInterceptor {
-	return func(ctx context.Context, req any, handler Handler) (any, error) {
+	return func(ctx context.Context, req interface{}, handler Handler) (interface{}, error) {
 		if handler == nil {	// Check if handler is nil
-			handler = func(context.Context, any) (any, error) { return nil, nil }	// Use no-op handler
+			handler = func(context.Context, interface{}) (interface{}, error) { return nil, nil }	// Use no-op handler
 		}
 		wrapped := handler	// Start with final handler
 		for i := len(interceptors) - 1; i >= 0; i-- {	// Iterate backwards (right-to-left)
@@ -70,7 +70,7 @@ func Chain(interceptors ...UnaryServerInterceptor) UnaryServerInterceptor {
 				continue
 			}
 			next := wrapped	// Capture current wrapped handler
-			wrapped = func(c context.Context, r any) (any, error) {	// Create new handler
+			wrapped = func(c context.Context, r interface{}) (interface{}, error) {	// Create new handler
 				return current(c, r, next)	// Call interceptor with next handler
 			}
 		}
@@ -90,7 +90,7 @@ import (
 func Test1(t *testing.T) {
 	// Test empty chain returns handler result
 	chain := Chain()
-	handler := func(ctx context.Context, req any) (any, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return "response", nil
 	}
 	resp, err := chain(context.Background(), nil, handler)
@@ -102,12 +102,12 @@ func Test1(t *testing.T) {
 func Test2(t *testing.T) {
 	// Test single interceptor
 	order := []string{}
-	interceptor := func(ctx context.Context, req any, next Handler) (any, error) {
+	interceptor := func(ctx context.Context, req interface{}, next Handler) (interface{}, error) {
 		order = append(order, "interceptor")
 		return next(ctx, req)
 	}
 	chain := Chain(interceptor)
-	handler := func(ctx context.Context, req any) (any, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		order = append(order, "handler")
 		return nil, nil
 	}
@@ -120,16 +120,16 @@ func Test2(t *testing.T) {
 func Test3(t *testing.T) {
 	// Test multiple interceptors execute in order
 	order := []string{}
-	first := func(ctx context.Context, req any, next Handler) (any, error) {
+	first := func(ctx context.Context, req interface{}, next Handler) (interface{}, error) {
 		order = append(order, "first")
 		return next(ctx, req)
 	}
-	second := func(ctx context.Context, req any, next Handler) (any, error) {
+	second := func(ctx context.Context, req interface{}, next Handler) (interface{}, error) {
 		order = append(order, "second")
 		return next(ctx, req)
 	}
 	chain := Chain(first, second)
-	handler := func(ctx context.Context, req any) (any, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		order = append(order, "handler")
 		return nil, nil
 	}
@@ -142,12 +142,12 @@ func Test3(t *testing.T) {
 func Test4(t *testing.T) {
 	// Test nil interceptors are skipped
 	order := []string{}
-	interceptor := func(ctx context.Context, req any, next Handler) (any, error) {
+	interceptor := func(ctx context.Context, req interface{}, next Handler) (interface{}, error) {
 		order = append(order, "interceptor")
 		return next(ctx, req)
 	}
 	chain := Chain(nil, interceptor, nil)
-	handler := func(ctx context.Context, req any) (any, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		order = append(order, "handler")
 		return nil, nil
 	}
@@ -159,7 +159,7 @@ func Test4(t *testing.T) {
 
 func Test5(t *testing.T) {
 	// Test nil handler is replaced with no-op
-	interceptor := func(ctx context.Context, req any, next Handler) (any, error) {
+	interceptor := func(ctx context.Context, req interface{}, next Handler) (interface{}, error) {
 		return next(ctx, req)
 	}
 	chain := Chain(interceptor)
@@ -173,7 +173,7 @@ func Test6(t *testing.T) {
 	// Test error propagation through chain
 	expectedErr := errors.New("handler error")
 	chain := Chain()
-	handler := func(ctx context.Context, req any) (any, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return nil, expectedErr
 	}
 	_, err := chain(context.Background(), nil, handler)
@@ -184,12 +184,12 @@ func Test6(t *testing.T) {
 
 func Test7(t *testing.T) {
 	// Test interceptor can modify request
-	modifier := func(ctx context.Context, req any, next Handler) (any, error) {
+	modifier := func(ctx context.Context, req interface{}, next Handler) (interface{}, error) {
 		return next(ctx, "modified-"+req.(string))
 	}
 	chain := Chain(modifier)
-	var receivedReq any
-	handler := func(ctx context.Context, req any) (any, error) {
+	var receivedReq interface{}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		receivedReq = req
 		return nil, nil
 	}
@@ -201,12 +201,12 @@ func Test7(t *testing.T) {
 
 func Test8(t *testing.T) {
 	// Test interceptor can modify response
-	modifier := func(ctx context.Context, req any, next Handler) (any, error) {
+	modifier := func(ctx context.Context, req interface{}, next Handler) (interface{}, error) {
 		resp, err := next(ctx, req)
 		return "modified-" + resp.(string), err
 	}
 	chain := Chain(modifier)
-	handler := func(ctx context.Context, req any) (any, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return "response", nil
 	}
 	resp, _ := chain(context.Background(), nil, handler)
@@ -218,14 +218,14 @@ func Test8(t *testing.T) {
 func Test9(t *testing.T) {
 	// Test context is passed through chain
 	ctx := context.WithValue(context.Background(), "key", "value")
-	interceptor := func(c context.Context, req any, next Handler) (any, error) {
+	interceptor := func(c context.Context, req interface{}, next Handler) (interface{}, error) {
 		if c.Value("key") != "value" {
 			t.Error("context value not preserved in interceptor")
 		}
 		return next(c, req)
 	}
 	chain := Chain(interceptor)
-	handler := func(c context.Context, req any) (any, error) {
+	handler := func(c context.Context, req interface{}) (interface{}, error) {
 		if c.Value("key") != "value" {
 			t.Error("context value not preserved in handler")
 		}
@@ -236,12 +236,12 @@ func Test9(t *testing.T) {
 
 func Test10(t *testing.T) {
 	// Test interceptor can short-circuit chain
-	short := func(ctx context.Context, req any, next Handler) (any, error) {
+	short := func(ctx context.Context, req interface{}, next Handler) (interface{}, error) {
 		return "short-circuit", nil // Don't call next
 	}
 	handlerCalled := false
 	chain := Chain(short)
-	handler := func(ctx context.Context, req any) (any, error) {
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		handlerCalled = true
 		return nil, nil
 	}
@@ -306,7 +306,7 @@ var StreamingServiceInterceptors = Chain(
 
 // Per-method interceptor selection
 func MethodInterceptorSelector() grpc.UnaryServerInterceptor {
-    return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
+    return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
         var interceptor UnaryServerInterceptor
 
         switch {
@@ -327,7 +327,7 @@ func ConditionalChain(condition bool, interceptor UnaryServerInterceptor) UnaryS
     if condition {
         return interceptor
     }
-    return func(ctx context.Context, req any, next Handler) (any, error) {
+    return func(ctx context.Context, req interface{}, next Handler) (interface{}, error) {
         return next(ctx, req) // Pass-through
     }
 }
@@ -497,7 +497,7 @@ timeout := TimeoutInterceptor(5 * time.Second)
 
 combined := Chain(logging, timeout) // Logging выполняется первым, затем timeout
 
-handler := func(ctx context.Context, req any) (any, error) {
+handler := func(ctx context.Context, req interface{}) (interface{}, error) {
     return "response", nil
 }
 
@@ -564,7 +564,7 @@ var StreamingServiceInterceptors = Chain(
 
 // Выбор interceptor по методу
 func MethodInterceptorSelector() grpc.UnaryServerInterceptor {
-    return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
+    return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
         var interceptor UnaryServerInterceptor
 
         switch {
@@ -585,7 +585,7 @@ func ConditionalChain(condition bool, interceptor UnaryServerInterceptor) UnaryS
     if condition {
         return interceptor
     }
-    return func(ctx context.Context, req any, next Handler) (any, error) {
+    return func(ctx context.Context, req interface{}, next Handler) (interface{}, error) {
         return next(ctx, req) // Сквозной проход
     }
 }
@@ -742,14 +742,14 @@ import (
 	"context"
 )
 
-type Handler func(ctx context.Context, req any) (any, error)
+type Handler func(ctx context.Context, req interface{}) (interface{}, error)
 
-type UnaryServerInterceptor func(ctx context.Context, req any, next Handler) (any, error)
+type UnaryServerInterceptor func(ctx context.Context, req interface{}, next Handler) (interface{}, error)
 
 func Chain(interceptors ...UnaryServerInterceptor) UnaryServerInterceptor {
-	return func(ctx context.Context, req any, handler Handler) (any, error) {
+	return func(ctx context.Context, req interface{}, handler Handler) (interface{}, error) {
 		if handler == nil {	// Проверка на nil handler
-			handler = func(context.Context, any) (any, error) { return nil, nil }	// Используем no-op handler
+			handler = func(context.Context, interface{}) (interface{}, error) { return nil, nil }	// Используем no-op handler
 		}
 		wrapped := handler	// Начинаем с финального handler
 		for i := len(interceptors) - 1; i >= 0; i-- {	// Итерируем в обратном порядке (справа налево)
@@ -758,7 +758,7 @@ func Chain(interceptors ...UnaryServerInterceptor) UnaryServerInterceptor {
 				continue
 			}
 			next := wrapped	// Захватываем текущий обёрнутый handler
-			wrapped = func(c context.Context, r any) (any, error) {	// Создаём новый handler
+			wrapped = func(c context.Context, r interface{}) (interface{}, error) {	// Создаём новый handler
 				return current(c, r, next)	// Вызываем interceptor со следующим handler
 			}
 		}
@@ -784,7 +784,7 @@ timeout := TimeoutInterceptor(5 * time.Second)
 
 combined := Chain(logging, timeout) // Logging birinchi bajariladi, keyin timeout
 
-handler := func(ctx context.Context, req any) (any, error) {
+handler := func(ctx context.Context, req interface{}) (interface{}, error) {
     return "response", nil
 }
 
@@ -851,7 +851,7 @@ var StreamingServiceInterceptors = Chain(
 
 // Metod bo'yicha interceptor tanlash
 func MethodInterceptorSelector() grpc.UnaryServerInterceptor {
-    return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
+    return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
         var interceptor UnaryServerInterceptor
 
         switch {
@@ -872,7 +872,7 @@ func ConditionalChain(condition bool, interceptor UnaryServerInterceptor) UnaryS
     if condition {
         return interceptor
     }
-    return func(ctx context.Context, req any, next Handler) (any, error) {
+    return func(ctx context.Context, req interface{}, next Handler) (interface{}, error) {
         return next(ctx, req) // O'tkazib yuborish
     }
 }
@@ -1029,14 +1029,14 @@ import (
 	"context"
 )
 
-type Handler func(ctx context.Context, req any) (any, error)
+type Handler func(ctx context.Context, req interface{}) (interface{}, error)
 
-type UnaryServerInterceptor func(ctx context.Context, req any, next Handler) (any, error)
+type UnaryServerInterceptor func(ctx context.Context, req interface{}, next Handler) (interface{}, error)
 
 func Chain(interceptors ...UnaryServerInterceptor) UnaryServerInterceptor {
-	return func(ctx context.Context, req any, handler Handler) (any, error) {
+	return func(ctx context.Context, req interface{}, handler Handler) (interface{}, error) {
 		if handler == nil {	// Handler nil ekanligini tekshirish
-			handler = func(context.Context, any) (any, error) { return nil, nil }	// No-op handler ishlatamiz
+			handler = func(context.Context, interface{}) (interface{}, error) { return nil, nil }	// No-op handler ishlatamiz
 		}
 		wrapped := handler	// Yakuniy handlerdan boshlaymiz
 		for i := len(interceptors) - 1; i >= 0; i-- {	// Teskari tartibda iteratsiya qilamiz (o'ngdan chapga)
@@ -1045,7 +1045,7 @@ func Chain(interceptors ...UnaryServerInterceptor) UnaryServerInterceptor {
 				continue
 			}
 			next := wrapped	// Hozirgi o'ralgan handlerni ushlab qolamiz
-			wrapped = func(c context.Context, r any) (any, error) {	// Yangi handler yaratamiz
+			wrapped = func(c context.Context, r interface{}) (interface{}, error) {	// Yangi handler yaratamiz
 				return current(c, r, next)	// Keyingi handler bilan interceptorni chaqiramiz
 			}
 		}

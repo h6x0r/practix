@@ -253,7 +253,7 @@ result := FlattenUnknown([]interface{}{1, []interface{}{2, 3}, []interface{}{4, 
 **Продакшен паттерн:**
 \`\`\`go
 // Парсинг вложенной JSON конфигурации
-func ParseNestedConfig(data map[string]any) []int {
+func ParseNestedConfig(data map[string]interface{}) []int {
     var values []interface{}
     for _, v := range data {
         values = append(values, v)
@@ -262,9 +262,9 @@ func ParseNestedConfig(data map[string]any) []int {
 }
 
 // Обработка вложенных API ответов
-func ExtractIDs(response any) []int {
+func ExtractIDs(response interface{}) []int {
     switch v := response.(type) {
-    case map[string]any:
+    case map[string]interface{}:
         if ids, ok := v["ids"]; ok {
             return FlattenUnknown([]interface{}{ids})
         }
@@ -367,7 +367,7 @@ result := FlattenUnknown([]interface{}{1, []interface{}{2, 3}, []interface{}{4, 
 **Ishlab chiqarish patterni:**
 \`\`\`go
 // Ichma-ich JSON konfiguratsiyasini tahlil qilish
-func ParseNestedConfig(data map[string]any) []int {
+func ParseNestedConfig(data map[string]interface{}) []int {
     var values []interface{}
     for _, v := range data {
         values = append(values, v)
@@ -376,9 +376,9 @@ func ParseNestedConfig(data map[string]any) []int {
 }
 
 // Ichma-ich API javoblarini qayta ishlash
-func ExtractIDs(response any) []int {
+func ExtractIDs(response interface{}) []int {
     switch v := response.(type) {
-    case map[string]any:
+    case map[string]interface{}:
         if ids, ok := v["ids"]; ok {
             return FlattenUnknown([]interface{}{ids})
         }

@@ -67,7 +67,7 @@ func (c *TTLCache) Set(key string, v any) {
 	c.m[key] = entry{v: v, exp: expire}
 }
 
-func (c *TTLCache) Get(key string) (any, bool) {
+func (c *TTLCache) Get(key string) (interface{}, bool) {
 	if c == nil {
 		return nil, false
 	}
@@ -131,7 +131,7 @@ func (c *TTLCache) Set(key string, v any) {
 	c.m[key] = entry{v: v, exp: expire}
 }
 
-func (c *TTLCache) Get(key string) (any, bool) {
+func (c *TTLCache) Get(key string) (interface{}, bool) {
 	if c == nil {
 		return nil, false
 	}
