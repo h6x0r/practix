@@ -750,6 +750,7 @@ ${testCalls}
     const cleanSolution = solutionCode
       .replace(/import\s+java\.util\.\*;/gm, "")
       .replace(/import\s+java\.util\.\w+;/gm, "")
+      .replace(/public\s+class\s+/g, "class ") // Remove public from classes (only Main can be public)
       .trim();
 
     const cleanTests = testCode
@@ -763,6 +764,7 @@ ${testCalls}
       .replace(/(?<!Assert\.)assertFalse\(/g, "Assert.assertFalse(")
       .replace(/(?<!Assert\.)assertNull\(/g, "Assert.assertNull(")
       .replace(/(?<!Assert\.)assertNotNull\(/g, "Assert.assertNotNull(")
+      .replace(/(?<!Assert\.)fail\(/g, "Assert.fail(")
       .trim();
 
     const testCalls = testClasses
@@ -833,20 +835,48 @@ class Assert {
         if (!java.util.Objects.equals(expected, actual))
             throw new AssertionError("Expected: " + expected + ", Got: " + actual);
     }
+    static void assertEquals(String msg, Object expected, Object actual) {
+        if (!java.util.Objects.equals(expected, actual))
+            throw new AssertionError(msg + " - Expected: " + expected + ", Got: " + actual);
+    }
     static void assertEquals(int expected, int actual) {
         if (expected != actual) throw new AssertionError("Expected: " + expected + ", Got: " + actual);
+    }
+    static void assertEquals(String msg, int expected, int actual) {
+        if (expected != actual) throw new AssertionError(msg + " - Expected: " + expected + ", Got: " + actual);
+    }
+    static void assertEquals(long expected, long actual) {
+        if (expected != actual) throw new AssertionError("Expected: " + expected + ", Got: " + actual);
+    }
+    static void assertEquals(double expected, double actual, double delta) {
+        if (Math.abs(expected - actual) > delta) throw new AssertionError("Expected: " + expected + ", Got: " + actual);
     }
     static void assertTrue(boolean condition) {
         if (!condition) throw new AssertionError("Expected true but got false");
     }
+    static void assertTrue(String msg, boolean condition) {
+        if (!condition) throw new AssertionError(msg);
+    }
     static void assertFalse(boolean condition) {
         if (condition) throw new AssertionError("Expected false but got true");
+    }
+    static void assertFalse(String msg, boolean condition) {
+        if (condition) throw new AssertionError(msg);
     }
     static void assertNull(Object obj) {
         if (obj != null) throw new AssertionError("Expected null but got: " + obj);
     }
+    static void assertNull(String msg, Object obj) {
+        if (obj != null) throw new AssertionError(msg + " - Expected null but got: " + obj);
+    }
     static void assertNotNull(Object obj) {
         if (obj == null) throw new AssertionError("Expected not null but got null");
+    }
+    static void assertNotNull(String msg, Object obj) {
+        if (obj == null) throw new AssertionError(msg + " - Expected not null but got null");
+    }
+    static void fail(String msg) {
+        throw new AssertionError(msg);
     }
     static void reset() {}
 }
