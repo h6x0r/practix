@@ -1208,4 +1208,124 @@ export class AdminService {
       createdAt: p.createdAt,
     }));
   }
+
+  /**
+   * Get analytics timeline data
+   * Returns: DAU, new users, and revenue per day for the last N days
+   */
+  async getAnalyticsTimeline(days: number = 30) {
+    const now = new Date();
+    const startDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+
+    // Generate all dates in range
+    const dates: string[] = [];
+    for (let d = new Date(startDate); d <= now; d.setDate(d.getDate() + 1)) {
+      dates.push(d.toISOString().split("T")[0]);
+    }
+
+    // Get new users per day
+    const newUsersRaw = await this.prisma.user.groupBy({
+      by: ["createdAt"],
+      where: {
+        createdAt: { gte: startDate },
+      },
+      _count: { id: true },
+    });
+
+    const newUsersMap = new Map<string, number>();
+    newUsersRaw.forEach((u) => {
+      const date = u.createdAt.toISOString().split("T")[0];
+      newUsersMap.set(date, (newUsersMap.get(date) || 0) + u._count.id);
+    });
+
+    // Get active users per day (based on lastActivityAt)
+    const activeUsersRaw = await this.prisma.user.groupBy({
+      by: ["lastActivityAt"],
+      where: {
+        lastActivityAt: { gte: startDate, not: null },
+      },
+      _count: { id: true },
+    });
+
+    const activeUsersMap = new Map<string, number>();
+    activeUsersRaw.forEach((u) => {
+      if (u.lastActivityAt) {
+        const date = u.lastActivityAt.toISOString().split("T")[0];
+        activeUsersMap.set(date, (activeUsersMap.get(date) || 0) + u._count.id);
+      }
+    });
+
+    // Get revenue per day (completed payments)
+    const revenueRaw = await this.prisma.payment.groupBy({
+      by: ["createdAt"],
+      where: {
+        status: "completed",
+        createdAt: { gte: startDate },
+      },
+      _sum: { amount: true },
+      _count: { id: true },
+    });
+
+    const revenueMap = new Map<string, { amount: number; count: number }>();
+    revenueRaw.forEach((p) => {
+      const date = p.createdAt.toISOString().split("T")[0];
+      const existing = revenueMap.get(date) || { amount: 0, count: 0 };
+      revenueMap.set(date, {
+        amount: existing.amount + (p._sum.amount || 0),
+        count: existing.count + p._count.id,
+      });
+    });
+
+    // Get new subscriptions per day
+    const newSubsRaw = await this.prisma.subscription.groupBy({
+      by: ["createdAt"],
+      where: {
+        createdAt: { gte: startDate },
+      },
+      _count: { id: true },
+    });
+
+    const newSubsMap = new Map<string, number>();
+    newSubsRaw.forEach((s) => {
+      const date = s.createdAt.toISOString().split("T")[0];
+      newSubsMap.set(date, (newSubsMap.get(date) || 0) + s._count.id);
+    });
+
+    // Build timeline data
+    const timeline = dates.map((date) => {
+      const revenue = revenueMap.get(date) || { amount: 0, count: 0 };
+      return {
+        date,
+        dau: activeUsersMap.get(date) || 0,
+        newUsers: newUsersMap.get(date) || 0,
+        revenue: revenue.amount,
+        payments: revenue.count,
+        newSubscriptions: newSubsMap.get(date) || 0,
+      };
+    });
+
+    // Calculate totals and averages
+    const totalNewUsers = timeline.reduce((sum, d) => sum + d.newUsers, 0);
+    const totalRevenue = timeline.reduce((sum, d) => sum + d.revenue, 0);
+    const avgDau = Math.round(
+      timeline.reduce((sum, d) => sum + d.dau, 0) / timeline.length,
+    );
+    const totalPayments = timeline.reduce((sum, d) => sum + d.payments, 0);
+    const totalNewSubs = timeline.reduce(
+      (sum, d) => sum + d.newSubscriptions,
+      0,
+    );
+
+    return {
+      timeline,
+      summary: {
+        totalNewUsers,
+        totalRevenue,
+        avgDau,
+        totalPayments,
+        totalNewSubscriptions: totalNewSubs,
+        period: days,
+      },
+    };
+  }
 }

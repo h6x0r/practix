@@ -715,6 +715,23 @@ const UI_TRANSLATIONS: Record<Language, Record<string, string>> = {
     "admin.enrolled": "enrolled",
     "admin.completed": "completed",
 
+    // Analytics Timeline
+    "admin.dau": "Daily Active Users",
+    "admin.wau": "Weekly Active Users",
+    "admin.mau": "Monthly Active Users",
+    "admin.last24h": "Last 24 hours",
+    "admin.last7d": "Last 7 days",
+    "admin.last30d": "Last 30 days",
+    "admin.analyticsTimeline": "Analytics Timeline",
+    "admin.avgDau": "Avg DAU",
+    "admin.newSubs": "New Subs",
+    "admin.payments": "Payments",
+    "admin.totalRevenue": "Revenue (UZS)",
+    "admin.dauChart": "Daily Active Users",
+    "admin.revenueChart": "Revenue & Payments",
+    "admin.growthChart": "User Growth",
+    "admin.noData": "No data available",
+
     // AI Settings
     "admin.aiSettings.title": "AI Tutor Settings",
     "admin.aiSettings.subtitle": "Configure daily request limits for AI Tutor",
@@ -1480,6 +1497,23 @@ const UI_TRANSLATIONS: Record<Language, Record<string, string>> = {
     "admin.statusPending": "Ожидание",
     "admin.enrolled": "записано",
     "admin.completed": "завершено",
+
+    // Analytics Timeline
+    "admin.dau": "Дневные активные (DAU)",
+    "admin.wau": "Недельные активные (WAU)",
+    "admin.mau": "Месячные активные (MAU)",
+    "admin.last24h": "Последние 24 часа",
+    "admin.last7d": "Последние 7 дней",
+    "admin.last30d": "Последние 30 дней",
+    "admin.analyticsTimeline": "Аналитика по времени",
+    "admin.avgDau": "Сред. DAU",
+    "admin.newSubs": "Новые подписки",
+    "admin.payments": "Платежи",
+    "admin.totalRevenue": "Доход (UZS)",
+    "admin.dauChart": "Дневные активные пользователи",
+    "admin.revenueChart": "Доход и платежи",
+    "admin.growthChart": "Рост пользователей",
+    "admin.noData": "Нет данных",
 
     // AI Settings
     "admin.aiSettings.title": "Настройки AI Tutor",
@@ -2253,6 +2287,23 @@ const UI_TRANSLATIONS: Record<Language, Record<string, string>> = {
     "admin.statusPending": "Kutilmoqda",
     "admin.enrolled": "yozilgan",
     "admin.completed": "tugatilgan",
+
+    // Analytics Timeline
+    "admin.dau": "Kunlik faollar (DAU)",
+    "admin.wau": "Haftalik faollar (WAU)",
+    "admin.mau": "Oylik faollar (MAU)",
+    "admin.last24h": "So'nggi 24 soat",
+    "admin.last7d": "So'nggi 7 kun",
+    "admin.last30d": "So'nggi 30 kun",
+    "admin.analyticsTimeline": "Vaqt bo'yicha tahlil",
+    "admin.avgDau": "O'rtacha DAU",
+    "admin.newSubs": "Yangi obunalar",
+    "admin.payments": "To'lovlar",
+    "admin.totalRevenue": "Daromad (UZS)",
+    "admin.dauChart": "Kunlik faol foydalanuvchilar",
+    "admin.revenueChart": "Daromad va to'lovlar",
+    "admin.growthChart": "Foydalanuvchilar o'sishi",
+    "admin.noData": "Ma'lumot yo'q",
 
     // AI Settings
     "admin.aiSettings.title": "AI Tutor sozlamalari",

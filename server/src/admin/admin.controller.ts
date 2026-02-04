@@ -319,4 +319,21 @@ export class AdminController {
       );
     }
   }
+
+  // ============================================
+  // ANALYTICS TIMELINE (DAU/MAU, Revenue)
+  // ============================================
+
+  /**
+   * GET /admin/analytics/timeline?days=30
+   * Get analytics timeline with DAU, new users, and revenue per day
+   */
+  @Get("timeline")
+  async getAnalyticsTimeline(@Query("days") days?: string) {
+    const daysNum = days ? parseInt(days, 10) : 30;
+    if (isNaN(daysNum) || daysNum < 1 || daysNum > 365) {
+      throw new BadRequestException("Days must be between 1 and 365");
+    }
+    return this.adminService.getAnalyticsTimeline(daysNum);
+  }
 }

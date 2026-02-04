@@ -35,6 +35,7 @@ import BugReportsPanel from "./BugReportsPanel";
 import UserSearchPanel from "./UserSearchPanel";
 import PaymentsPanel from "./PaymentsPanel";
 import PromoCodesPanel from "./PromoCodesPanel";
+import AnalyticsPanel from "./AnalyticsPanel";
 
 const log = createLogger("AdminDashboard");
 
@@ -246,6 +247,9 @@ const AdminDashboard = () => {
 
       {/* Promo Codes */}
       <PromoCodesPanel />
+
+      {/* Analytics Timeline (DAU/WAU/MAU, Revenue) */}
+      <AnalyticsPanel dashboardStats={dashboardStats} />
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

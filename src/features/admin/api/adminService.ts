@@ -87,6 +87,28 @@ export interface SubscriptionStats {
   totalRevenue: number;
 }
 
+// Analytics Timeline
+export interface TimelineDataPoint {
+  date: string;
+  dau: number;
+  newUsers: number;
+  revenue: number;
+  payments: number;
+  newSubscriptions: number;
+}
+
+export interface AnalyticsTimelineResponse {
+  timeline: TimelineDataPoint[];
+  summary: {
+    totalNewUsers: number;
+    totalRevenue: number;
+    avgDau: number;
+    totalPayments: number;
+    totalNewSubscriptions: number;
+    period: number;
+  };
+}
+
 // AI Usage Stats
 export interface AiUsageStats {
   totalQueries: number;
@@ -786,6 +808,22 @@ export const adminService = {
   ): Promise<{ success: boolean }> => {
     return await api.delete<{ success: boolean }>(
       `/admin/promocodes/${promoCodeId}`,
+    );
+  },
+
+  // ============================================
+  // ANALYTICS TIMELINE
+  // ============================================
+
+  /**
+   * Get analytics timeline (DAU, new users, revenue per day)
+   * GET /admin/analytics/timeline?days=30
+   */
+  getAnalyticsTimeline: async (
+    days: number = 30,
+  ): Promise<AnalyticsTimelineResponse> => {
+    return await api.get<AnalyticsTimelineResponse>(
+      `/admin/analytics/timeline?days=${days}`,
     );
   },
 };
