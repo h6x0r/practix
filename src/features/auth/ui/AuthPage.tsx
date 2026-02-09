@@ -1,10 +1,9 @@
-
-import React, { useState, useContext } from 'react';
-import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { AuthContext } from '@/components/Layout';
-import { authService } from '../api/authService';
-import { ApiError } from '@/lib/api';
-import { useToast } from '@/components/Toast';
+import React, { useState, useContext } from "react";
+import { useNavigate, useLocation, Link } from "react-router-dom";
+import { AuthContext } from "@/components/Layout";
+import { authService } from "../api/authService";
+import { ApiError } from "@/lib/api";
+import { useToast } from "@/components/Toast";
 
 const AuthPage = () => {
   const navigate = useNavigate();
@@ -13,14 +12,15 @@ const AuthPage = () => {
   const { showToast } = useToast();
 
   // Get the page user was trying to access before being redirected to login
-  const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/';
-  
-  const [mode, setMode] = useState<'login' | 'register' | 'forgot'>('login');
+  const from =
+    (location.state as { from?: { pathname: string } })?.from?.pathname || "/";
+
+  const [mode, setMode] = useState<"login" | "register" | "forgot">("login");
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    name: ''
+    email: "",
+    password: "",
+    name: "",
   });
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -30,50 +30,59 @@ const AuthPage = () => {
     setErrorMessage(null);
 
     try {
-      if (mode === 'forgot') {
-         await authService.resetPassword(formData.email);
-         showToast('Password reset link sent to your email.', 'success');
-         setMode('login');
-         return;
+      if (mode === "forgot") {
+        await authService.resetPassword(formData.email);
+        showToast("Password reset link sent to your email.", "success");
+        setMode("login");
+        return;
       }
 
-      if (mode === 'login') {
-         const resp = await authService.login({ email: formData.email, password: formData.password });
-         await login(resp.user);
-         showToast(`Welcome back, ${resp.user.name.split(' ')[0]}!`, 'success');
+      if (mode === "login") {
+        const resp = await authService.login({
+          email: formData.email,
+          password: formData.password,
+        });
+        await login(resp.user);
+        showToast(`Welcome back, ${resp.user.name.split(" ")[0]}!`, "success");
       } else {
-         const resp = await authService.register({ name: formData.name, email: formData.email, password: formData.password });
-         await login(resp.user);
-         showToast('Account created successfully!', 'success');
+        const resp = await authService.register({
+          name: formData.name,
+          email: formData.email,
+          password: formData.password,
+        });
+        await login(resp.user, true); // isNew = true for onboarding tour
+        showToast("Account created successfully!", "success");
       }
       // Navigate back to the page they were trying to access, or home
       navigate(from, { replace: true });
     } catch (err: unknown) {
-        const message = err instanceof ApiError
-            ? err.message
-            : 'Connection failed. Please check your internet.';
-        setErrorMessage(message);
-        showToast(message, 'error');
+      const message =
+        err instanceof ApiError
+          ? err.message
+          : "Connection failed. Please check your internet.";
+      setErrorMessage(message);
+      showToast(message, "error");
     } finally {
       setIsLoading(false);
     }
   };
 
   const getTitle = () => {
-      if (mode === 'login') return 'Welcome back';
-      if (mode === 'register') return 'Create an account';
-      return 'Reset Password';
+    if (mode === "login") return "Welcome back";
+    if (mode === "register") return "Create an account";
+    return "Reset Password";
   };
 
   const getDescription = () => {
-      if (mode === 'login') return 'Enter your credentials to access your workspace.';
-      if (mode === 'register') return 'Join thousands of engineers mastering their craft.';
-      return 'Enter your email to receive a reset link.';
+    if (mode === "login")
+      return "Enter your credentials to access your workspace.";
+    if (mode === "register")
+      return "Join thousands of engineers mastering their craft.";
+    return "Enter your email to receive a reset link.";
   };
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-black flex flex-col items-center justify-center p-4 relative overflow-hidden">
-      
       {/* Background Decor */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
         <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-brand-500/10 rounded-full blur-[100px]"></div>
@@ -87,24 +96,24 @@ const AuthPage = () => {
             <div className="w-10 h-10 bg-gradient-to-br from-brand-500 to-purple-600 rounded-xl flex items-center justify-center text-white font-display font-black text-xl shadow-xl shadow-brand-500/25 group-hover:scale-110 transition-transform">
               P
             </div>
-            <span className="text-2xl font-display font-bold text-gray-900 dark:text-white">Practix</span>
+            <span className="text-2xl font-display font-bold text-gray-900 dark:text-white">
+              Practix
+            </span>
           </Link>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
             {getTitle()}
           </h1>
-          <p className="text-gray-500 dark:text-gray-400">
-            {getDescription()}
-          </p>
+          <p className="text-gray-500 dark:text-gray-400">{getDescription()}</p>
         </div>
 
         {/* Card */}
         <div className="bg-white dark:bg-dark-surface p-8 rounded-3xl border border-gray-100 dark:border-dark-border shadow-2xl shadow-brand-900/5">
-          
           <form onSubmit={handleSubmit} className="space-y-5">
-            
-            {mode === 'register' && (
+            {mode === "register" && (
               <div className="animate-fade-in-up">
-                <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Full Name</label>
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-2">
+                  Full Name
+                </label>
                 <input
                   type="text"
                   required
@@ -112,13 +121,17 @@ const AuthPage = () => {
                   data-testid="name-input"
                   className="w-full bg-gray-50 dark:bg-dark-bg border border-gray-200 dark:border-dark-border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-brand-500 outline-none dark:text-white transition-all"
                   value={formData.name}
-                  onChange={e => setFormData({...formData, name: e.target.value})}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
                 />
               </div>
             )}
 
             <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Email Address</label>
+              <label className="block text-xs font-bold text-gray-500 uppercase mb-2">
+                Email Address
+              </label>
               <input
                 type="email"
                 required
@@ -126,21 +139,25 @@ const AuthPage = () => {
                 data-testid="email-input"
                 className="w-full bg-gray-50 dark:bg-dark-bg border border-gray-200 dark:border-dark-border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-brand-500 outline-none dark:text-white transition-all"
                 value={formData.email}
-                onChange={e => setFormData({...formData, email: e.target.value})}
+                onChange={(e) =>
+                  setFormData({ ...formData, email: e.target.value })
+                }
               />
             </div>
 
-            {mode !== 'forgot' && (
+            {mode !== "forgot" && (
               <div className="animate-fade-in-up">
                 <div className="flex justify-between mb-2">
-                  <label className="block text-xs font-bold text-gray-500 uppercase">Password</label>
-                  {mode === 'login' && (
+                  <label className="block text-xs font-bold text-gray-500 uppercase">
+                    Password
+                  </label>
+                  {mode === "login" && (
                     <button
-                        type="button"
-                        onClick={() => setMode('forgot')}
-                        className="text-xs font-bold text-brand-600 hover:text-brand-500 transition-colors"
+                      type="button"
+                      onClick={() => setMode("forgot")}
+                      className="text-xs font-bold text-brand-600 hover:text-brand-500 transition-colors"
                     >
-                        Forgot?
+                      Forgot?
                     </button>
                   )}
                 </div>
@@ -151,7 +168,9 @@ const AuthPage = () => {
                   data-testid="password-input"
                   className="w-full bg-gray-50 dark:bg-dark-bg border border-gray-200 dark:border-dark-border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-brand-500 outline-none dark:text-white transition-all"
                   value={formData.password}
-                  onChange={e => setFormData({...formData, password: e.target.value})}
+                  onChange={(e) =>
+                    setFormData({ ...formData, password: e.target.value })
+                  }
                 />
               </div>
             )}
@@ -168,58 +187,86 @@ const AuthPage = () => {
             <button
               type="submit"
               disabled={isLoading}
-              data-testid={mode === 'login' ? 'login-button' : mode === 'register' ? 'register-button' : 'reset-button'}
+              data-testid={
+                mode === "login"
+                  ? "login-button"
+                  : mode === "register"
+                    ? "register-button"
+                    : "reset-button"
+              }
               className="w-full py-3.5 bg-gradient-to-r from-brand-600 to-purple-600 hover:from-brand-500 hover:to-purple-500 text-white font-bold rounded-xl shadow-lg shadow-brand-500/25 transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2"
             >
               {isLoading ? (
                 <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
               ) : (
                 <>
-                   {mode === 'login' && 'Sign In'}
-                   {mode === 'register' && 'Create Account'}
-                   {mode === 'forgot' && 'Send Reset Link'}
+                  {mode === "login" && "Sign In"}
+                  {mode === "register" && "Create Account"}
+                  {mode === "forgot" && "Send Reset Link"}
                 </>
               )}
             </button>
           </form>
 
           {/* Divider & Social Logic (Hidden on Forgot) */}
-          {mode !== 'forgot' && (
+          {mode !== "forgot" && (
             <>
-                <div className="relative my-8">
-                    <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-100 dark:border-dark-border"></div></div>
-                    <div className="relative flex justify-center text-xs uppercase font-bold text-gray-400">
-                    <span className="bg-white dark:bg-dark-surface px-4">Or continue with</span>
-                    </div>
+              <div className="relative my-8">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-100 dark:border-dark-border"></div>
                 </div>
+                <div className="relative flex justify-center text-xs uppercase font-bold text-gray-400">
+                  <span className="bg-white dark:bg-dark-surface px-4">
+                    Or continue with
+                  </span>
+                </div>
+              </div>
 
-                <div>
-                    <button className="w-full flex items-center justify-center gap-2 py-2.5 border border-gray-200 dark:border-dark-border rounded-xl hover:bg-gray-50 dark:hover:bg-dark-bg transition-colors">
-                    <span className="text-lg">🐙</span> <span className="text-sm font-bold text-gray-600 dark:text-gray-300">GitHub</span>
-                    </button>
-                </div>
+              <div>
+                <button className="w-full flex items-center justify-center gap-2 py-2.5 border border-gray-200 dark:border-dark-border rounded-xl hover:bg-gray-50 dark:hover:bg-dark-bg transition-colors">
+                  <span className="text-lg">🐙</span>{" "}
+                  <span className="text-sm font-bold text-gray-600 dark:text-gray-300">
+                    GitHub
+                  </span>
+                </button>
+              </div>
             </>
           )}
         </div>
 
         {/* Toggle Mode */}
         <p className="text-center mt-8 text-sm text-gray-500 dark:text-gray-400">
-          {mode === 'login' && (
-              <>
-                Don't have an account yet?{' '}
-                <button onClick={() => setMode('register')} data-testid="register-link" className="font-bold text-brand-600 hover:text-brand-500 transition-colors">Sign up</button>
-              </>
-          )}
-          {mode === 'register' && (
-              <>
-                Already have an account?{' '}
-                <button onClick={() => setMode('login')} data-testid="login-link" className="font-bold text-brand-600 hover:text-brand-500 transition-colors">Log in</button>
-              </>
-          )}
-          {mode === 'forgot' && (
-              <button onClick={() => setMode('login')} className="font-bold text-gray-600 dark:text-gray-400 hover:text-brand-600 dark:hover:text-white transition-colors flex items-center gap-2 mx-auto">
-                 ← Back to Sign In
+          {mode === "login" && (
+            <>
+              Don't have an account yet?{" "}
+              <button
+                onClick={() => setMode("register")}
+                data-testid="register-link"
+                className="font-bold text-brand-600 hover:text-brand-500 transition-colors"
+              >
+                Sign up
               </button>
+            </>
+          )}
+          {mode === "register" && (
+            <>
+              Already have an account?{" "}
+              <button
+                onClick={() => setMode("login")}
+                data-testid="login-link"
+                className="font-bold text-brand-600 hover:text-brand-500 transition-colors"
+              >
+                Log in
+              </button>
+            </>
+          )}
+          {mode === "forgot" && (
+            <button
+              onClick={() => setMode("login")}
+              className="font-bold text-gray-600 dark:text-gray-400 hover:text-brand-600 dark:hover:text-white transition-colors flex items-center gap-2 mx-auto"
+            >
+              ← Back to Sign In
+            </button>
           )}
         </p>
       </div>

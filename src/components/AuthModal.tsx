@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useContext } from 'react';
-import { AuthContext } from './Layout';
-import { authService } from '@/features/auth/api/authService';
-import { ApiError } from '@/lib/api';
-import { useToast } from './Toast';
-import { useUITranslation } from '@/contexts/LanguageContext';
+import React, { useState, useEffect, useContext } from "react";
+import { AuthContext } from "./Layout";
+import { authService } from "@/features/auth/api/authService";
+import { ApiError } from "@/lib/api";
+import { useToast } from "./Toast";
+import { useUITranslation } from "@/contexts/LanguageContext";
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -16,36 +16,36 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   isOpen,
   onClose,
   onSuccess,
-  message
+  message,
 }) => {
   const { login } = useContext(AuthContext);
   const { showToast } = useToast();
   const { tUI } = useUITranslation();
 
-  const [mode, setMode] = useState<'login' | 'register'>('login');
+  const [mode, setMode] = useState<"login" | "register">("login");
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    name: ''
+    email: "",
+    password: "",
+    name: "",
   });
 
   // Reset form when modal opens/closes
   useEffect(() => {
     if (!isOpen) {
-      setFormData({ email: '', password: '', name: '' });
-      setMode('login');
+      setFormData({ email: "", password: "", name: "" });
+      setMode("login");
     }
   }, [isOpen]);
 
   // Close on Escape key
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === "Escape") onClose();
     };
     if (isOpen) {
-      window.addEventListener('keydown', handleEscape);
-      return () => window.removeEventListener('keydown', handleEscape);
+      window.addEventListener("keydown", handleEscape);
+      return () => window.removeEventListener("keydown", handleEscape);
     }
   }, [isOpen, onClose]);
 
@@ -56,29 +56,29 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setIsLoading(true);
 
     try {
-      if (mode === 'login') {
+      if (mode === "login") {
         const resp = await authService.login({
           email: formData.email,
-          password: formData.password
+          password: formData.password,
         });
         await login(resp.user);
-        showToast(`Welcome back, ${resp.user.name.split(' ')[0]}!`, 'success');
+        showToast(`Welcome back, ${resp.user.name.split(" ")[0]}!`, "success");
       } else {
         const resp = await authService.register({
           name: formData.name,
           email: formData.email,
-          password: formData.password
+          password: formData.password,
         });
-        await login(resp.user);
-        showToast('Account created successfully!', 'success');
+        await login(resp.user, true); // isNew = true for onboarding tour
+        showToast("Account created successfully!", "success");
       }
       onClose();
       onSuccess?.();
     } catch (err: unknown) {
       if (err instanceof ApiError) {
-        showToast(err.message, 'error');
+        showToast(err.message, "error");
       } else {
-        showToast('Connection failed. Please check your internet.', 'error');
+        showToast("Connection failed. Please check your internet.", "error");
       }
     } finally {
       setIsLoading(false);
@@ -99,8 +99,18 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           onClick={onClose}
           className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
         >
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          <svg
+            className="w-5 h-5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M6 18L18 6M6 6l12 12"
+            />
           </svg>
         </button>
 
@@ -111,7 +121,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               P
             </div>
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-              {mode === 'login' ? tUI('auth.signIn') : tUI('auth.createAccount')}
+              {mode === "login"
+                ? tUI("auth.signIn")
+                : tUI("auth.createAccount")}
             </h2>
             {message && (
               <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -122,10 +134,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
-            {mode === 'register' && (
+            {mode === "register" && (
               <div>
                 <label className="block text-xs font-bold text-gray-500 uppercase mb-2">
-                  {tUI('auth.fullName')}
+                  {tUI("auth.fullName")}
                 </label>
                 <input
                   type="text"
@@ -133,14 +145,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   placeholder="Alex Developer"
                   className="w-full bg-gray-50 dark:bg-dark-bg border border-gray-200 dark:border-dark-border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-brand-500 outline-none dark:text-white transition-all"
                   value={formData.name}
-                  onChange={e => setFormData({...formData, name: e.target.value})}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
                 />
               </div>
             )}
 
             <div>
               <label className="block text-xs font-bold text-gray-500 uppercase mb-2">
-                {tUI('auth.email')}
+                {tUI("auth.email")}
               </label>
               <input
                 type="email"
@@ -148,13 +162,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 placeholder="alex@example.com"
                 className="w-full bg-gray-50 dark:bg-dark-bg border border-gray-200 dark:border-dark-border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-brand-500 outline-none dark:text-white transition-all"
                 value={formData.email}
-                onChange={e => setFormData({...formData, email: e.target.value})}
+                onChange={(e) =>
+                  setFormData({ ...formData, email: e.target.value })
+                }
               />
             </div>
 
             <div>
               <label className="block text-xs font-bold text-gray-500 uppercase mb-2">
-                {tUI('auth.password')}
+                {tUI("auth.password")}
               </label>
               <input
                 type="password"
@@ -162,7 +178,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 placeholder="••••••••"
                 className="w-full bg-gray-50 dark:bg-dark-bg border border-gray-200 dark:border-dark-border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-brand-500 outline-none dark:text-white transition-all"
                 value={formData.password}
-                onChange={e => setFormData({...formData, password: e.target.value})}
+                onChange={(e) =>
+                  setFormData({ ...formData, password: e.target.value })
+                }
               />
             </div>
 
@@ -173,32 +191,34 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             >
               {isLoading ? (
                 <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+              ) : mode === "login" ? (
+                tUI("auth.signIn")
               ) : (
-                mode === 'login' ? tUI('auth.signIn') : tUI('auth.createAccount')
+                tUI("auth.createAccount")
               )}
             </button>
           </form>
 
           {/* Toggle Mode */}
           <p className="text-center mt-6 text-sm text-gray-500 dark:text-gray-400">
-            {mode === 'login' ? (
+            {mode === "login" ? (
               <>
-                {tUI('auth.noAccount')}{' '}
+                {tUI("auth.noAccount")}{" "}
                 <button
-                  onClick={() => setMode('register')}
+                  onClick={() => setMode("register")}
                   className="font-bold text-brand-600 hover:text-brand-500 transition-colors"
                 >
-                  {tUI('auth.signUp')}
+                  {tUI("auth.signUp")}
                 </button>
               </>
             ) : (
               <>
-                {tUI('auth.hasAccount')}{' '}
+                {tUI("auth.hasAccount")}{" "}
                 <button
-                  onClick={() => setMode('login')}
+                  onClick={() => setMode("login")}
                   className="font-bold text-brand-600 hover:text-brand-500 transition-colors"
                 >
-                  {tUI('auth.logIn')}
+                  {tUI("auth.logIn")}
                 </button>
               </>
             )}

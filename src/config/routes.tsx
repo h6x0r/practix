@@ -47,6 +47,7 @@ const DashboardPage = lazyWithSuspense(
 import CoursesPage from "../features/courses/ui/CoursesPage";
 import CourseDetailsPage from "../features/courses/ui/CourseDetailsPage";
 import PaymentsPage from "../features/payments/ui/PaymentsPage";
+import PricingPage from "../features/payments/ui/PricingPage";
 import SettingsPage from "../features/settings/ui/SettingsPage";
 import MyTasksPage from "../features/my-tasks/ui/MyTasksPage";
 import RoadmapPage from "../features/roadmap/ui/RoadmapPage";
@@ -64,6 +65,7 @@ export const routes: AppRouteConfig[] = [
   { path: "/course/:courseId", element: <CourseDetailsPage />, layout: true },
   { path: "/playground", element: PlaygroundPage, layout: true },
   { path: "/playground/:shortId", element: SharedSnippetPage, layout: true },
+  { path: "/pricing", element: <PricingPage />, layout: true },
 
   // Semi-Protected Routes (Show preview with auth overlay)
   { path: "/my-tasks", element: <MyTasksPage />, layout: true },

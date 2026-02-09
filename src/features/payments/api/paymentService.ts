@@ -39,6 +39,16 @@ export interface CheckoutRequest {
   quantity?: number;
   provider: "payme" | "click";
   returnUrl?: string;
+  promoCode?: string;
+}
+
+export interface PromoCodeValidation {
+  valid: boolean;
+  error?: string;
+  code?: string;
+  type?: "PERCENTAGE" | "FIXED" | "FREE_TRIAL";
+  discount?: number;
+  discountAmount?: number;
 }
 
 export interface CoursePricing {
@@ -155,6 +165,23 @@ export const paymentService = {
       courseId,
       provider,
       returnUrl,
+    });
+  },
+
+  /**
+   * Validate promo code
+   */
+  validatePromoCode: async (
+    code: string,
+    orderType: "subscription" | "purchase",
+    amount: number,
+    courseId?: string,
+  ): Promise<PromoCodeValidation> => {
+    return api.post<PromoCodeValidation>("/promocodes/validate", {
+      code,
+      orderType,
+      amount,
+      courseId,
     });
   },
 };
