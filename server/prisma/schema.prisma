@@ -585,6 +585,25 @@ model PromoCodeUsage {
   @@index([orderId])
 }
 
+// Shared code snippets for Playground
+model CodeSnippet {
+  id          String   @id @default(uuid())
+  shortId     String   @unique // Short URL-friendly ID (e.g., "abc123")
+  userId      String?  // null for anonymous snippets
+  title       String?  // Optional title
+  code        String   // The code content
+  language    String   // 'go', 'java', 'python', 'typescript', etc.
+  isPublic    Boolean  @default(true)
+  viewCount   Int      @default(0)
+  expiresAt   DateTime? // null = never expires
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([shortId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
 // Admin action audit log for tracking administrative actions
 model AuditLog {
   id        String   @id @default(uuid())

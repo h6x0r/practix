@@ -48,6 +48,7 @@ export const adminService = {
   getAnalyticsTimeline: adminAnalyticsService.getAnalyticsTimeline,
   getRetentionMetrics: adminAnalyticsService.getRetentionMetrics,
   getConversionMetrics: adminAnalyticsService.getConversionMetrics,
+  getDayDetails: adminAnalyticsService.getDayDetails,
 
   // Users
   searchUsers: adminUsersService.searchUsers,

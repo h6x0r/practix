@@ -24,6 +24,7 @@ import { LoggerModule } from "./common/logger/logger.module";
 import { SecurityModule } from "./security/security.module";
 import { SecurityMiddleware } from "./security/middleware/security.middleware";
 import { HealthModule } from "./health/health.module";
+import { SnippetsModule } from "./snippets/snippets.module";
 
 @Module({
   imports: [
@@ -70,6 +71,7 @@ import { HealthModule } from "./health/health.module";
     AdminModule,
     PromoCodesModule,
     HealthModule, // Health checks and Prometheus metrics
+    SnippetsModule, // Code snippet sharing
   ],
   controllers: [],
   providers: [],

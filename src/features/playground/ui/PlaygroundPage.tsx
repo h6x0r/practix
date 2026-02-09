@@ -19,6 +19,7 @@ import { TimerStopwatch } from "../../tasks/ui/components/TimerStopwatch";
 import { EditorSettingsDropdown } from "../../tasks/ui/components/EditorSettingsDropdown";
 import { ThemeSelector } from "./components/ThemeSelector";
 import { SnippetsLibrary } from "./components/SnippetsLibrary";
+import { ShareButton } from "./components/ShareButton";
 import { usePlaygroundStorage } from "../hooks/usePlaygroundStorage";
 import { useEditorThemes, defineAllThemes } from "../hooks/useEditorThemes";
 import { useUITranslation } from "@/contexts/LanguageContext";
@@ -105,9 +106,22 @@ const PlaygroundPage = () => {
   );
   const cooldownIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Check for saved state on mount
+  // Check for forked snippet on mount
   useEffect(() => {
-    if (savedState && savedState.code !== CODE_TEMPLATES[savedState.language]) {
+    const forkedSnippet = sessionStorage.getItem("playground_fork");
+    if (forkedSnippet) {
+      try {
+        const { code, language: lang } = JSON.parse(forkedSnippet);
+        setLanguage(lang);
+        setCode(code);
+        sessionStorage.removeItem("playground_fork");
+      } catch {
+        // Ignore invalid JSON
+      }
+    } else if (
+      savedState &&
+      savedState.code !== CODE_TEMPLATES[savedState.language]
+    ) {
       setShowRestorePrompt(true);
     }
   }, [savedState]);
@@ -391,6 +405,7 @@ const PlaygroundPage = () => {
 
           {/* Tools */}
           <div className="flex items-center gap-1 px-2">
+            <ShareButton code={code} language={language} />
             <SnippetsLibrary
               currentLanguage={language}
               onInsertSnippet={handleInsertSnippet}

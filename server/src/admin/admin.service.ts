@@ -1559,4 +1559,186 @@ export class AdminService {
       },
     };
   }
+
+  /**
+   * Get detailed breakdown for a specific day and metric (drill-down)
+   */
+  async getDayDetails(date: string, metric: string) {
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const details: Array<{
+      id: string;
+      label: string;
+      value: string | number;
+      sublabel?: string;
+      status?: "success" | "warning" | "error" | "info";
+    }> = [];
+
+    let total = 0;
+
+    switch (metric) {
+      case "dau": {
+        // Get users who had activity on this day
+        const activeUsers = await this.prisma.submission.groupBy({
+          by: ["userId"],
+          where: {
+            createdAt: { gte: startOfDay, lte: endOfDay },
+          },
+        });
+        total = activeUsers.length;
+
+        // Get top active users for this day
+        const topUsers = await this.prisma.submission.groupBy({
+          by: ["userId"],
+          where: {
+            createdAt: { gte: startOfDay, lte: endOfDay },
+          },
+          _count: { id: true },
+          orderBy: { _count: { id: "desc" } },
+          take: 10,
+        });
+
+        const userIds = topUsers.map((u) => u.userId);
+        const users = await this.prisma.user.findMany({
+          where: { id: { in: userIds } },
+          select: { id: true, email: true, name: true },
+        });
+
+        const userMap = new Map(users.map((u) => [u.id, u]));
+
+        for (const item of topUsers) {
+          const user = userMap.get(item.userId);
+          details.push({
+            id: item.userId,
+            label: user?.name || "Unknown",
+            sublabel: user?.email,
+            value: `${item._count.id} submissions`,
+            status: "info",
+          });
+        }
+        break;
+      }
+
+      case "newUsers": {
+        const newUsers = await this.prisma.user.findMany({
+          where: {
+            createdAt: { gte: startOfDay, lte: endOfDay },
+          },
+          select: { id: true, email: true, name: true, isPremium: true },
+          orderBy: { createdAt: "desc" },
+          take: 20,
+        });
+        total = newUsers.length;
+
+        for (const user of newUsers) {
+          details.push({
+            id: user.id,
+            label: user.name,
+            sublabel: user.email,
+            value: user.isPremium ? "Premium" : "Free",
+            status: user.isPremium ? "success" : "info",
+          });
+        }
+        break;
+      }
+
+      case "revenue": {
+        const payments = await this.prisma.payment.findMany({
+          where: {
+            createdAt: { gte: startOfDay, lte: endOfDay },
+            status: "completed",
+          },
+          include: {
+            subscription: {
+              include: { plan: true, user: true },
+            },
+          },
+          orderBy: { amount: "desc" },
+        });
+
+        total = payments.reduce((sum, p) => sum + p.amount, 0);
+
+        for (const payment of payments) {
+          details.push({
+            id: payment.id,
+            label: payment.subscription?.user?.name || "Unknown",
+            sublabel: payment.subscription?.plan?.name || "Unknown Plan",
+            value: `${(payment.amount / 100).toLocaleString()} UZS`,
+            status: "success",
+          });
+        }
+        break;
+      }
+
+      case "payments": {
+        const payments = await this.prisma.payment.findMany({
+          where: {
+            createdAt: { gte: startOfDay, lte: endOfDay },
+          },
+          include: {
+            subscription: {
+              include: { plan: true, user: true },
+            },
+          },
+          orderBy: { createdAt: "desc" },
+        });
+
+        total = payments.length;
+
+        for (const payment of payments) {
+          const statusMap: Record<string, "success" | "warning" | "error"> = {
+            completed: "success",
+            pending: "warning",
+            failed: "error",
+            refunded: "warning",
+          };
+
+          details.push({
+            id: payment.id,
+            label: payment.subscription?.user?.name || "Unknown",
+            sublabel: `${(payment.amount / 100).toLocaleString()} UZS`,
+            value: payment.status,
+            status: statusMap[payment.status] || "info",
+          });
+        }
+        break;
+      }
+
+      case "subscriptions": {
+        const newSubs = await this.prisma.subscription.findMany({
+          where: {
+            createdAt: { gte: startOfDay, lte: endOfDay },
+          },
+          include: {
+            plan: true,
+            user: { select: { id: true, email: true, name: true } },
+          },
+          orderBy: { createdAt: "desc" },
+        });
+
+        total = newSubs.length;
+
+        for (const sub of newSubs) {
+          details.push({
+            id: sub.id,
+            label: sub.user.name,
+            sublabel: sub.plan.name,
+            value: sub.status,
+            status: sub.status === "active" ? "success" : "warning",
+          });
+        }
+        break;
+      }
+    }
+
+    return {
+      date,
+      metric,
+      total,
+      details,
+    };
+  }
 }

@@ -354,4 +354,33 @@ export class AdminController {
   async getConversionMetrics() {
     return this.adminService.getConversionMetrics();
   }
+
+  /**
+   * GET /admin/analytics/day-details?date=2026-02-09&metric=dau
+   * Get detailed breakdown for a specific day and metric (drill-down)
+   */
+  @Get("day-details")
+  async getDayDetails(
+    @Query("date") date: string,
+    @Query("metric") metric: string,
+  ) {
+    if (!date || !metric) {
+      throw new BadRequestException("Date and metric are required");
+    }
+
+    const validMetrics = [
+      "dau",
+      "revenue",
+      "payments",
+      "newUsers",
+      "subscriptions",
+    ];
+    if (!validMetrics.includes(metric)) {
+      throw new BadRequestException(
+        `Invalid metric. Valid options: ${validMetrics.join(", ")}`,
+      );
+    }
+
+    return this.adminService.getDayDetails(date, metric);
+  }
 }

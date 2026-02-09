@@ -152,3 +152,19 @@ export interface ConversionMetrics {
     conversionRate: number;
   };
 }
+
+// Day Details (Drill-down)
+export interface DayDetailItem {
+  id: string;
+  label: string;
+  value: string | number;
+  sublabel?: string;
+  status?: "success" | "warning" | "error" | "info";
+}
+
+export interface DayDetailsResponse {
+  date: string;
+  metric: string;
+  total: number;
+  details: DayDetailItem[];
+}

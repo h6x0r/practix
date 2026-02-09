@@ -9,6 +9,7 @@ import type {
   AiUsageStats,
   RetentionMetrics,
   ConversionMetrics,
+  DayDetailsResponse,
 } from "../types";
 
 export const adminAnalyticsService = {
@@ -52,5 +53,14 @@ export const adminAnalyticsService = {
 
   getConversionMetrics: async (): Promise<ConversionMetrics> => {
     return await api.get<ConversionMetrics>("/admin/analytics/conversion");
+  },
+
+  getDayDetails: async (
+    date: string,
+    metric: string,
+  ): Promise<DayDetailsResponse> => {
+    return await api.get<DayDetailsResponse>(
+      `/admin/analytics/day-details?date=${date}&metric=${metric}`,
+    );
   },
 };

@@ -18,7 +18,9 @@ import {
   AnalyticsTimelineResponse,
   RetentionMetrics,
   ConversionMetrics,
+  DayDetailsResponse,
 } from "../api/adminService";
+import { DrillDownModal, DrillDownData } from "./components/DrillDownModal";
 import { useUITranslation } from "@/contexts/LanguageContext";
 import { createLogger } from "@/lib/logger";
 
@@ -39,6 +41,12 @@ const AnalyticsPanel = ({ dashboardStats }: AnalyticsPanelProps) => {
     useState<ConversionMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<7 | 14 | 30 | 90>(30);
+
+  // Drill-down state
+  const [drillDownData, setDrillDownData] = useState<DrillDownData | null>(
+    null,
+  );
+  const [drillDownLoading, setDrillDownLoading] = useState(false);
 
   const loadTimeline = useCallback(async () => {
     setLoading(true);
@@ -61,6 +69,44 @@ const AnalyticsPanel = ({ dashboardStats }: AnalyticsPanelProps) => {
   useEffect(() => {
     loadTimeline();
   }, [loadTimeline]);
+
+  // Handle chart click for drill-down
+  const handleChartClick = useCallback(
+    async (
+      date: string,
+      metric: "dau" | "revenue" | "payments" | "newUsers" | "subscriptions",
+      value: number,
+    ) => {
+      setDrillDownData({ date, metric, value, details: [] });
+      setDrillDownLoading(true);
+
+      try {
+        const response = await adminService.getDayDetails(date, metric);
+        setDrillDownData({
+          date,
+          metric,
+          value: response.total,
+          details: response.details.map((d) => ({
+            id: d.id,
+            label: d.label,
+            value: d.value,
+            sublabel: d.sublabel,
+            status: d.status,
+          })),
+        });
+      } catch (error) {
+        log.error("Failed to load day details", error);
+        // Keep modal open with basic data
+      } finally {
+        setDrillDownLoading(false);
+      }
+    },
+    [],
+  );
+
+  const closeDrillDown = useCallback(() => {
+    setDrillDownData(null);
+  }, []);
 
   // Format currency (UZS in tiyn to readable format)
   const formatRevenue = (amount: number) => {
@@ -251,12 +297,26 @@ const AnalyticsPanel = ({ dashboardStats }: AnalyticsPanelProps) => {
 
             {/* DAU Chart */}
             <div>
-              <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-4">
-                {tUI("admin.dauChart") || "Daily Active Users"}
-              </h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300">
+                  {tUI("admin.dauChart") || "Daily Active Users"}
+                </h3>
+                <span className="text-xs text-gray-400">
+                  {tUI("admin.clickForDetails") || "Click on chart for details"}
+                </span>
+              </div>
               <div className="h-48">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={timelineData.timeline}>
+                  <AreaChart
+                    data={timelineData.timeline}
+                    onClick={(data) => {
+                      if (data?.activePayload?.[0]) {
+                        const point = data.activePayload[0].payload;
+                        handleChartClick(point.date, "dau", point.dau);
+                      }
+                    }}
+                    style={{ cursor: "pointer" }}
+                  >
                     <defs>
                       <linearGradient
                         id="dauGradient"
@@ -321,12 +381,26 @@ const AnalyticsPanel = ({ dashboardStats }: AnalyticsPanelProps) => {
 
             {/* Revenue & Payments Chart */}
             <div>
-              <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-4">
-                {tUI("admin.revenueChart") || "Revenue & Payments"}
-              </h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300">
+                  {tUI("admin.revenueChart") || "Revenue & Payments"}
+                </h3>
+                <span className="text-xs text-gray-400">
+                  {tUI("admin.clickForDetails") || "Click on chart for details"}
+                </span>
+              </div>
               <div className="h-48">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={timelineData.timeline}>
+                  <BarChart
+                    data={timelineData.timeline}
+                    onClick={(data) => {
+                      if (data?.activePayload?.[0]) {
+                        const point = data.activePayload[0].payload;
+                        handleChartClick(point.date, "revenue", point.revenue);
+                      }
+                    }}
+                    style={{ cursor: "pointer" }}
+                  >
                     <CartesianGrid
                       strokeDasharray="3 3"
                       vertical={false}
@@ -394,12 +468,30 @@ const AnalyticsPanel = ({ dashboardStats }: AnalyticsPanelProps) => {
 
             {/* New Users & Subscriptions Chart */}
             <div>
-              <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-4">
-                {tUI("admin.growthChart") || "User Growth"}
-              </h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300">
+                  {tUI("admin.growthChart") || "User Growth"}
+                </h3>
+                <span className="text-xs text-gray-400">
+                  {tUI("admin.clickForDetails") || "Click on chart for details"}
+                </span>
+              </div>
               <div className="h-48">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={timelineData.timeline}>
+                  <LineChart
+                    data={timelineData.timeline}
+                    onClick={(data) => {
+                      if (data?.activePayload?.[0]) {
+                        const point = data.activePayload[0].payload;
+                        handleChartClick(
+                          point.date,
+                          "newUsers",
+                          point.newUsers,
+                        );
+                      }
+                    }}
+                    style={{ cursor: "pointer" }}
+                  >
                     <CartesianGrid
                       strokeDasharray="3 3"
                       vertical={false}
@@ -659,6 +751,13 @@ const AnalyticsPanel = ({ dashboardStats }: AnalyticsPanelProps) => {
           )}
         </div>
       </div>
+
+      {/* Drill-down Modal */}
+      <DrillDownModal
+        data={drillDownData}
+        onClose={closeDrillDown}
+        loading={drillDownLoading}
+      />
     </div>
   );
 };
