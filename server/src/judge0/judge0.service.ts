@@ -81,8 +81,17 @@ export interface LanguageConfig {
 
 // Judge0 Language IDs (CE edition)
 // https://ce.judge0.com/languages
-// Note: Default Judge0 limits are max_cpu_time_limit=15, max_wall_time_limit=20
-// These can be increased via JUDGE0_MAX_CPU_TIME_LIMIT env var in docker-compose
+//
+// EXECUTION LIMITS (configurable per-submission):
+// - cpu_time_limit: max 15s (default), can increase via JUDGE0_MAX_CPU_TIME_LIMIT
+// - wall_time_limit: max 20s (default), can increase via JUDGE0_MAX_WALL_TIME_LIMIT
+// - memory_limit: max 512MB
+//
+// COMPILATION LIMITS (fixed by Judge0, not configurable via API):
+// - compile_cpu_time_limit: 5s (hardcoded in isolate)
+// - compile_wall_time_limit: 10s (hardcoded in isolate)
+// - Java compilation may take longer under high server load
+//
 export const LANGUAGES: Record<string, LanguageConfig> = {
   go: {
     judge0Id: 60, // Go (1.13.5)

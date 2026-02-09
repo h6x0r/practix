@@ -1,4 +1,4 @@
-import { Page, Locator } from '@playwright/test';
+import { Page, Locator } from "@playwright/test";
 
 /**
  * Page Object for Playground page
@@ -45,47 +45,91 @@ export class PlaygroundPage {
     this.page = page;
 
     // Editor elements
-    this.editorContainer = page.locator('.monaco-editor').first();
-    this.codeEditor = page.locator('[data-keybinding-context]').or(page.locator('.monaco-editor textarea'));
+    this.editorContainer = page.locator(".monaco-editor").first();
+    this.codeEditor = page
+      .locator("[data-keybinding-context]")
+      .or(page.locator(".monaco-editor textarea"));
 
     // Language selector - the tab button that opens dropdown
-    this.languageTab = page.locator('button').filter({ hasText: /main\.(go|java|py|ts)/ });
-    this.languageDropdown = page.locator('[class*="shadow-lg"]').filter({ has: page.locator('button').filter({ hasText: /Go|Java|Python|TypeScript/ }) });
+    this.languageTab = page
+      .locator("button")
+      .filter({ hasText: /main\.(go|java|py|ts)/ });
+    this.languageDropdown = page
+      .locator('[class*="shadow-lg"]')
+      .filter({
+        has: page
+          .locator("button")
+          .filter({ hasText: /Go|Java|Python|TypeScript/ }),
+      });
     // Language options in dropdown - look for span with language name inside button
-    this.goOption = page.locator('button span').filter({ hasText: 'Go' }).locator('..');
-    this.javaOption = page.locator('button span').filter({ hasText: 'Java' }).locator('..');
-    this.pythonOption = page.locator('button span').filter({ hasText: 'Python' }).locator('..');
-    this.typescriptOption = page.locator('button span').filter({ hasText: 'TypeScript' }).locator('..');
+    this.goOption = page
+      .locator("button span")
+      .filter({ hasText: "Go" })
+      .locator("..");
+    this.javaOption = page
+      .locator("button span")
+      .filter({ hasText: "Java" })
+      .locator("..");
+    this.pythonOption = page
+      .locator("button span")
+      .filter({ hasText: "Python" })
+      .locator("..");
+    this.typescriptOption = page
+      .locator("button span")
+      .filter({ hasText: "TypeScript" })
+      .locator("..");
 
     // Action buttons
-    this.runButton = page.locator('button').filter({ hasText: /Run|Running|\d+s/ });
-    this.resetButton = page.locator('button[title="Reset"]').or(page.locator('button').filter({ has: page.locator('svg[class*="refresh"]') }));
+    this.runButton = page
+      .locator("button")
+      .filter({ hasText: /Run|Running|\d+s/ });
+    this.resetButton = page
+      .locator('button[title="Reset"]')
+      .or(
+        page
+          .locator("button")
+          .filter({ has: page.locator('svg[class*="refresh"]') }),
+      );
 
     // Output panel
-    this.outputPanel = page.locator('span').filter({ hasText: /^Output$/ }).locator('..').locator('..');
-    this.outputContent = page.locator('pre').or(page.locator('text=Run code to see output'));
-    this.outputHeader = page.locator('span.uppercase').filter({ hasText: 'Output' });
-    this.outputTime = page.locator('text=/\\d+\\.?\\d*s/');
+    this.outputPanel = page
+      .locator("span")
+      .filter({ hasText: /^Output$/ })
+      .locator("..")
+      .locator("..");
+    this.outputContent = page
+      .locator("pre")
+      .or(page.locator("text=Run code to see output"));
+    this.outputHeader = page
+      .locator("span.uppercase")
+      .filter({ hasText: "Output" });
+    this.outputTime = page.locator("text=/\\d+\\.?\\d*s/");
 
     // Status indicators
-    this.statusIndicator = page.locator('text=/Ready|Mock/');
-    this.rateLimitIndicator = page.locator('text=/Premium|\\d+s limit/');
-    this.cooldownTimer = page.locator('button').filter({ hasText: /^\d+s$/ });
+    this.statusIndicator = page.locator("text=/Ready|Mock/");
+    this.rateLimitIndicator = page.locator("text=/Premium|\\d+s limit/");
+    this.cooldownTimer = page.locator("button").filter({ hasText: /^\d+s$/ });
 
     // Loading states
-    this.runningIndicator = page.locator('text=Running').or(page.locator('text=Executing'));
-    this.editorLoading = page.locator('text=Loading editor');
+    this.runningIndicator = page
+      .locator("text=Running")
+      .or(page.locator("text=Executing"));
+    this.editorLoading = page.locator("text=Loading editor");
 
     // Auto-save popup
-    this.autoSavePopup = page.locator('[class*="fixed"]').filter({ hasText: /auto|cloud|save/i });
-    this.autoSaveCloseButton = page.locator('button').filter({ hasText: /got it|понял|tushundim/i });
+    this.autoSavePopup = page
+      .locator('[class*="fixed"]')
+      .filter({ hasText: /auto|cloud|save/i });
+    this.autoSaveCloseButton = page
+      .locator("button")
+      .filter({ hasText: /got it|понял|tushundim/i });
   }
 
   /**
    * Navigate to playground page
    */
   async goto() {
-    await this.page.goto('/playground');
+    await this.page.goto("/playground");
   }
 
   /**
@@ -93,7 +137,7 @@ export class PlaygroundPage {
    */
   async waitForLoad() {
     // Wait for editor to be ready
-    await this.page.waitForLoadState('networkidle');
+    await this.page.waitForLoadState("networkidle");
     await this.page.waitForTimeout(1000); // Give Monaco time to initialize
   }
 
@@ -101,8 +145,12 @@ export class PlaygroundPage {
    * Wait for editor to be ready
    */
   async waitForEditorReady() {
-    await this.editorContainer.waitFor({ state: 'visible', timeout: 15000 }).catch(() => {});
-    await this.editorLoading.waitFor({ state: 'hidden', timeout: 15000 }).catch(() => {});
+    await this.editorContainer
+      .waitFor({ state: "visible", timeout: 15000 })
+      .catch(() => {});
+    await this.editorLoading
+      .waitFor({ state: "hidden", timeout: 15000 })
+      .catch(() => {});
   }
 
   /**
@@ -123,7 +171,7 @@ export class PlaygroundPage {
   /**
    * Select a language
    */
-  async selectLanguage(language: 'go' | 'java' | 'python' | 'typescript') {
+  async selectLanguage(language: "go" | "java" | "python" | "typescript") {
     await this.openLanguageDropdown();
 
     const optionMap = {
@@ -144,10 +192,10 @@ export class PlaygroundPage {
     const tabText = await this.languageTab.textContent().catch(() => null);
     if (!tabText) return null;
 
-    if (tabText.includes('.go')) return 'go';
-    if (tabText.includes('.java')) return 'java';
-    if (tabText.includes('.py')) return 'python';
-    if (tabText.includes('.ts')) return 'typescript';
+    if (tabText.includes(".go")) return "go";
+    if (tabText.includes(".java")) return "java";
+    if (tabText.includes(".py")) return "python";
+    if (tabText.includes(".ts")) return "typescript";
     return null;
   }
 
@@ -158,8 +206,44 @@ export class PlaygroundPage {
     // Click on editor to focus
     await this.editorContainer.click();
     // Clear existing code with Cmd/Ctrl+A and then type
-    await this.page.keyboard.press('Meta+a');
+    await this.page.keyboard.press("Meta+a");
     await this.page.keyboard.type(code, { delay: 10 });
+  }
+
+  /**
+   * Set code in editor using Monaco API
+   * More reliable than typeCode for complex code
+   */
+  async setCode(code: string) {
+    // Wait for editor to be ready
+    await this.waitForEditorReady();
+
+    // Use Monaco editor API to set code directly
+    await this.page.evaluate((newCode) => {
+      // Access Monaco editor instance
+      const editor = (window as any).monaco?.editor?.getEditors?.()?.[0];
+      if (editor) {
+        editor.setValue(newCode);
+        return true;
+      }
+
+      // Fallback: try to find editor in DOM
+      const monacoContainer = document.querySelector(".monaco-editor");
+      if (monacoContainer) {
+        const model = (
+          monacoContainer as any
+        )?.__vue__?.$refs?.editor?.getModel?.();
+        if (model) {
+          model.setValue(newCode);
+          return true;
+        }
+      }
+
+      return false;
+    }, code);
+
+    // Small delay to ensure code is set
+    await this.page.waitForTimeout(300);
   }
 
   /**
@@ -167,6 +251,27 @@ export class PlaygroundPage {
    */
   async runCode() {
     await this.runButton.click();
+  }
+
+  /**
+   * Click run button (alias for runCode)
+   */
+  async clickRun() {
+    // Wait for button to be enabled (not on cooldown)
+    const button = this.page.locator("button").filter({ hasText: /^Run$/ });
+
+    // Try the specific Run button first
+    if (await button.isVisible().catch(() => false)) {
+      if (await button.isEnabled().catch(() => false)) {
+        await button.click();
+        return;
+      }
+    }
+
+    // Fallback to runButton which may show cooldown timer
+    if (await this.runButton.isEnabled().catch(() => false)) {
+      await this.runButton.click();
+    }
   }
 
   /**
@@ -189,9 +294,11 @@ export class PlaygroundPage {
    */
   async waitForExecution(timeout: number = 30000) {
     // Wait for running indicator to appear
-    await this.runningIndicator.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
+    await this.runningIndicator
+      .waitFor({ state: "visible", timeout: 5000 })
+      .catch(() => {});
     // Wait for running indicator to disappear (execution complete)
-    await this.runningIndicator.waitFor({ state: 'hidden', timeout });
+    await this.runningIndicator.waitFor({ state: "hidden", timeout });
   }
 
   /**
@@ -205,8 +312,8 @@ export class PlaygroundPage {
    * Check if on cooldown
    */
   async isOnCooldown(): Promise<boolean> {
-    const buttonText = await this.runButton.textContent().catch(() => '');
-    return /^\d+s$/.test(buttonText?.trim() || '');
+    const buttonText = await this.runButton.textContent().catch(() => "");
+    return /^\d+s$/.test(buttonText?.trim() || "");
   }
 
   /**
@@ -214,11 +321,14 @@ export class PlaygroundPage {
    */
   async getOutput(): Promise<string | null> {
     // Try to get text from pre element (actual output)
-    const preElements = this.page.locator('pre');
+    const preElements = this.page.locator("pre");
     const count = await preElements.count();
 
     for (let i = 0; i < count; i++) {
-      const text = await preElements.nth(i).textContent().catch(() => null);
+      const text = await preElements
+        .nth(i)
+        .textContent()
+        .catch(() => null);
       if (text && text.trim().length > 0) {
         return text;
       }
@@ -231,7 +341,9 @@ export class PlaygroundPage {
    * Check if output contains error
    */
   async hasError(): Promise<boolean> {
-    const errorPre = this.page.locator('pre[class*="red"]').or(this.page.locator('[class*="red-"]').locator('pre'));
+    const errorPre = this.page
+      .locator('pre[class*="red"]')
+      .or(this.page.locator('[class*="red-"]').locator("pre"));
     return await errorPre.isVisible().catch(() => false);
   }
 
@@ -239,8 +351,8 @@ export class PlaygroundPage {
    * Check if judge is ready
    */
   async isJudgeReady(): Promise<boolean> {
-    const statusText = await this.statusIndicator.textContent().catch(() => '');
-    return statusText === 'Ready';
+    const statusText = await this.statusIndicator.textContent().catch(() => "");
+    return statusText === "Ready";
   }
 
   /**

@@ -102,7 +102,9 @@ services:
       - MAX_FILE_SIZE=2048
       - NUMBER_OF_RUNS=1
       - ENABLE_NETWORK=false
-      # Disable cgroups if not available (Docker Desktop workaround)
+      # SECURITY NOTE: Memory limit is disabled for Docker Desktop (macOS/Windows)
+      # because cgroups don't work properly. In production (Coolify), memory limits ARE enforced.
+      # See docker-compose.coolify.yml for production settings.
       - DISABLE_MEMORY_LIMIT=true
     depends_on:
       judge0-db:
@@ -147,6 +149,7 @@ services:
       - WALL_TIME_LIMIT=20
       - MEMORY_LIMIT=512000
       - NUMBER_OF_RUNS=1
+      # SECURITY NOTE: See comment above in judge0-server section
       - DISABLE_MEMORY_LIMIT=true
     depends_on:
       judge0-server:

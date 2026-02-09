@@ -1,37 +1,35 @@
-import React, { useState, useEffect, useContext, useCallback, useRef } from 'react';
-import Editor, { loader, Monaco } from '@monaco-editor/react';
-import type { editor } from 'monaco-editor';
-import { playgroundService, ExecutionResult, isRateLimitError, extractRateLimitInfo, RateLimitInfo } from '../api/playgroundService';
-import { AuthContext, ThemeContext } from '@/components/Layout';
-import { IconPlay, IconRefresh, IconChevronDown } from '@/components/Icons';
-import { TimerStopwatch } from '../../tasks/ui/components/TimerStopwatch';
-import { EditorSettingsDropdown } from '../../tasks/ui/components/EditorSettingsDropdown';
-import { useUITranslation } from '@/contexts/LanguageContext';
-import { createLogger } from '@/lib/logger';
-import { ApiError } from '@/lib/api';
+import React, {
+  useState,
+  useEffect,
+  useContext,
+  useCallback,
+  useRef,
+} from "react";
+import Editor, { loader, Monaco } from "@monaco-editor/react";
+import type { editor } from "monaco-editor";
+import {
+  playgroundService,
+  ExecutionResult,
+  extractRateLimitInfo,
+  RateLimitInfo,
+} from "../api/playgroundService";
+import { AuthContext, ThemeContext } from "@/components/Layout";
+import { IconPlay, IconRefresh, IconChevronDown } from "@/components/Icons";
+import { TimerStopwatch } from "../../tasks/ui/components/TimerStopwatch";
+import { EditorSettingsDropdown } from "../../tasks/ui/components/EditorSettingsDropdown";
+import { ThemeSelector } from "./components/ThemeSelector";
+import { SnippetsLibrary } from "./components/SnippetsLibrary";
+import { usePlaygroundStorage } from "../hooks/usePlaygroundStorage";
+import { useEditorThemes, defineAllThemes } from "../hooks/useEditorThemes";
+import { useUITranslation } from "@/contexts/LanguageContext";
+import { createLogger } from "@/lib/logger";
+import { ApiError } from "@/lib/api";
 
-const log = createLogger('Playground');
+const log = createLogger("Playground");
 
 loader.config({
-  paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.46.0/min/vs' },
+  paths: { vs: "https://cdn.jsdelivr.net/npm/monaco-editor@0.46.0/min/vs" },
 });
-
-// Define custom dark theme matching the task details editor
-const defineCustomTheme = (monaco: Monaco) => {
-  monaco.editor.defineTheme('practix-dark', {
-    base: 'vs-dark',
-    inherit: true,
-    rules: [],
-    colors: {
-      'editor.background': '#0d1117',
-      'editor.lineHighlightBackground': '#161b22',
-      'editorLineNumber.foreground': '#484f58',
-      'editorLineNumber.activeForeground': '#8b949e',
-      'editor.selectionBackground': '#264f78',
-      'editorCursor.foreground': '#c9d1d9',
-    }
-  });
-};
 
 const CODE_TEMPLATES: Record<string, string> = {
   go: `package main
@@ -62,59 +60,82 @@ func main() {
 };
 
 const LANGUAGE_COLORS: Record<string, string> = {
-  go: 'text-cyan-400',
-  java: 'text-orange-400',
-  python: 'text-green-400',
-  typescript: 'text-blue-400',
+  go: "text-cyan-400",
+  java: "text-orange-400",
+  python: "text-green-400",
+  typescript: "text-blue-400",
 };
 
 const LANGUAGE_DISPLAY: Record<string, string> = {
-  go: 'Go',
-  java: 'Java',
-  python: 'Python',
-  typescript: 'TypeScript',
+  go: "Go",
+  java: "Java",
+  python: "Python",
+  typescript: "TypeScript",
 };
 
 const FILE_EXTENSIONS: Record<string, string> = {
-  go: '.go',
-  java: '.java',
-  python: '.py',
-  typescript: '.ts',
+  go: ".go",
+  java: ".java",
+  python: ".py",
+  typescript: ".ts",
 };
 
 const PlaygroundPage = () => {
   const { user } = useContext(AuthContext);
   const { isDark } = useContext(ThemeContext);
   const { tUI } = useUITranslation();
-  const [language, setLanguage] = useState('go');
+  const [language, setLanguage] = useState("go");
   const [code, setCode] = useState(CODE_TEMPLATES.go);
   const [output, setOutput] = useState<ExecutionResult | null>(null);
   const [isRunning, setIsRunning] = useState(false);
   const [showLangDropdown, setShowLangDropdown] = useState(false);
   const [judgeAvailable, setJudgeAvailable] = useState(true);
   const [showSavePopup, setShowSavePopup] = useState(false);
+  const [showRestorePrompt, setShowRestorePrompt] = useState(false);
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
+
+  // Custom hooks
+  const { savedState, saveState, lastSavedAt } = usePlaygroundStorage();
+  const { currentTheme, setTheme } = useEditorThemes(isDark);
 
   // Rate limiting state
   const [cooldownSeconds, setCooldownSeconds] = useState(0);
-  const [rateLimitInfo, setRateLimitInfo] = useState<RateLimitInfo | null>(null);
+  const [rateLimitInfo, setRateLimitInfo] = useState<RateLimitInfo | null>(
+    null,
+  );
   const cooldownIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Check for saved state on mount
   useEffect(() => {
-    playgroundService.getJudgeStatus()
+    if (savedState && savedState.code !== CODE_TEMPLATES[savedState.language]) {
+      setShowRestorePrompt(true);
+    }
+  }, [savedState]);
+
+  // Auto-save code changes
+  useEffect(() => {
+    if (code && language) {
+      saveState(code, language);
+    }
+  }, [code, language, saveState]);
+
+  useEffect(() => {
+    playgroundService
+      .getJudgeStatus()
       .then((status) => {
         setJudgeAvailable(status.available);
       })
       .catch((error) => {
-        log.error('Failed to get judge status', error);
+        log.error("Failed to get judge status", error);
         setJudgeAvailable(false);
       });
 
     // Fetch rate limit info
-    playgroundService.getRateLimitInfo()
+    playgroundService
+      .getRateLimitInfo()
       .then(setRateLimitInfo)
       .catch((error) => {
-        log.error('Failed to get rate limit info', error);
+        log.error("Failed to get rate limit info", error);
       });
   }, []);
 
@@ -150,31 +171,61 @@ const PlaygroundPage = () => {
   }, []);
 
   // Handle editor mount to add Cmd+S / Ctrl+S keybinding
-  const handleEditorMount = useCallback((editorInstance: editor.IStandaloneCodeEditor, monaco: Monaco) => {
-    editorRef.current = editorInstance;
+  const handleEditorMount = useCallback(
+    (editorInstance: editor.IStandaloneCodeEditor, monaco: Monaco) => {
+      editorRef.current = editorInstance;
 
-    // Override Cmd+S / Ctrl+S to show popup instead of browser save
-    editorInstance.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
-      setShowSavePopup(true);
-    });
-  }, []);
+      // Override Cmd+S / Ctrl+S to show popup instead of browser save
+      editorInstance.addCommand(
+        monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS,
+        () => {
+          setShowSavePopup(true);
+        },
+      );
+    },
+    [],
+  );
 
   // Also handle Cmd+S / Ctrl+S at document level to prevent browser save dialog
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+      if ((e.metaKey || e.ctrlKey) && e.key === "s") {
         e.preventDefault();
         setShowSavePopup(true);
       }
     };
 
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
   }, []);
+
+  // Restore saved code
+  const handleRestoreCode = useCallback(() => {
+    if (savedState) {
+      setLanguage(savedState.language);
+      setCode(savedState.code);
+      setShowRestorePrompt(false);
+    }
+  }, [savedState]);
+
+  // Discard saved code and start fresh
+  const handleDiscardCode = useCallback(() => {
+    setShowRestorePrompt(false);
+  }, []);
+
+  // Insert snippet
+  const handleInsertSnippet = useCallback(
+    (snippetCode: string, snippetLanguage: string) => {
+      setLanguage(snippetLanguage);
+      setCode(snippetCode);
+      setOutput(null);
+    },
+    [],
+  );
 
   const handleLanguageChange = useCallback((newLang: string) => {
     setLanguage(newLang);
-    setCode(CODE_TEMPLATES[newLang] || '// Start coding...');
+    setCode(CODE_TEMPLATES[newLang] || "// Start coding...");
     setOutput(null);
     setShowLangDropdown(false);
   }, []);
@@ -203,27 +254,28 @@ const PlaygroundPage = () => {
         startCooldown(rateLimitData.retryAfter);
 
         setOutput({
-          status: 'error',
+          status: "error",
           statusId: 429,
-          description: 'Rate Limited',
-          stdout: '',
-          stderr: '',
-          compileOutput: '',
-          time: '0',
+          description: "Rate Limited",
+          stdout: "",
+          stderr: "",
+          compileOutput: "",
+          time: "0",
           memory: 0,
           exitCode: null,
           message: rateLimitData.message,
         });
       } else {
-        const errorMessage = error instanceof Error ? error.message : 'Failed to execute code';
+        const errorMessage =
+          error instanceof Error ? error.message : "Failed to execute code";
         setOutput({
-          status: 'error',
+          status: "error",
           statusId: 13,
-          description: 'Error',
-          stdout: '',
+          description: "Error",
+          stdout: "",
           stderr: errorMessage,
-          compileOutput: '',
-          time: '0',
+          compileOutput: "",
+          time: "0",
           memory: 0,
           exitCode: null,
           message: errorMessage,
@@ -235,24 +287,27 @@ const PlaygroundPage = () => {
   };
 
   const handleReset = () => {
-    setCode(CODE_TEMPLATES[language] || '');
+    setCode(CODE_TEMPLATES[language] || "");
     setOutput(null);
   };
 
   const editorOptions = {
     minimap: { enabled: user?.preferences?.editorMinimap ?? false },
     fontSize: user?.preferences?.editorFontSize || 14,
-    lineNumbers: (user?.preferences?.editorLineNumbers !== false ? 'on' : 'off') as 'on' | 'off',
+    lineNumbers: (user?.preferences?.editorLineNumbers !== false
+      ? "on"
+      : "off") as "on" | "off",
     scrollBeyondLastLine: false,
     automaticLayout: true,
     padding: { top: 16, bottom: 16 },
-    fontFamily: user?.preferences?.editorFontFamily || "'JetBrains Mono', 'Courier New', monospace",
+    fontFamily:
+      user?.preferences?.editorFontFamily ||
+      "'JetBrains Mono', 'Courier New', monospace",
     lineHeight: 24,
-    renderLineHighlight: 'all' as const,
+    renderLineHighlight: "all" as const,
     hideCursorInOverviewRuler: true,
     overviewRulerBorder: false,
   };
-
 
   return (
     <div className="h-[calc(100vh-7rem)] flex bg-white dark:bg-[#0d1117] rounded-xl overflow-hidden shadow-sm dark:shadow-none border border-gray-200 dark:border-gray-800">
@@ -267,10 +322,13 @@ const PlaygroundPage = () => {
               className={`px-4 py-2.5 text-xs flex items-center gap-2 border-t-2 transition-colors bg-white dark:bg-[#0d1117] text-gray-900 dark:text-white border-brand-500`}
             >
               <span className={LANGUAGE_COLORS[language]}>
-                {LANGUAGE_DISPLAY[language]?.charAt(0) || language.charAt(0).toUpperCase()}
+                {LANGUAGE_DISPLAY[language]?.charAt(0) ||
+                  language.charAt(0).toUpperCase()}
               </span>
               main{FILE_EXTENSIONS[language]}
-              <IconChevronDown className={`w-3 h-3 text-gray-400 transition-transform ${showLangDropdown ? 'rotate-180' : ''}`} />
+              <IconChevronDown
+                className={`w-3 h-3 text-gray-400 transition-transform ${showLangDropdown ? "rotate-180" : ""}`}
+              />
             </button>
 
             {showLangDropdown && (
@@ -280,13 +338,16 @@ const PlaygroundPage = () => {
                     key={lang}
                     onClick={() => handleLanguageChange(lang)}
                     className={`w-full text-left px-4 py-2 text-xs hover:bg-gray-100 dark:hover:bg-[#21262d] transition-colors flex items-center gap-2 ${
-                      language === lang ? 'bg-gray-100 dark:bg-[#21262d]' : ''
+                      language === lang ? "bg-gray-100 dark:bg-[#21262d]" : ""
                     }`}
                   >
                     <span className={LANGUAGE_COLORS[lang]}>
-                      {LANGUAGE_DISPLAY[lang]?.charAt(0) || lang.charAt(0).toUpperCase()}
+                      {LANGUAGE_DISPLAY[lang]?.charAt(0) ||
+                        lang.charAt(0).toUpperCase()}
                     </span>
-                    <span className="text-gray-700 dark:text-gray-300">{LANGUAGE_DISPLAY[lang]}</span>
+                    <span className="text-gray-700 dark:text-gray-300">
+                      {LANGUAGE_DISPLAY[lang]}
+                    </span>
                   </button>
                 ))}
               </div>
@@ -296,13 +357,22 @@ const PlaygroundPage = () => {
           {/* Status indicator */}
           <div className="flex items-center gap-3 px-3 text-xs text-gray-400">
             <div className="flex items-center gap-1.5">
-              <div className={`w-1.5 h-1.5 rounded-full ${judgeAvailable ? 'bg-green-500' : 'bg-yellow-500'}`} />
-              {judgeAvailable ? 'Ready' : 'Mock'}
+              <div
+                className={`w-1.5 h-1.5 rounded-full ${judgeAvailable ? "bg-green-500" : "bg-yellow-500"}`}
+              />
+              {judgeAvailable ? "Ready" : "Mock"}
             </div>
 
             {/* Rate limit indicator */}
             {rateLimitInfo && (
-              <div className="flex items-center gap-1.5" title={rateLimitInfo.isPremium ? 'Premium: 5s cooldown' : 'Free: 10s cooldown'}>
+              <div
+                className="flex items-center gap-1.5"
+                title={
+                  rateLimitInfo.isPremium
+                    ? "Premium: 5s cooldown"
+                    : "Free: 10s cooldown"
+                }
+              >
                 {rateLimitInfo.isPremium ? (
                   <span className="px-1.5 py-0.5 bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-500 rounded text-[10px] font-medium">
                     Premium
@@ -321,6 +391,14 @@ const PlaygroundPage = () => {
 
           {/* Tools */}
           <div className="flex items-center gap-1 px-2">
+            <SnippetsLibrary
+              currentLanguage={language}
+              onInsertSnippet={handleInsertSnippet}
+            />
+            <ThemeSelector
+              currentTheme={currentTheme}
+              onThemeChange={setTheme}
+            />
             <TimerStopwatch />
             <EditorSettingsDropdown />
           </div>
@@ -330,12 +408,12 @@ const PlaygroundPage = () => {
         <div className="flex-1 relative bg-gray-50 dark:bg-[#0d1117]">
           <Editor
             height="100%"
-            language={language === 'cpp' ? 'cpp' : language}
-            theme={isDark ? 'practix-dark' : 'light'}
-            beforeMount={defineCustomTheme}
+            language={language === "cpp" ? "cpp" : language}
+            theme={currentTheme}
+            beforeMount={defineAllThemes}
             onMount={handleEditorMount}
             value={code}
-            onChange={(value) => setCode(value || '')}
+            onChange={(value) => setCode(value || "")}
             options={editorOptions}
             loading={
               <div className="flex h-full items-center justify-center text-gray-500 text-sm bg-gray-50 dark:bg-[#0d1117]">
@@ -351,9 +429,13 @@ const PlaygroundPage = () => {
         {/* Output Header */}
         <div className="flex h-[41px] items-center justify-between px-4 bg-gray-50 dark:bg-[#161b22] border-b border-gray-200 dark:border-[#21262d]">
           <div className="flex items-center gap-3">
-            <span className="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide">Output</span>
-            {output && output.time !== '0' && (
-              <span className="text-xs text-gray-400 font-mono">{output.time}s</span>
+            <span className="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide">
+              Output
+            </span>
+            {output && output.time !== "0" && (
+              <span className="text-xs text-gray-400 font-mono">
+                {output.time}s
+              </span>
             )}
           </div>
 
@@ -371,22 +453,42 @@ const PlaygroundPage = () => {
               disabled={isRunning || cooldownSeconds > 0}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md font-semibold text-xs transition-all ${
                 isRunning || cooldownSeconds > 0
-                  ? 'bg-gray-200 dark:bg-[#21262d] text-gray-400 cursor-not-allowed'
-                  : 'bg-green-500 hover:bg-green-600 text-white'
+                  ? "bg-gray-200 dark:bg-[#21262d] text-gray-400 cursor-not-allowed"
+                  : "bg-green-500 hover:bg-green-600 text-white"
               }`}
-              title={cooldownSeconds > 0 ? `Wait ${cooldownSeconds}s` : undefined}
+              title={
+                cooldownSeconds > 0 ? `Wait ${cooldownSeconds}s` : undefined
+              }
             >
               {isRunning ? (
                 <>
                   <svg className="w-3 h-3 animate-spin" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                      fill="none"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                    />
                   </svg>
                   <span>Running</span>
                 </>
               ) : cooldownSeconds > 0 ? (
                 <>
-                  <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <svg
+                    className="w-3 h-3"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
                     <circle cx="12" cy="12" r="10" />
                     <polyline points="12 6 12 12 16 14" />
                   </svg>
@@ -414,8 +516,20 @@ const PlaygroundPage = () => {
             <div className="h-full flex items-center justify-center">
               <div className="flex items-center gap-2 text-gray-400 text-sm">
                 <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                    fill="none"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                  />
                 </svg>
                 <span>Executing...</span>
               </div>
@@ -453,11 +567,13 @@ const PlaygroundPage = () => {
               )}
 
               {/* No output */}
-              {!output.stdout && !output.stderr && !output.compileOutput && !output.message && output.status === 'passed' && (
-                <div className="text-gray-400 text-sm">
-                  No output
-                </div>
-              )}
+              {!output.stdout &&
+                !output.stderr &&
+                !output.compileOutput &&
+                !output.message &&
+                output.status === "passed" && (
+                  <div className="text-gray-400 text-sm">No output</div>
+                )}
             </div>
           )}
         </div>
@@ -470,19 +586,72 @@ const PlaygroundPage = () => {
             <div className="text-center">
               <div className="text-4xl mb-4">☁️</div>
               <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
-                {tUI('editor.autoSaveTitle')}
+                {tUI("editor.autoSaveTitle")}
               </h3>
               <p className="text-gray-600 dark:text-gray-400 text-sm mb-5">
-                {tUI('editor.autoSaveMessage')}
+                {tUI("editor.autoSaveMessage")}
               </p>
               <button
                 onClick={() => setShowSavePopup(false)}
                 className="w-full px-4 py-2.5 bg-gradient-to-r from-brand-600 to-purple-600 hover:from-brand-500 hover:to-purple-500 text-white font-bold rounded-xl shadow-lg shadow-brand-500/25 transition-all"
               >
-                {tUI('editor.gotIt')}
+                {tUI("editor.gotIt")}
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Restore code prompt */}
+      {showRestorePrompt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-[#161b22] rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 p-6 max-w-sm mx-4 transform animate-in zoom-in-95 duration-200">
+            <div className="text-center">
+              <div className="text-4xl mb-4">💾</div>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+                {tUI("playground.restored")}
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400 text-sm mb-5">
+                {savedState && (
+                  <>
+                    <span className="font-medium text-gray-900 dark:text-white">
+                      {LANGUAGE_DISPLAY[savedState.language]}
+                    </span>
+                    {" • "}
+                    {new Date(savedState.savedAt).toLocaleString()}
+                  </>
+                )}
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={handleDiscardCode}
+                  className="flex-1 px-4 py-2.5 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-medium rounded-xl transition-all"
+                >
+                  {tUI("playground.discardCode")}
+                </button>
+                <button
+                  onClick={handleRestoreCode}
+                  className="flex-1 px-4 py-2.5 bg-gradient-to-r from-brand-600 to-purple-600 hover:from-brand-500 hover:to-purple-500 text-white font-bold rounded-xl shadow-lg shadow-brand-500/25 transition-all"
+                >
+                  {tUI("playground.restoreCode")}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Auto-save indicator */}
+      {lastSavedAt && !showRestorePrompt && (
+        <div className="fixed bottom-4 right-4 px-3 py-1.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-medium rounded-full flex items-center gap-1.5 animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+            <path
+              fillRule="evenodd"
+              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+              clipRule="evenodd"
+            />
+          </svg>
+          {tUI("playground.autoSaved")}
         </div>
       )}
     </div>
