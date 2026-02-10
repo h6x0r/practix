@@ -24,20 +24,13 @@ export class ExportController {
    */
   @Get("users")
   async exportUsers(
+    @Res() res: Response,
     @Query("format") format: string = "csv",
     @Query("startDate") startDate?: string,
     @Query("endDate") endDate?: string,
     @Query("limit") limit?: string,
-    @Res() res: Response,
   ) {
-    return this.handleExport(
-      res,
-      "users",
-      format,
-      startDate,
-      endDate,
-      limit,
-    );
+    return this.handleExport(res, "users", format, startDate, endDate, limit);
   }
 
   /**
@@ -46,11 +39,11 @@ export class ExportController {
    */
   @Get("payments")
   async exportPayments(
+    @Res() res: Response,
     @Query("format") format: string = "csv",
     @Query("startDate") startDate?: string,
     @Query("endDate") endDate?: string,
     @Query("limit") limit?: string,
-    @Res() res: Response,
   ) {
     return this.handleExport(
       res,
@@ -68,11 +61,11 @@ export class ExportController {
    */
   @Get("subscriptions")
   async exportSubscriptions(
+    @Res() res: Response,
     @Query("format") format: string = "csv",
     @Query("startDate") startDate?: string,
     @Query("endDate") endDate?: string,
     @Query("limit") limit?: string,
-    @Res() res: Response,
   ) {
     return this.handleExport(
       res,
@@ -90,11 +83,11 @@ export class ExportController {
    */
   @Get("audit-logs")
   async exportAuditLogs(
+    @Res() res: Response,
     @Query("format") format: string = "csv",
     @Query("startDate") startDate?: string,
     @Query("endDate") endDate?: string,
     @Query("limit") limit?: string,
-    @Res() res: Response,
   ) {
     return this.handleExport(
       res,
