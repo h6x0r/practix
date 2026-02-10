@@ -12,7 +12,7 @@ ENV VITE_APP_ENV=${VITE_APP_ENV}
 
 # Install dependencies
 COPY package*.json ./
-RUN npm ci
+RUN npm ci --legacy-peer-deps
 
 # Copy source files
 COPY tsconfig.json vite.config.ts index.html ./
