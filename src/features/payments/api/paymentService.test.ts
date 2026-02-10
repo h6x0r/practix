@@ -1,37 +1,37 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { paymentService } from './paymentService';
+import { describe, it, expect, beforeEach, vi } from "vitest";
+import { paymentService } from "./paymentService";
 
-vi.mock('@/lib/api', () => ({
+vi.mock("@/lib/api", () => ({
   api: {
     get: vi.fn(),
     post: vi.fn(),
   },
 }));
 
-import { api } from '@/lib/api';
+import { api } from "@/lib/api";
 
-describe('paymentService', () => {
+describe("paymentService", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  describe('getProviders', () => {
-    it('should fetch available payment providers', async () => {
+  describe("getProviders", () => {
+    it("should fetch available payment providers", async () => {
       const mockProviders = [
-        { id: 'payme', name: 'Payme', configured: true },
-        { id: 'click', name: 'Click', configured: true },
+        { id: "payme", name: "Payme", configured: true },
+        { id: "click", name: "Click", configured: true },
       ];
 
       vi.mocked(api.get).mockResolvedValueOnce(mockProviders);
 
       const result = await paymentService.getProviders();
 
-      expect(api.get).toHaveBeenCalledWith('/payments/providers');
+      expect(api.get).toHaveBeenCalledWith("/payments/providers");
       expect(result).toHaveLength(2);
-      expect(result[0].id).toBe('payme');
+      expect(result[0].id).toBe("payme");
     });
 
-    it('should handle no configured providers', async () => {
+    it("should handle no configured providers", async () => {
       vi.mocked(api.get).mockResolvedValueOnce([]);
 
       const result = await paymentService.getProviders();
@@ -39,29 +39,33 @@ describe('paymentService', () => {
       expect(result).toHaveLength(0);
     });
 
-    it('should throw on API error', async () => {
-      vi.mocked(api.get).mockRejectedValueOnce(new Error('Service unavailable'));
+    it("should throw on API error", async () => {
+      vi.mocked(api.get).mockRejectedValueOnce(
+        new Error("Service unavailable"),
+      );
 
-      await expect(paymentService.getProviders()).rejects.toThrow('Service unavailable');
+      await expect(paymentService.getProviders()).rejects.toThrow(
+        "Service unavailable",
+      );
     });
   });
 
-  describe('getPricing', () => {
-    it('should fetch pricing for purchases', async () => {
+  describe("getPricing", () => {
+    it("should fetch pricing for purchases", async () => {
       const mockPricing = [
         {
-          type: 'roadmap_generation',
+          type: "roadmap_generation",
           price: 50000,
-          name: 'Roadmap Generation',
-          nameRu: 'Генерация роадмапа',
-          priceFormatted: '50,000 UZS',
+          name: "Roadmap Generation",
+          nameRu: "Генерация роадмапа",
+          priceFormatted: "50,000 UZS",
         },
         {
-          type: 'ai_credits',
+          type: "ai_credits",
           price: 25000,
-          name: 'AI Credits Pack',
-          nameRu: 'Пакет AI кредитов',
-          priceFormatted: '25,000 UZS',
+          name: "AI Credits Pack",
+          nameRu: "Пакет AI кредитов",
+          priceFormatted: "25,000 UZS",
         },
       ];
 
@@ -69,19 +73,21 @@ describe('paymentService', () => {
 
       const result = await paymentService.getPricing();
 
-      expect(api.get).toHaveBeenCalledWith('/payments/pricing');
+      expect(api.get).toHaveBeenCalledWith("/payments/pricing");
       expect(result).toHaveLength(2);
     });
 
-    it('should throw on API error', async () => {
-      vi.mocked(api.get).mockRejectedValueOnce(new Error('Network error'));
+    it("should throw on API error", async () => {
+      vi.mocked(api.get).mockRejectedValueOnce(new Error("Network error"));
 
-      await expect(paymentService.getPricing()).rejects.toThrow('Network error');
+      await expect(paymentService.getPricing()).rejects.toThrow(
+        "Network error",
+      );
     });
   });
 
-  describe('getRoadmapCredits', () => {
-    it('should fetch roadmap credits', async () => {
+  describe("getRoadmapCredits", () => {
+    it("should fetch roadmap credits", async () => {
       const mockCredits = {
         used: 2,
         available: 3,
@@ -92,11 +98,11 @@ describe('paymentService', () => {
 
       const result = await paymentService.getRoadmapCredits();
 
-      expect(api.get).toHaveBeenCalledWith('/payments/roadmap-credits');
+      expect(api.get).toHaveBeenCalledWith("/payments/roadmap-credits");
       expect(result.canGenerate).toBe(true);
     });
 
-    it('should handle no credits available', async () => {
+    it("should handle no credits available", async () => {
       const mockCredits = {
         used: 5,
         available: 0,
@@ -110,35 +116,37 @@ describe('paymentService', () => {
       expect(result.canGenerate).toBe(false);
     });
 
-    it('should throw on API error', async () => {
-      vi.mocked(api.get).mockRejectedValueOnce(new Error('Unauthorized'));
+    it("should throw on API error", async () => {
+      vi.mocked(api.get).mockRejectedValueOnce(new Error("Unauthorized"));
 
-      await expect(paymentService.getRoadmapCredits()).rejects.toThrow('Unauthorized');
+      await expect(paymentService.getRoadmapCredits()).rejects.toThrow(
+        "Unauthorized",
+      );
     });
   });
 
-  describe('getPaymentHistory', () => {
-    it('should fetch payment history', async () => {
+  describe("getPaymentHistory", () => {
+    it("should fetch payment history", async () => {
       const mockHistory = [
         {
-          id: 'payment-1',
-          type: 'subscription' as const,
-          description: 'Global Premium Monthly',
+          id: "payment-1",
+          type: "subscription" as const,
+          description: "Global Premium Monthly",
           amount: 100000,
-          currency: 'UZS',
-          status: 'completed',
-          provider: 'payme',
-          createdAt: '2025-01-15T10:00:00Z',
+          currency: "UZS",
+          status: "completed",
+          provider: "payme",
+          createdAt: "2025-01-15T10:00:00Z",
         },
         {
-          id: 'payment-2',
-          type: 'purchase' as const,
-          description: 'Roadmap Generation',
+          id: "payment-2",
+          type: "purchase" as const,
+          description: "Roadmap Generation",
           amount: 50000,
-          currency: 'UZS',
-          status: 'completed',
-          provider: 'click',
-          createdAt: '2025-01-10T15:30:00Z',
+          currency: "UZS",
+          status: "completed",
+          provider: "click",
+          createdAt: "2025-01-10T15:30:00Z",
         },
       ];
 
@@ -146,12 +154,12 @@ describe('paymentService', () => {
 
       const result = await paymentService.getPaymentHistory();
 
-      expect(api.get).toHaveBeenCalledWith('/payments/history');
+      expect(api.get).toHaveBeenCalledWith("/payments/history");
       expect(result).toHaveLength(2);
-      expect(result[0].type).toBe('subscription');
+      expect(result[0].type).toBe("subscription");
     });
 
-    it('should handle empty payment history', async () => {
+    it("should handle empty payment history", async () => {
       vi.mocked(api.get).mockResolvedValueOnce([]);
 
       const result = await paymentService.getPaymentHistory();
@@ -159,115 +167,245 @@ describe('paymentService', () => {
       expect(result).toHaveLength(0);
     });
 
-    it('should throw on API error', async () => {
-      vi.mocked(api.get).mockRejectedValueOnce(new Error('Forbidden'));
+    it("should throw on API error", async () => {
+      vi.mocked(api.get).mockRejectedValueOnce(new Error("Forbidden"));
 
-      await expect(paymentService.getPaymentHistory()).rejects.toThrow('Forbidden');
+      await expect(paymentService.getPaymentHistory()).rejects.toThrow(
+        "Forbidden",
+      );
     });
   });
 
-  describe('getPaymentStatus', () => {
-    it('should fetch payment status', async () => {
+  describe("getPaymentStatus", () => {
+    it("should fetch payment status", async () => {
       const mockStatus = {
-        status: 'completed',
-        orderType: 'subscription' as const,
+        status: "completed",
+        orderType: "subscription" as const,
         amount: 100000,
       };
 
       vi.mocked(api.get).mockResolvedValueOnce(mockStatus);
 
-      const result = await paymentService.getPaymentStatus('order-123');
+      const result = await paymentService.getPaymentStatus("order-123");
 
-      expect(api.get).toHaveBeenCalledWith('/payments/status/order-123');
-      expect(result.status).toBe('completed');
+      expect(api.get).toHaveBeenCalledWith("/payments/status/order-123");
+      expect(result.status).toBe("completed");
     });
 
-    it('should handle pending status', async () => {
+    it("should handle pending status", async () => {
       const mockStatus = {
-        status: 'pending',
-        orderType: 'purchase' as const,
+        status: "pending",
+        orderType: "purchase" as const,
         amount: 50000,
       };
 
       vi.mocked(api.get).mockResolvedValueOnce(mockStatus);
 
-      const result = await paymentService.getPaymentStatus('order-456');
+      const result = await paymentService.getPaymentStatus("order-456");
 
-      expect(result.status).toBe('pending');
+      expect(result.status).toBe("pending");
     });
 
-    it('should throw on API error', async () => {
-      vi.mocked(api.get).mockRejectedValueOnce(new Error('Order not found'));
+    it("should throw on API error", async () => {
+      vi.mocked(api.get).mockRejectedValueOnce(new Error("Order not found"));
 
-      await expect(paymentService.getPaymentStatus('invalid')).rejects.toThrow('Order not found');
+      await expect(paymentService.getPaymentStatus("invalid")).rejects.toThrow(
+        "Order not found",
+      );
     });
   });
 
-  describe('createCheckout', () => {
-    it('should create subscription checkout', async () => {
+  describe("createCheckout", () => {
+    it("should create subscription checkout", async () => {
       const mockResponse = {
-        orderId: 'order-789',
-        paymentUrl: 'https://payme.uz/checkout/xyz',
+        orderId: "order-789",
+        paymentUrl: "https://payme.uz/checkout/xyz",
         amount: 100000,
-        currency: 'UZS',
-        provider: 'payme',
+        currency: "UZS",
+        provider: "payme",
       };
 
       vi.mocked(api.post).mockResolvedValueOnce(mockResponse);
 
       const result = await paymentService.createCheckout({
-        orderType: 'subscription',
-        planId: 'global-premium',
-        provider: 'payme',
-        returnUrl: 'https://practix.dev/payments/success',
+        orderType: "subscription",
+        planId: "global-premium",
+        provider: "payme",
+        returnUrl: "https://practix.dev/payments/success",
       });
 
-      expect(api.post).toHaveBeenCalledWith('/payments/checkout', {
-        orderType: 'subscription',
-        planId: 'global-premium',
-        provider: 'payme',
-        returnUrl: 'https://practix.dev/payments/success',
+      expect(api.post).toHaveBeenCalledWith("/payments/checkout", {
+        orderType: "subscription",
+        planId: "global-premium",
+        provider: "payme",
+        returnUrl: "https://practix.dev/payments/success",
       });
-      expect(result.paymentUrl).toContain('payme.uz');
+      expect(result.paymentUrl).toContain("payme.uz");
     });
 
-    it('should create purchase checkout', async () => {
+    it("should create purchase checkout", async () => {
       const mockResponse = {
-        orderId: 'order-abc',
-        paymentUrl: 'https://click.uz/checkout/abc',
+        orderId: "order-abc",
+        paymentUrl: "https://click.uz/checkout/abc",
         amount: 50000,
-        currency: 'UZS',
-        provider: 'click',
+        currency: "UZS",
+        provider: "click",
       };
 
       vi.mocked(api.post).mockResolvedValueOnce(mockResponse);
 
       const result = await paymentService.createCheckout({
-        orderType: 'purchase',
-        purchaseType: 'roadmap_generation',
+        orderType: "purchase",
+        purchaseType: "roadmap_generation",
         quantity: 1,
-        provider: 'click',
+        provider: "click",
       });
 
-      expect(api.post).toHaveBeenCalledWith('/payments/checkout', {
-        orderType: 'purchase',
-        purchaseType: 'roadmap_generation',
+      expect(api.post).toHaveBeenCalledWith("/payments/checkout", {
+        orderType: "purchase",
+        purchaseType: "roadmap_generation",
         quantity: 1,
-        provider: 'click',
+        provider: "click",
       });
-      expect(result.provider).toBe('click');
+      expect(result.provider).toBe("click");
     });
 
-    it('should throw on invalid request', async () => {
-      vi.mocked(api.post).mockRejectedValueOnce(new Error('Invalid plan'));
+    it("should throw on invalid request", async () => {
+      vi.mocked(api.post).mockRejectedValueOnce(new Error("Invalid plan"));
 
       await expect(
         paymentService.createCheckout({
-          orderType: 'subscription',
-          planId: 'invalid-plan',
-          provider: 'payme',
-        })
-      ).rejects.toThrow('Invalid plan');
+          orderType: "subscription",
+          planId: "invalid-plan",
+          provider: "payme",
+        }),
+      ).rejects.toThrow("Invalid plan");
+    });
+
+    it("should include promo code when provided", async () => {
+      const mockResponse = {
+        orderId: "order-promo",
+        paymentUrl: "https://payme.uz/checkout/promo",
+        amount: 80000,
+        currency: "UZS",
+        provider: "payme",
+      };
+
+      vi.mocked(api.post).mockResolvedValueOnce(mockResponse);
+
+      await paymentService.createCheckout({
+        orderType: "subscription",
+        planId: "global-premium",
+        provider: "payme",
+        promoCode: "SAVE20",
+      });
+
+      expect(api.post).toHaveBeenCalledWith("/payments/checkout", {
+        orderType: "subscription",
+        planId: "global-premium",
+        provider: "payme",
+        promoCode: "SAVE20",
+      });
+    });
+  });
+
+  describe("validatePromoCode", () => {
+    it("should validate a valid promo code", async () => {
+      const mockResponse = {
+        valid: true,
+        code: "SAVE20",
+        type: "PERCENTAGE",
+        discount: 20,
+        discountAmount: 2000000,
+      };
+
+      vi.mocked(api.post).mockResolvedValueOnce(mockResponse);
+
+      const result = await paymentService.validatePromoCode(
+        "SAVE20",
+        "subscription",
+        10000000,
+      );
+
+      expect(api.post).toHaveBeenCalledWith("/promocodes/validate", {
+        code: "SAVE20",
+        orderType: "subscription",
+        amount: 10000000,
+        courseId: undefined,
+      });
+      expect(result.valid).toBe(true);
+      expect(result.discount).toBe(20);
+      expect(result.discountAmount).toBe(2000000);
+    });
+
+    it("should handle invalid promo code", async () => {
+      const mockResponse = {
+        valid: false,
+        error: "Invalid promo code",
+      };
+
+      vi.mocked(api.post).mockResolvedValueOnce(mockResponse);
+
+      const result = await paymentService.validatePromoCode(
+        "INVALID",
+        "subscription",
+        10000000,
+      );
+
+      expect(result.valid).toBe(false);
+      expect(result.error).toBe("Invalid promo code");
+    });
+
+    it("should handle expired promo code", async () => {
+      const mockResponse = {
+        valid: false,
+        error: "Promo code has expired",
+      };
+
+      vi.mocked(api.post).mockResolvedValueOnce(mockResponse);
+
+      const result = await paymentService.validatePromoCode(
+        "EXPIRED",
+        "subscription",
+        10000000,
+      );
+
+      expect(result.valid).toBe(false);
+      expect(result.error).toBe("Promo code has expired");
+    });
+
+    it("should validate promo code for specific course", async () => {
+      const mockResponse = {
+        valid: true,
+        code: "JAVACOURSE",
+        type: "FIXED",
+        discount: 5000000,
+        discountAmount: 5000000,
+      };
+
+      vi.mocked(api.post).mockResolvedValueOnce(mockResponse);
+
+      await paymentService.validatePromoCode(
+        "JAVACOURSE",
+        "purchase",
+        15000000,
+        "course-java-id",
+      );
+
+      expect(api.post).toHaveBeenCalledWith("/promocodes/validate", {
+        code: "JAVACOURSE",
+        orderType: "purchase",
+        amount: 15000000,
+        courseId: "course-java-id",
+      });
+    });
+
+    it("should throw on API error", async () => {
+      vi.mocked(api.post).mockRejectedValueOnce(new Error("Network error"));
+
+      await expect(
+        paymentService.validatePromoCode("CODE", "subscription", 10000000),
+      ).rejects.toThrow("Network error");
     });
   });
 });
