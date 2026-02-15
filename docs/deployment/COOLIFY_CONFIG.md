@@ -15,7 +15,7 @@
 ### Frontend
 | Parameter | Value |
 |-----------|-------|
-| **Container** | `nwk0wwo0gw0g0oso0g04gwwc-100418250453` |
+| **Container** | `nwk0wwo0gw0g0oso0g04gwwc-131935658892` |
 | **URL** | https://nwk0wwo0gw0g0oso0g04gwwc.5.189.182.153.sslip.io |
 | **Internal Port** | 80 |
 | **VITE_API_URL** | https://wsggcg0s80cccw044s4k884c.5.189.182.153.sslip.io |
@@ -23,12 +23,12 @@
 ### Backend
 | Parameter | Value |
 |-----------|-------|
-| **Container** | `wsggcg0s80cccw044s4k884c-100425270004` |
+| **Container** | `wsggcg0s80cccw044s4k884c-132821394360` |
 | **URL** | https://wsggcg0s80cccw044s4k884c.5.189.182.153.sslip.io |
 | **Internal Port** | 8080 |
 | **Database** | `postgresql://kodla:KodlaDB2026Secure@oo8ss0ockw04kcs0sswok8kw:5432/kodla` |
 | **Redis** | `redis://default:KodlaRedis2026Secure@vo04w88gkkkw4w8w88skcw40:6379/0` |
-| **Judge0** | `http://judge0-judge0-server-1:2358` |
+| **Judge0** | `http://practix_judge0:2358` |
 
 ### Database (PostgreSQL)
 | Parameter | Value |
@@ -49,12 +49,13 @@
 ### Judge0 (Code Execution)
 | Parameter | Value |
 |-----------|-------|
-| **Server Container** | `judge0-judge0-server-1` |
-| **Workers Container** | `judge0-judge0-workers-1` |
-| **DB Container** | `judge0-judge0-db-1` |
-| **Redis Container** | `judge0-judge0-redis-1` |
+| **Server Container** | `practix_judge0` |
+| **Workers Container** | `practix_judge0_workers` |
+| **DB Container** | `practix_judge0_db` |
+| **Redis Container** | `practix_judge0_redis` |
+| **Network** | `kodla-starter_default` |
 | **External Port** | 2358 |
-| **Internal URL** | `http://judge0-judge0-server-1:2358` |
+| **Internal URL** | `http://practix_judge0:2358` |
 
 ---
 
@@ -77,17 +78,17 @@ ssh root@5.189.182.153
 # Check all containers
 docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 
-# Check Practix backend logs
-docker logs wsggcg0s80cccw044s4k884c-100425270004 --tail 100 -f
+# Check Practix backend logs (container name changes on redeploy)
+docker logs $(docker ps --format '{{.Names}}' | grep wsgg) --tail 100 -f
 
 # Check Practix frontend logs
-docker logs nwk0wwo0gw0g0oso0g04gwwc-100418250453 --tail 100 -f
+docker logs $(docker ps --format '{{.Names}}' | grep nwk0) --tail 100 -f
 
 # Check Judge0 logs
-docker logs judge0-judge0-server-1 --tail 100 -f
+docker logs practix_judge0 --tail 100 -f
 
 # Check Judge0 workers
-docker logs judge0-judge0-workers-1 --tail 100 -f
+docker logs practix_judge0_workers --tail 100 -f
 
 # Test Judge0 health
 curl http://localhost:2358/languages
@@ -96,10 +97,10 @@ curl http://localhost:2358/languages
 curl https://wsggcg0s80cccw044s4k884c.5.189.182.153.sslip.io/health
 
 # Restart Practix backend
-docker restart wsggcg0s80cccw044s4k884c-100425270004
+docker restart $(docker ps --format '{{.Names}}' | grep wsgg)
 
 # Restart Practix frontend
-docker restart nwk0wwo0gw0g0oso0g04gwwc-100418250453
+docker restart $(docker ps --format '{{.Names}}' | grep nwk0)
 ```
 
 ---
@@ -124,32 +125,32 @@ npx playwright test e2e/tests/task-validation/
 
 ## Network Configuration
 
-**IMPORTANT:** Backend must be connected to `judge0_default` network to access Judge0!
+**IMPORTANT:** Backend must be connected to `kodla-starter_default` network to access Judge0!
 
 ```bash
-# Connect backend to Judge0 network (required after container restart)
-docker network connect judge0_default wsggcg0s80cccw044s4k884c-100425270004
+# Connect backend to Judge0 network (required after each redeploy!)
+docker network connect kodla-starter_default $(docker ps --format '{{.Names}}' | grep wsgg)
 
 # Verify connection
-docker exec wsggcg0s80cccw044s4k884c-100425270004 curl -s http://judge0-judge0-server-1:2358/languages | head -3
+docker exec $(docker ps --format '{{.Names}}' | grep wsgg) curl -s http://practix_judge0:2358/languages | head -3
 ```
 
 ### Networks
 | Network | Purpose |
 |---------|---------|
 | `coolify` | Coolify managed services (frontend, backend, db, redis) |
-| `judge0_default` | Judge0 services (server, workers, db, redis) |
+| `kodla-starter_default` | Judge0 services (server, workers, db, redis) |
 
 ---
 
 ## Notes
 
 - All Coolify services use `coolify` network
-- Judge0 uses separate `judge0_default` network
-- Backend must be manually connected to `judge0_default` after restart
+- Judge0 uses separate `kodla-starter_default` network
+- Backend must be manually connected to `kodla-starter_default` after each redeploy
 - sslip.io provides automatic SSL certificates via Let's Encrypt
 - Frontend uses VITE_API_URL env var set at build time in Coolify
 
 ---
 
-*Last updated: 2026-02-03*
+*Last updated: 2026-02-15*
