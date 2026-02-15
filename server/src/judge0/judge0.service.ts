@@ -232,6 +232,13 @@ export class Judge0Service implements OnModuleInit, OnModuleDestroy {
     const time = response.time || fallbackTime;
     const memory = response.memory || 0;
 
+    if (!status || typeof status.id !== "number") {
+      this.logger.error(
+        `Invalid Judge0 response: missing status field. Response: ${JSON.stringify(response).substring(0, 500)}`,
+      );
+      return this.errorResult("Invalid response from code execution service");
+    }
+
     if (status.id === STATUS.COMPILATION_ERROR) {
       return {
         status: "compileError",
