@@ -27,10 +27,9 @@ interface LanguageContextType {
 // Entities that have translations field
 interface TranslatableEntity {
   translations?: {
-    ru?: Record<string, unknown>;
-    uz?: Record<string, unknown>;
+    ru?: Record<string, string>;
+    uz?: Record<string, string>;
   } | null;
-  [key: string]: unknown;
 }
 
 // Return type preserves the entity but with translated string fields
@@ -46,8 +45,10 @@ function getTranslatedField<T>(
   field: string,
   language: Language,
 ): T {
+  const record = entity as Record<string, unknown>;
+
   if (language === "en") {
-    return entity[field] as T;
+    return record[field] as T;
   }
 
   const entityTranslations = entity.translations;
@@ -60,7 +61,7 @@ function getTranslatedField<T>(
   }
 
   // Fallback to English (default field value)
-  return entity[field] as T;
+  return record[field] as T;
 }
 
 // Fields that should be translated
@@ -96,7 +97,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       entity: T | null | undefined,
     ): TranslatedFields<T> => {
       if (!entity) {
-        return entity as TranslatedFields<T>;
+        return entity as unknown as TranslatedFields<T>;
       }
 
       // If language is English, return entity as-is (English is default)

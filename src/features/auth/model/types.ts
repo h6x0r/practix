@@ -1,9 +1,10 @@
 export interface UserPreferences {
   editorFontSize: number;
+  editorFontFamily: string;
   editorMinimap: boolean;
   editorVimMode: boolean;
   editorLineNumbers: boolean;
-  editorTheme: 'vs-dark' | 'light';
+  editorTheme: "vs-dark" | "light";
   notifications: {
     emailDigest: boolean;
     newCourses: boolean;
@@ -18,7 +19,7 @@ export interface User {
   email: string;
   avatarUrl: string;
   isPremium: boolean;
-  role?: 'USER' | 'ADMIN'; // User role for access control
+  role?: "USER" | "ADMIN"; // User role for access control
   plan?: {
     name: string;
     expiresAt: string;

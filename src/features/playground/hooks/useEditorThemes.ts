@@ -1,6 +1,6 @@
 import { useCallback, useState, useEffect } from "react";
 import type { Monaco } from "@monaco-editor/react";
-import { storage } from "@/lib/storage";
+// Uses localStorage directly for playground-specific keys (not in storage wrapper)
 
 const THEME_STORAGE_KEY = "playground_editor_theme";
 
@@ -119,14 +119,14 @@ export function defineAllThemes(monaco: Monaco) {
 
 export function useEditorThemes(isDark: boolean) {
   const [currentTheme, setCurrentTheme] = useState<string>(() => {
-    const stored = storage.getItem(THEME_STORAGE_KEY);
+    const stored = localStorage.getItem(THEME_STORAGE_KEY);
     if (stored) return stored;
     return isDark ? "practix-dark" : "light";
   });
 
   // Update theme when system theme changes (only if using default)
   useEffect(() => {
-    const stored = storage.getItem(THEME_STORAGE_KEY);
+    const stored = localStorage.getItem(THEME_STORAGE_KEY);
     if (!stored) {
       setCurrentTheme(isDark ? "practix-dark" : "light");
     }
@@ -134,7 +134,7 @@ export function useEditorThemes(isDark: boolean) {
 
   const setTheme = useCallback((themeId: string) => {
     setCurrentTheme(themeId);
-    storage.setItem(THEME_STORAGE_KEY, themeId);
+    localStorage.setItem(THEME_STORAGE_KEY, themeId);
   }, []);
 
   const getAvailableThemes = useCallback(() => {

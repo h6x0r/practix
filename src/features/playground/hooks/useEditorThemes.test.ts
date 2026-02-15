@@ -1,20 +1,27 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
-import { useEditorThemes, EDITOR_THEMES, defineAllThemes } from "./useEditorThemes";
+import {
+  useEditorThemes,
+  EDITOR_THEMES,
+  defineAllThemes,
+} from "./useEditorThemes";
 
-// Mock storage
+// Mock localStorage
 const mockStorage: Record<string, string> = {};
-vi.mock("@/lib/storage", () => ({
-  storage: {
-    getItem: vi.fn((key: string) => mockStorage[key] || null),
-    setItem: vi.fn((key: string, value: string) => {
-      mockStorage[key] = value;
-    }),
-    removeItem: vi.fn((key: string) => {
-      delete mockStorage[key];
-    }),
-  },
-}));
+const localStorageMock = {
+  getItem: vi.fn((key: string) => mockStorage[key] ?? null),
+  setItem: vi.fn((key: string, value: string) => {
+    mockStorage[key] = value;
+  }),
+  removeItem: vi.fn((key: string) => {
+    delete mockStorage[key];
+  }),
+  clear: vi.fn(),
+  length: 0,
+  key: vi.fn(),
+};
+
+Object.defineProperty(window, "localStorage", { value: localStorageMock });
 
 describe("useEditorThemes", () => {
   beforeEach(() => {

@@ -309,10 +309,21 @@ const AnalyticsPanel = ({ dashboardStats }: AnalyticsPanelProps) => {
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart
                     data={timelineData.timeline}
-                    onClick={(data) => {
-                      if (data?.activePayload?.[0]) {
-                        const point = data.activePayload[0].payload;
-                        handleChartClick(point.date, "dau", point.dau);
+                    onClick={(data: Record<string, unknown>) => {
+                      const payload = (
+                        data as {
+                          activePayload?: Array<{
+                            payload: Record<string, string | number>;
+                          }>;
+                        }
+                      )?.activePayload;
+                      if (payload?.[0]) {
+                        const point = payload[0].payload;
+                        handleChartClick(
+                          point.date as string,
+                          "dau",
+                          point.dau as number,
+                        );
                       }
                     }}
                     style={{ cursor: "pointer" }}
@@ -393,10 +404,21 @@ const AnalyticsPanel = ({ dashboardStats }: AnalyticsPanelProps) => {
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
                     data={timelineData.timeline}
-                    onClick={(data) => {
-                      if (data?.activePayload?.[0]) {
-                        const point = data.activePayload[0].payload;
-                        handleChartClick(point.date, "revenue", point.revenue);
+                    onClick={(data: Record<string, unknown>) => {
+                      const payload = (
+                        data as {
+                          activePayload?: Array<{
+                            payload: Record<string, string | number>;
+                          }>;
+                        }
+                      )?.activePayload;
+                      if (payload?.[0]) {
+                        const point = payload[0].payload;
+                        handleChartClick(
+                          point.date as string,
+                          "revenue",
+                          point.revenue as number,
+                        );
                       }
                     }}
                     style={{ cursor: "pointer" }}
@@ -480,13 +502,20 @@ const AnalyticsPanel = ({ dashboardStats }: AnalyticsPanelProps) => {
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart
                     data={timelineData.timeline}
-                    onClick={(data) => {
-                      if (data?.activePayload?.[0]) {
-                        const point = data.activePayload[0].payload;
+                    onClick={(data: Record<string, unknown>) => {
+                      const payload = (
+                        data as {
+                          activePayload?: Array<{
+                            payload: Record<string, string | number>;
+                          }>;
+                        }
+                      )?.activePayload;
+                      if (payload?.[0]) {
+                        const point = payload[0].payload;
                         handleChartClick(
-                          point.date,
+                          point.date as string,
                           "newUsers",
-                          point.newUsers,
+                          point.newUsers as number,
                         );
                       }
                     }}

@@ -5,17 +5,17 @@ export interface Translations {
 }
 
 // Task types for different submission flows
-export type TaskType = 'CODE' | 'PROMPT';
+export type TaskType = "CODE" | "PROMPT";
 
 // Visualization types for ML tasks
 export type VisualizationType =
-  | 'none'
-  | 'line'
-  | 'bar'
-  | 'scatter'
-  | 'heatmap'
-  | 'confusion_matrix'
-  | 'multi';
+  | "none"
+  | "line"
+  | "bar"
+  | "scatter"
+  | "heatmap"
+  | "confusion_matrix"
+  | "multi";
 
 // Prompt test scenario for prompt engineering tasks
 export interface PromptTestScenario {
@@ -58,18 +58,18 @@ export interface Task {
   slug: string;
   title: string;
   description: string;
-  difficulty: 'easy' | 'medium' | 'hard';
+  difficulty: "easy" | "medium" | "hard";
   tags: string[];
   isPremium: boolean;
   initialCode: string;
   solutionCode?: string; // Canonical solution code
   solutionExplanation?: string; // Line-by-line explanation of the solution
   whyItMatters?: string; // Real-world usage and importance of this pattern
-  testCode?: string;     // Test code for validation
-  hint1?: string;        // First hint (gentle nudge, 8-10 words)
-  hint2?: string;        // Second hint (more detailed, 8-10 words)
+  testCode?: string; // Test code for validation
+  hint1?: string; // First hint (gentle nudge, 8-10 words)
+  hint2?: string; // Second hint (more detailed, 8-10 words)
   estimatedTime: string; // e.g. "30m"
-  status?: 'pending' | 'completed'; // For UI display
+  status?: "pending" | "completed"; // For UI display
   youtubeUrl?: string; // Optional link to video solution
   translations?: Translations; // Multi-language support
   // ML visualization support
@@ -83,7 +83,7 @@ export interface Task {
 // Prompt submission result (returned from backend)
 export interface PromptSubmission {
   id: string;
-  status: 'pending' | 'running' | 'passed' | 'failed' | 'error';
+  status: "pending" | "running" | "passed" | "failed" | "error";
   score: number;
   message: string;
   createdAt: string;
@@ -108,7 +108,7 @@ export interface TestCaseResult {
 
 export interface Submission {
   id: string;
-  status: 'pending' | 'running' | 'passed' | 'failed' | 'error';
+  status: "pending" | "running" | "passed" | "failed" | "error";
   score: number;
   runtime: string;
   memory?: string;
@@ -119,9 +119,12 @@ export interface Submission {
   testsPassed?: number;
   testsTotal?: number;
   testCases?: TestCaseResult[];
+  // Extended fields (populated in dashboard/history views)
+  taskId?: string;
+  task?: { slug: string; title: string };
 }
 
 export interface AiChatMessage {
-  role: 'user' | 'model';
+  role: "user" | "model";
   text: string;
 }

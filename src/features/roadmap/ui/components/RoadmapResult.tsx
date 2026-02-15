@@ -27,9 +27,7 @@ export const RoadmapResult: React.FC<RoadmapResultProps> = ({
   return (
     <div className="max-w-4xl mx-auto pb-12">
       {/* Premium regeneration gate */}
-      {!canRegenerate && !isPremium && (
-        <PremiumGateBanner tUI={tUI} />
-      )}
+      {!canRegenerate && !isPremium && <PremiumGateBanner tUI={tUI} />}
 
       <div className="flex justify-between items-center mb-10">
         <div>
@@ -187,7 +185,7 @@ const StepItem: React.FC<StepItemProps> = ({ step }) => {
 
   return (
     <Link
-      to={step.deepLink}
+      to={step.deepLink || "#"}
       className={`group flex items-start gap-3 p-3 rounded-xl border transition-all cursor-pointer hover:shadow-sm ${
         isCompleted
           ? "bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-900/30 shadow-sm"

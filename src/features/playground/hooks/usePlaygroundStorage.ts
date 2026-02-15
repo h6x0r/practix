@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { storage } from "@/lib/storage";
+// Uses localStorage directly for playground-specific keys (not in storage wrapper)
 import { createLogger } from "@/lib/logger";
 
 const log = createLogger("PlaygroundStorage");
@@ -28,7 +28,7 @@ export function usePlaygroundStorage(): UsePlaygroundStorageReturn {
   // Load saved state on mount
   useEffect(() => {
     try {
-      const stored = storage.getItem(STORAGE_KEY);
+      const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored) as PlaygroundState;
         setSavedState(parsed);
@@ -53,7 +53,7 @@ export function usePlaygroundStorage(): UsePlaygroundStorageReturn {
           language,
           savedAt: new Date().toISOString(),
         };
-        storage.setItem(STORAGE_KEY, JSON.stringify(state));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
         setSavedState(state);
         setLastSavedAt(new Date(state.savedAt));
         log.debug("Saved playground state", { language });
@@ -66,7 +66,7 @@ export function usePlaygroundStorage(): UsePlaygroundStorageReturn {
   // Clear saved state
   const clearState = useCallback(() => {
     try {
-      storage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(STORAGE_KEY);
       setSavedState(null);
       setLastSavedAt(null);
       log.info("Cleared playground state");

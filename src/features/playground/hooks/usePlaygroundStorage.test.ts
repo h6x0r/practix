@@ -1,20 +1,23 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { renderHook, act, waitFor } from "@testing-library/react";
+import { renderHook, act } from "@testing-library/react";
 import { usePlaygroundStorage } from "./usePlaygroundStorage";
 
-// Mock storage
+// Mock localStorage
 const mockStorage: Record<string, string> = {};
-vi.mock("@/lib/storage", () => ({
-  storage: {
-    getItem: vi.fn((key: string) => mockStorage[key] || null),
-    setItem: vi.fn((key: string, value: string) => {
-      mockStorage[key] = value;
-    }),
-    removeItem: vi.fn((key: string) => {
-      delete mockStorage[key];
-    }),
-  },
-}));
+const localStorageMock = {
+  getItem: vi.fn((key: string) => mockStorage[key] ?? null),
+  setItem: vi.fn((key: string, value: string) => {
+    mockStorage[key] = value;
+  }),
+  removeItem: vi.fn((key: string) => {
+    delete mockStorage[key];
+  }),
+  clear: vi.fn(),
+  length: 0,
+  key: vi.fn(),
+};
+
+Object.defineProperty(window, "localStorage", { value: localStorageMock });
 
 vi.mock("@/lib/logger", () => ({
   createLogger: () => ({
@@ -28,11 +31,11 @@ describe("usePlaygroundStorage", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     Object.keys(mockStorage).forEach((key) => delete mockStorage[key]);
+    vi.clearAllMocks();
   });
 
   afterEach(() => {
     vi.useRealTimers();
-    vi.clearAllMocks();
   });
 
   it("should return null savedState initially when no data stored", () => {

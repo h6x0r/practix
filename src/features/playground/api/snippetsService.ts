@@ -1,4 +1,8 @@
-import { api, ApiResponse } from '@/lib/api';
+import { api } from "@/lib/api";
+
+interface ApiResponse<T> {
+  data: T;
+}
 
 export interface Snippet {
   id: string;
@@ -38,7 +42,7 @@ export interface CreateSnippetResponse {
 export const snippetsService = {
   async create(dto: CreateSnippetDto): Promise<CreateSnippetResponse> {
     const response = await api.post<ApiResponse<CreateSnippetResponse>>(
-      '/snippets',
+      "/snippets",
       dto,
     );
     return response.data;
@@ -52,9 +56,8 @@ export const snippetsService = {
   },
 
   async getMySnippets(): Promise<SnippetListItem[]> {
-    const response = await api.get<ApiResponse<SnippetListItem[]>>(
-      '/snippets/user/my',
-    );
+    const response =
+      await api.get<ApiResponse<SnippetListItem[]>>("/snippets/user/my");
     return response.data;
   },
 

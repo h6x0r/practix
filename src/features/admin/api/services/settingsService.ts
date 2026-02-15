@@ -7,6 +7,6 @@ export const adminSettingsService = {
   },
 
   updateAiSettings: async (dto: UpdateAiSettingsDto): Promise<AiSettings> => {
-    return await api.put<AiSettings>("/admin/settings/ai", dto);
+    return await api.patch<AiSettings>("/admin/settings/ai", dto);
   },
 };

@@ -15,6 +15,7 @@ export type {
   RetentionCohort,
   RetentionMetrics,
   ConversionMetrics,
+  DayDetailsResponse,
 } from "./analytics";
 
 // Users types

@@ -1,6 +1,6 @@
-import { Task, Translations } from '../../tasks/model/types';
+import { Task, Translations } from "../../tasks/model/types";
 
-export type CourseCategory = 'language' | 'cs' | 'interview';
+export type CourseCategory = "language" | "cs" | "interview";
 
 export interface SampleTopic {
   title: string;
@@ -9,6 +9,7 @@ export interface SampleTopic {
 
 export interface Course {
   id: string;
+  slug: string;
   category: CourseCategory;
   title: string;
   description: string;
@@ -24,7 +25,7 @@ export interface Topic {
   id: string;
   title: string;
   description: string;
-  difficulty: 'easy' | 'medium' | 'hard';
+  difficulty: "easy" | "medium" | "hard";
   estimatedTime: string; // e.g. "2h"
   tasks: Task[]; // Hierarchy: Course -> Topic -> Task
   translations?: Translations; // Multi-language support
@@ -34,7 +35,7 @@ export interface CourseModule {
   id: string;
   title: string;
   description: string;
-  section?: 'core' | 'frameworks' | 'interview' | 'projects'; // New categorization
+  section?: "core" | "frameworks" | "interview" | "projects"; // New categorization
   estimatedTime: string; // Calculated from sum of task times during seed
   topics: Topic[];
   translations?: Translations; // Multi-language support
