@@ -9,7 +9,7 @@ ENV NODE_ENV=development
 COPY package*.json ./
 RUN npm ci --include=dev
 
-COPY tsconfig.json ./
+COPY tsconfig.json tsconfig.build.json ./
 COPY prisma ./prisma
 COPY src ./src
 
