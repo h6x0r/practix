@@ -1,6 +1,7 @@
 import { Controller, Get, Delete, Param, UseGuards, Request, HttpException, HttpStatus } from '@nestjs/common';
 import { SessionsService } from './sessions.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { AuthenticatedRequest } from '../common/types';
 
 @Controller('users/me/sessions')
 @UseGuards(JwtAuthGuard)
@@ -12,7 +13,7 @@ export class SessionsController {
    * GET /users/me/sessions
    */
   @Get()
-  async getUserSessions(@Request() req) {
+  async getUserSessions(@Request() req: AuthenticatedRequest) {
     const sessions = await this.sessionsService.getUserSessions(req.user.userId);
 
     // Transform sessions to remove sensitive token data
@@ -32,7 +33,7 @@ export class SessionsController {
    * DELETE /users/me/sessions/:sessionId
    */
   @Delete(':sessionId')
-  async invalidateSession(@Request() req, @Param('sessionId') sessionId: string) {
+  async invalidateSession(@Request() req: AuthenticatedRequest, @Param('sessionId') sessionId: string) {
     // First, verify the session belongs to the authenticated user
     const sessions = await this.sessionsService.getUserSessions(req.user.userId);
     const session = sessions.find(s => s.id === sessionId);

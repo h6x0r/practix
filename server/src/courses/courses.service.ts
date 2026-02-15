@@ -1,11 +1,11 @@
-import { Injectable, NotFoundException, Logger } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import { CacheService } from '../cache/cache.service';
-import { Prisma } from '@prisma/client';
+import { Injectable, NotFoundException, Logger } from "@nestjs/common";
+import { PrismaService } from "../prisma/prisma.service";
+import { CacheService } from "../cache/cache.service";
+import { Prisma } from "@prisma/client";
 
 // Cache keys
 const CACHE_KEYS = {
-  COURSES_LIST: 'courses:list',
+  COURSES_LIST: "courses:list",
   COURSE_STRUCTURE: (slug: string) => `courses:structure:${slug}`,
 };
 
@@ -19,7 +19,7 @@ export class CoursesService {
   constructor(
     private prisma: PrismaService,
     private cache: CacheService,
-  ) { }
+  ) {}
 
   async findAll(userId?: string) {
     try {
@@ -27,11 +27,11 @@ export class CoursesService {
       let baseCourses = await this.cache.get<any[]>(CACHE_KEYS.COURSES_LIST);
 
       if (!baseCourses) {
-        this.logger.log('Cache MISS for courses list, fetching from DB');
+        this.logger.log("Cache MISS for courses list, fetching from DB");
 
         // Use _count to avoid N+1 query - only fetch counts, not all task data
         const courses = await this.prisma.course.findMany({
-          orderBy: { order: 'asc' },
+          orderBy: { order: "asc" },
           include: {
             modules: {
               include: {
@@ -41,28 +41,33 @@ export class CoursesService {
                     // Only fetch first 4 topics for sample preview
                     tasks: {
                       take: 1,
-                      select: { id: true }
-                    }
-                  }
-                }
-              }
-            }
-          }
+                      select: { id: true },
+                    },
+                  },
+                },
+              },
+            },
+          },
         });
 
         // Transform to cacheable format (without user-specific data)
         baseCourses = courses.map((c) => {
           let totalTasks = 0;
-          c.modules.forEach(m => m.topics.forEach(t => totalTasks += t._count.tasks));
+          c.modules.forEach((m) =>
+            m.topics.forEach((t) => (totalTasks += t._count.tasks)),
+          );
 
           // Get sample topics for preview (first 3-4 topics from different modules)
-          const sampleTopics: { title: string; translations?: Prisma.JsonValue }[] = [];
+          const sampleTopics: {
+            title: string;
+            translations?: Prisma.JsonValue;
+          }[] = [];
           for (const m of c.modules) {
             for (const t of m.topics) {
               if (sampleTopics.length < 4) {
                 sampleTopics.push({
                   title: t.title,
-                  translations: t.translations
+                  translations: t.translations,
                 });
               }
             }
@@ -81,27 +86,29 @@ export class CoursesService {
             totalModules: c.modules.length,
             totalTasks,
             translations: c.translations,
-            sampleTopics
+            sampleTopics,
           };
         });
 
         // Cache the base courses (without progress)
         await this.cache.set(CACHE_KEYS.COURSES_LIST, baseCourses, CACHE_TTL);
-        this.logger.log(`Cached ${baseCourses.length} courses for ${CACHE_TTL}s`);
+        this.logger.log(
+          `Cached ${baseCourses.length} courses for ${CACHE_TTL}s`,
+        );
       } else {
-        this.logger.debug('Cache HIT for courses list');
+        this.logger.debug("Cache HIT for courses list");
       }
 
       // If no user, return courses with 0 progress
       if (!userId) {
-        return baseCourses.map(c => ({ ...c, progress: 0 }));
+        return baseCourses.map((c) => ({ ...c, progress: 0 }));
       }
 
       // Fetch user's progress (this is per-user, not cached)
       const passedSubmissions = await this.prisma.submission.findMany({
         where: {
           userId,
-          status: 'passed'
+          status: "passed",
         },
         select: {
           taskId: true,
@@ -111,32 +118,41 @@ export class CoursesService {
                 select: {
                   module: {
                     select: {
-                      courseId: true
-                    }
-                  }
-                }
-              }
-            }
-          }
+                      courseId: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
         },
-        distinct: ['taskId']
+        distinct: ["taskId"],
       });
 
       // Group submissions by courseId
       const completedTasksByCourse = new Map<string, number>();
-      passedSubmissions.forEach(sub => {
-        const courseId = sub.task.topic.module.courseId;
-        completedTasksByCourse.set(courseId, (completedTasksByCourse.get(courseId) || 0) + 1);
+      passedSubmissions.forEach((sub) => {
+        const courseId = sub.task.topic?.module.courseId;
+        if (courseId) {
+          completedTasksByCourse.set(
+            courseId,
+            (completedTasksByCourse.get(courseId) || 0) + 1,
+          );
+        }
       });
 
       // Add progress to cached courses
       return baseCourses.map((c) => {
         const completed = completedTasksByCourse.get(c.uuid) || 0;
-        const progress = c.totalTasks === 0 ? 0 : Math.round((completed / c.totalTasks) * 100);
+        const progress =
+          c.totalTasks === 0 ? 0 : Math.round((completed / c.totalTasks) * 100);
         return { ...c, progress };
       });
     } catch (error) {
-      this.logger.error('Error in findAll', error instanceof Error ? error.stack : String(error));
+      this.logger.error(
+        "Error in findAll",
+        error instanceof Error ? error.stack : String(error),
+      );
       throw error;
     }
   }
@@ -152,10 +168,10 @@ export class CoursesService {
       return this.prisma.course.findUnique({ where: { id: slug } });
     }
 
-    // We reuse findAll logic for single entity hydration if needed, 
+    // We reuse findAll logic for single entity hydration if needed,
     // or just return the metadata matching frontend type
     const list = await this.findAll(userId);
-    return list.find(c => c.id === slug);
+    return list.find((c) => c.id === slug);
   }
 
   async getStructure(slug: string, userId?: string) {
@@ -172,13 +188,13 @@ export class CoursesService {
         where: { slug },
         include: {
           modules: {
-            orderBy: { order: 'asc' },
+            orderBy: { order: "asc" },
             include: {
               topics: {
-                orderBy: { order: 'asc' },
+                orderBy: { order: "asc" },
                 include: {
                   tasks: {
-                    orderBy: { order: 'asc' },
+                    orderBy: { order: "asc" },
                     select: {
                       id: true,
                       slug: true,
@@ -186,48 +202,48 @@ export class CoursesService {
                       difficulty: true,
                       estimatedTime: true,
                       isPremium: true,
-                      translations: true
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
+                      translations: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
       });
 
-      if (!course) throw new NotFoundException('Course not found');
+      if (!course) throw new NotFoundException("Course not found");
 
       courseId = course.id;
 
       // Transform to cacheable format
       baseStructure = {
         courseId: course.id,
-        modules: course.modules.map(m => ({
+        modules: course.modules.map((m) => ({
           id: m.id,
           title: m.title,
           description: m.description,
-          section: m.section || 'core',
+          section: m.section || "core",
           estimatedTime: m.estimatedTime,
           translations: m.translations,
-          topics: m.topics.map(t => ({
+          topics: m.topics.map((t) => ({
             id: t.id,
             title: t.title,
             description: t.description,
             difficulty: t.difficulty,
             estimatedTime: t.estimatedTime,
             translations: t.translations,
-            tasks: t.tasks.map(task => ({
+            tasks: t.tasks.map((task) => ({
               id: task.id,
               slug: task.slug,
               title: task.title,
               difficulty: task.difficulty,
               estimatedTime: task.estimatedTime,
               isPremium: task.isPremium,
-              translations: task.translations
-            }))
-          }))
-        }))
+              translations: task.translations,
+            })),
+          })),
+        })),
       };
 
       // Cache the structure
@@ -240,12 +256,12 @@ export class CoursesService {
 
     // If no user, return with all tasks as pending
     if (!userId) {
-      return baseStructure.modules.map(m => ({
+      return baseStructure.modules.map((m: any) => ({
         ...m,
-        topics: m.topics.map(t => ({
+        topics: m.topics.map((t: any) => ({
           ...t,
-          tasks: t.tasks.map(task => ({ ...task, status: 'pending' }))
-        }))
+          tasks: t.tasks.map((task: any) => ({ ...task, status: "pending" })),
+        })),
       }));
     }
 
@@ -253,23 +269,23 @@ export class CoursesService {
     const subs = await this.prisma.submission.findMany({
       where: {
         userId,
-        status: 'passed',
-        task: { topic: { module: { courseId } } }
+        status: "passed",
+        task: { topic: { module: { courseId } } },
       },
-      select: { taskId: true }
+      select: { taskId: true },
     });
-    const completedTaskIds = new Set(subs.map(s => s.taskId));
+    const completedTaskIds = new Set(subs.map((s) => s.taskId));
 
     // Add completion status
-    return baseStructure.modules.map(m => ({
+    return baseStructure.modules.map((m: any) => ({
       ...m,
-      topics: m.topics.map(t => ({
+      topics: m.topics.map((t: any) => ({
         ...t,
-        tasks: t.tasks.map(task => ({
+        tasks: t.tasks.map((task: any) => ({
           ...task,
-          status: completedTaskIds.has(task.id) ? 'completed' : 'pending'
-        }))
-      }))
+          status: completedTaskIds.has(task.id) ? "completed" : "pending",
+        })),
+      })),
     }));
   }
 
@@ -277,8 +293,8 @@ export class CoursesService {
    * Invalidate all course caches (call after seed/update)
    */
   async invalidateCache(): Promise<{ deleted: number }> {
-    this.logger.log('Invalidating all course caches');
-    const deleted = await this.cache.deleteByPattern('courses:*');
+    this.logger.log("Invalidating all course caches");
+    const deleted = await this.cache.deleteByPattern("courses:*");
     return { deleted };
   }
 }

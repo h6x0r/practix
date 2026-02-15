@@ -1,17 +1,25 @@
+import {
+  Controller,
+  Get,
+  Body,
+  Patch,
+  UseGuards,
+  Request,
+  Query,
+} from "@nestjs/common";
+import { UsersService } from "./users.service";
+import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { UpdatePreferencesDto } from "./dto/users.dto";
+import { User } from "@prisma/client";
+import { AuthenticatedRequest } from "../common/types";
 
-import { Controller, Get, Body, Patch, UseGuards, Request, Query } from '@nestjs/common';
-import { UsersService } from './users.service';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { UpdatePreferencesDto } from './dto/users.dto';
-import { User } from '@prisma/client';
-
-@Controller('users')
+@Controller("users")
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @UseGuards(JwtAuthGuard)
-  @Get('me')
-  async getProfile(@Request() req) {
+  @Get("me")
+  async getProfile(@Request() req: AuthenticatedRequest) {
     const user = await this.usersService.findById(req.user.userId);
 
     // Compute isPremium and plan from active subscriptions
@@ -26,8 +34,8 @@ export class UsersController {
    * Returns: totalSolved, hoursSpent, globalRank, skillPoints, streak
    */
   @UseGuards(JwtAuthGuard)
-  @Get('me/stats')
-  async getStats(@Request() req) {
+  @Get("me/stats")
+  async getStats(@Request() req: AuthenticatedRequest) {
     return this.usersService.getUserStats(req.user.userId);
   }
 
@@ -36,30 +44,40 @@ export class UsersController {
    * Query: ?days=7 (default 7), ?offset=0 (days offset from today)
    */
   @UseGuards(JwtAuthGuard)
-  @Get('me/activity')
+  @Get("me/activity")
   async getActivity(
-    @Request() req,
-    @Query('days') days?: string,
-    @Query('offset') offset?: string
+    @Request() req: AuthenticatedRequest,
+    @Query("days") days?: string,
+    @Query("offset") offset?: string,
   ) {
-    const numDays = parseInt(days || '7', 10);
-    const numOffset = parseInt(offset || '0', 10);
-    return this.usersService.getWeeklyActivity(req.user.userId, numDays, numOffset);
+    const numDays = parseInt(days || "7", 10);
+    const numOffset = parseInt(offset || "0", 10);
+    return this.usersService.getWeeklyActivity(
+      req.user.userId,
+      numDays,
+      numOffset,
+    );
   }
 
   /**
    * Get yearly activity for heatmap (Analytics page)
    */
   @UseGuards(JwtAuthGuard)
-  @Get('me/activity/yearly')
-  async getYearlyActivity(@Request() req) {
+  @Get("me/activity/yearly")
+  async getYearlyActivity(@Request() req: AuthenticatedRequest) {
     return this.usersService.getYearlyActivity(req.user.userId);
   }
 
   @UseGuards(JwtAuthGuard)
-  @Patch('me/preferences')
-  async updatePreferences(@Request() req, @Body() preferences: UpdatePreferencesDto) {
-    const user = await this.usersService.updatePreferences(req.user.userId, preferences);
+  @Patch("me/preferences")
+  async updatePreferences(
+    @Request() req: AuthenticatedRequest,
+    @Body() preferences: UpdatePreferencesDto,
+  ) {
+    const user = await this.usersService.updatePreferences(
+      req.user.userId,
+      preferences,
+    );
 
     // Compute isPremium and plan from active subscriptions
     const isPremium = await this.usersService.isPremiumUser(req.user.userId);
@@ -73,9 +91,15 @@ export class UsersController {
    * Accepts base64 image data or a preset avatar URL
    */
   @UseGuards(JwtAuthGuard)
-  @Patch('me/avatar')
-  async updateAvatar(@Request() req, @Body() body: { avatarUrl: string }) {
-    const user = await this.usersService.updateAvatar(req.user.userId, body.avatarUrl);
+  @Patch("me/avatar")
+  async updateAvatar(
+    @Request() req: AuthenticatedRequest,
+    @Body() body: { avatarUrl: string },
+  ) {
+    const user = await this.usersService.updateAvatar(
+      req.user.userId,
+      body.avatarUrl,
+    );
 
     // Compute isPremium and plan from active subscriptions
     const isPremium = await this.usersService.isPremiumUser(req.user.userId);
@@ -89,7 +113,11 @@ export class UsersController {
   // 1. POST /subscriptions (admin-only) - for manual subscriptions
   // 2. POST /webhooks/stripe - for payment gateway callbacks
 
-  private transformUser(user: Partial<User>, isPremium?: boolean, plan?: { name: string; expiresAt: string } | null) {
+  private transformUser(
+    user: Partial<User> | null,
+    isPremium?: boolean,
+    plan?: { name: string; expiresAt: string } | null,
+  ) {
     // Create a copy and ensure password is never included
     const { password, ...result } = user as any;
 

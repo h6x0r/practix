@@ -1,5 +1,5 @@
-import { Injectable, NotFoundException, Logger } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { Injectable, NotFoundException, Logger } from "@nestjs/common";
+import { PrismaService } from "../prisma/prisma.service";
 
 // Grace period: 3 days after subscription expires, user still has access
 const GRACE_PERIOD_DAYS = 3;
@@ -27,9 +27,9 @@ export class UserCoursesService {
     const subscription = await this.prisma.subscription.findFirst({
       where: {
         userId,
-        status: 'active',
+        status: "active",
         endDate: { gte: gracePeriodCutoff },
-        plan: { type: 'global' },
+        plan: { type: "global" },
       },
     });
     return !!subscription;
@@ -45,9 +45,9 @@ export class UserCoursesService {
     const subscriptions = await this.prisma.subscription.findMany({
       where: {
         userId,
-        status: 'active',
+        status: "active",
         endDate: { gte: gracePeriodCutoff },
-        plan: { type: 'course' },
+        plan: { type: "course" },
       },
       include: {
         plan: { select: { courseId: true } },
@@ -82,7 +82,7 @@ export class UserCoursesService {
       // Get user courses first
       const userCourses = await this.prisma.userCourse.findMany({
         where: { userId },
-        orderBy: { lastAccessedAt: 'desc' },
+        orderBy: { lastAccessedAt: "desc" },
       });
 
       if (userCourses.length === 0) {
@@ -120,17 +120,17 @@ export class UserCoursesService {
         courses.map((c) => {
           let totalTasks = 0;
           c.modules.forEach((m) =>
-            m.topics.forEach((t) => (totalTasks += t._count.tasks))
+            m.topics.forEach((t) => (totalTasks += t._count.tasks)),
           );
           return [c.slug, { ...c, totalTasks }];
-        })
+        }),
       );
 
       // Get user's passed submissions for these courses
       const passedSubmissions = await this.prisma.submission.findMany({
         where: {
           userId,
-          status: 'passed',
+          status: "passed",
           task: {
             topic: {
               module: {
@@ -155,20 +155,23 @@ export class UserCoursesService {
             },
           },
         },
-        distinct: ['taskId'],
+        distinct: ["taskId"],
       });
 
       // Group completed tasks by course
       const completedByCourse = new Map<string, Set<string>>();
       passedSubmissions.forEach((sub) => {
-        const courseSlug = sub.task.topic.module.course.slug;
+        const courseSlug = sub.task.topic?.module.course.slug;
+        if (!courseSlug) return;
         if (!completedByCourse.has(courseSlug)) {
           completedByCourse.set(courseSlug, new Set());
         }
         completedByCourse.get(courseSlug)!.add(sub.taskId);
       });
 
-      this.logger.log(`Retrieved ${userCourses.length} courses for user ${userId}`);
+      this.logger.log(
+        `Retrieved ${userCourses.length} courses for user ${userId}`,
+      );
 
       // Map to flattened structure with calculated progress
       // Filter by: 1) course exists, 2) user has access (global or course-specific subscription)
@@ -203,15 +206,16 @@ export class UserCoursesService {
             progress: calculatedProgress, // Calculated from submissions, not stored value
             startedAt: userCourse.startedAt,
             lastAccessedAt: userCourse.lastAccessedAt,
-            completedAt: calculatedProgress === 100 ? userCourse.completedAt : null,
+            completedAt:
+              calculatedProgress === 100 ? userCourse.completedAt : null,
           };
         });
 
       return coursesWithDetails;
     } catch (error) {
       this.logger.error(
-        'Error in getUserCourses',
-        error instanceof Error ? error.stack : String(error)
+        "Error in getUserCourses",
+        error instanceof Error ? error.stack : String(error),
       );
       throw error;
     }
@@ -270,8 +274,8 @@ export class UserCoursesService {
       };
     } catch (error) {
       this.logger.error(
-        'Error in startCourse',
-        error instanceof Error ? error.stack : String(error)
+        "Error in startCourse",
+        error instanceof Error ? error.stack : String(error),
       );
       throw error;
     }
@@ -285,7 +289,7 @@ export class UserCoursesService {
     try {
       // Validate progress value
       if (progress < 0 || progress > 100) {
-        throw new Error('Progress must be between 0 and 100');
+        throw new Error("Progress must be between 0 and 100");
       }
 
       // Check if user course exists
@@ -300,7 +304,7 @@ export class UserCoursesService {
 
       if (!existingUserCourse) {
         throw new NotFoundException(
-          `User has not started course: ${courseSlug}`
+          `User has not started course: ${courseSlug}`,
         );
       }
 
@@ -320,7 +324,7 @@ export class UserCoursesService {
       });
 
       this.logger.log(
-        `Updated progress for user ${userId} in course ${courseSlug}: ${progress}%`
+        `Updated progress for user ${userId} in course ${courseSlug}: ${progress}%`,
       );
 
       return {
@@ -331,8 +335,8 @@ export class UserCoursesService {
       };
     } catch (error) {
       this.logger.error(
-        'Error in updateProgress',
-        error instanceof Error ? error.stack : String(error)
+        "Error in updateProgress",
+        error instanceof Error ? error.stack : String(error),
       );
       throw error;
     }
@@ -365,7 +369,7 @@ export class UserCoursesService {
       });
 
       this.logger.log(
-        `Updated last accessed for user ${userId} in course ${courseSlug}`
+        `Updated last accessed for user ${userId} in course ${courseSlug}`,
       );
 
       return {
@@ -374,8 +378,8 @@ export class UserCoursesService {
       };
     } catch (error) {
       this.logger.error(
-        'Error in updateLastAccessed',
-        error instanceof Error ? error.stack : String(error)
+        "Error in updateLastAccessed",
+        error instanceof Error ? error.stack : String(error),
       );
       throw error;
     }

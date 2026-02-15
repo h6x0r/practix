@@ -1,4 +1,4 @@
-import { Prisma } from '@prisma/client';
+import { Prisma } from "@prisma/client";
 
 /**
  * User Preferences Interface
@@ -49,6 +49,16 @@ export interface JwtPayload {
 export interface RequestUser {
   userId: string;
   email: string;
+}
+
+/**
+ * Express Request with authenticated user (from JWT guard)
+ */
+export interface AuthenticatedRequest {
+  user: RequestUser;
+  ip?: string;
+  headers: Record<string, string | string[] | undefined>;
+  [key: string]: any;
 }
 
 /**

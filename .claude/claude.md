@@ -252,19 +252,19 @@ src/
 ## Current Platform Status
 
 ### Production Ready
-- **18 Courses** (~921 tasks) with full localization (EN/RU/UZ)
-- **Piston Code Execution** - 8 languages
+- **22 Courses** (~1301 tasks) with full localization (EN/RU/UZ)
+- **Code Execution (Judge0)** - 8 languages
 - **BullMQ Queue + Redis Caching**
-- **Playground (Web IDE)** - /playground
+- **Playground (Web IDE)** - /playground with snippets library
 - **AI Tutor** - Gemini 2.0 Flash (100 req/day premium)
 - **Gamification** - XP, levels, badges, streaks
 - **Health Checks** - /health, /health/metrics
 - **Swagger Docs** - /api/docs (dev only)
+- **TypeScript Strict Mode** - enabled on backend
 
 ### Planned Courses
-- **Prompt Engineering** (Priority: HIGH) - 35+ tasks
-- **Math for Data Science** (Priority: MEDIUM) - Discussion needed
 - **System Design** (Priority: MEDIUM) - 30+ tasks
+- **Data Engineering** (Priority: MEDIUM) - 50+ tasks
 
 ---
 
@@ -392,6 +392,17 @@ docker compose down && docker compose build --no-cache frontend backend && docke
 
 ## Session Notes
 
+### Feb 14, 2026
+- **Monster File Refactoring**: 4 major files decomposed
+  - `admin.service.ts` (1744→5 services + facade) — 64 tests passing
+  - `roadmaps.service.ts` (1090→4 files) — 69 tests passing
+  - `judge0.service.ts` (995→3 files) — 23 tests passing
+  - `PaymentsPage.tsx` (823→4 components) — 41 tests passing
+- **TypeScript Strict Mode**: Enabled on backend, fixed 245+ errors
+  - Found real bug in `snippets.controller.ts` (missing null check)
+- **Documentation Audit**: Updated all .md files with correct course/task counts (22 courses, ~1301 tasks)
+- **Dependencies Cleanup**: Removed 10 backend-only deps from frontend package.json
+
 ### Jan 17, 2026
 - **E2E Tests Complete**: 263/263 тестов проходят (было ~20%)
   - Все Page Objects созданы (14 файлов в `e2e/pages/`)
@@ -423,6 +434,6 @@ docker compose down && docker compose build --no-cache frontend backend && docke
 - RunResult feature: Save/restore last run results per task
 
 ### Next Priority
-1. Prompt Engineering course (with 100 AI req/day limit)
-2. Math for Data Science (needs execution strategy)
-3. Test Go/Java runners on production server
+1. Architecture cleanup (course naming consistency, frontend feature structure)
+2. LanguageContext.tsx refactoring (1937 lines → smaller contexts)
+3. System Design course planning

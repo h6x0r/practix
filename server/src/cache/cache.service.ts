@@ -70,7 +70,7 @@ export class CacheService implements OnModuleInit, OnModuleDestroy {
 
       // Test connection
       await this.redis.ping();
-    } catch (error) {
+    } catch (error: any) {
       this.logger.warn(
         "Failed to connect to Redis for caching, continuing without cache",
       );
@@ -134,7 +134,7 @@ export class CacheService implements OnModuleInit, OnModuleDestroy {
       }
 
       return null;
-    } catch (error) {
+    } catch (error: any) {
       this.logger.warn(`Cache get error: ${error.message}`);
       return null;
     }
@@ -163,7 +163,7 @@ export class CacheService implements OnModuleInit, OnModuleDestroy {
         JSON.stringify(result),
       );
       this.logger.debug(`Cached result for ${key}`);
-    } catch (error) {
+    } catch (error: any) {
       this.logger.warn(`Cache set error: ${error.message}`);
     }
   }
@@ -177,7 +177,7 @@ export class CacheService implements OnModuleInit, OnModuleDestroy {
     try {
       const value = await this.redis.get(key);
       return value ? JSON.parse(value) : null;
-    } catch (error) {
+    } catch (error: any) {
       this.logger.warn(`Cache get error: ${error.message}`);
       return null;
     }
@@ -195,7 +195,7 @@ export class CacheService implements OnModuleInit, OnModuleDestroy {
 
     try {
       await this.redis.setex(key, ttl, JSON.stringify(value));
-    } catch (error) {
+    } catch (error: any) {
       this.logger.warn(`Cache set error: ${error.message}`);
     }
   }
@@ -238,7 +238,7 @@ export class CacheService implements OnModuleInit, OnModuleDestroy {
           await this.redis.setex(key, ttl, JSON.stringify(value));
           await this.redis.del(lockKey);
           return value;
-        } catch (error) {
+        } catch (error: any) {
           await this.redis.del(lockKey);
           throw error;
         }
@@ -254,7 +254,7 @@ export class CacheService implements OnModuleInit, OnModuleDestroy {
         // Fallback to direct call if wait exceeded
         return factory();
       }
-    } catch (error) {
+    } catch (error: any) {
       this.logger.warn(`Cache getOrSet error: ${error.message}`);
       return factory();
     }
@@ -268,7 +268,7 @@ export class CacheService implements OnModuleInit, OnModuleDestroy {
 
     try {
       await this.redis.del(key);
-    } catch (error) {
+    } catch (error: any) {
       this.logger.warn(`Cache delete error: ${error.message}`);
     }
   }
@@ -307,7 +307,7 @@ export class CacheService implements OnModuleInit, OnModuleDestroy {
         );
       }
       return deletedCount;
-    } catch (error) {
+    } catch (error: any) {
       this.logger.warn(`Cache deleteByPattern error: ${error.message}`);
       return 0;
     }
@@ -363,7 +363,7 @@ export class CacheService implements OnModuleInit, OnModuleDestroy {
       this.logger.debug(
         `Run validated: user=${userId}, task=${taskId}, tests=${testsPassed}`,
       );
-    } catch (error) {
+    } catch (error: any) {
       this.logger.warn(`Run validation set error: ${error.message}`);
     }
   }
@@ -385,7 +385,7 @@ export class CacheService implements OnModuleInit, OnModuleDestroy {
       const key = this.getRunValidationKey(userId, taskId);
       const cached = await this.redis.get(key);
       return cached ? JSON.parse(cached) : null;
-    } catch (error) {
+    } catch (error: any) {
       this.logger.warn(`Run validation get error: ${error.message}`);
       return null;
     }
@@ -400,7 +400,7 @@ export class CacheService implements OnModuleInit, OnModuleDestroy {
     try {
       const key = this.getRunValidationKey(userId, taskId);
       await this.redis.del(key);
-    } catch (error) {
+    } catch (error: any) {
       this.logger.warn(`Run validation clear error: ${error.message}`);
     }
   }

@@ -1,6 +1,6 @@
 # Refactoring Plan
 
-> Last Updated: 2026-01-16
+> Last Updated: 2026-02-14
 
 ---
 
@@ -20,6 +20,36 @@
 - Updated `useResizablePanel` with `maxWidthRatio` support
 - Left panel now respects 55% max viewport width
 - Fixes issues when switching between monitors
+
+### ✅ AdminService Decomposition (2026-02-14)
+- Split `admin.service.ts` (1744 lines) → 5 sub-services + facade
+- Created: `AdminStatsService`, `AdminMetricsService`, `AdminRetentionService`, `AdminUsersService`, `AdminPaymentsService`
+- `AdminService` remains as facade, delegating to sub-services
+- All 64 admin tests passing
+
+### ✅ RoadmapsService Decomposition (2026-02-14)
+- Split `roadmaps.service.ts` (1090 lines) → 4 files
+- Created: `roadmap.types.ts` (90), `roadmap-ai.service.ts` (314), `roadmap-variants.service.ts` (158)
+- `RoadmapsService` (429 lines) remains as facade
+- All 69 roadmap tests passing
+
+### ✅ Judge0Service Decomposition (2026-02-14)
+- Split `judge0.service.ts` (995 lines) → 3 files
+- Created: `judge0.types.ts` (86), `judge0-test-builders.ts` (475)
+- `Judge0Service` (335 lines) — core service with re-exports
+- All 23 judge0 tests passing
+
+### ✅ PaymentsPage Decomposition (2026-02-14)
+- Split `PaymentsPage.tsx` (823 lines) → 4 components
+- Created: `StatusCard.tsx` (67), `CheckoutPanel.tsx` (263), `PaymentHistoryTab.tsx` (95)
+- `PaymentsPage.tsx` (450 lines) — main page with sub-components
+- All data-testid attributes preserved, 41 frontend tests passing
+
+### ✅ TypeScript Strict Mode on Backend (2026-02-14)
+- Enabled `strict: true` in `server/tsconfig.json`
+- Fixed 245+ type errors across the codebase
+- Found real bug in `snippets.controller.ts` (missing null check)
+- `strictPropertyInitialization: false` for NestJS DI compatibility
 
 ---
 
@@ -80,16 +110,11 @@
 
 ---
 
-### 4. RoadmapsService (1,362 lines)
+### 4. ~~RoadmapsService~~ ✅ DONE (2026-02-14)
 **Location:** `server/src/roadmaps/roadmaps.service.ts`
-**Status:** 🟡 Partially Done (configs extracted)
+**Status:** ✅ Completed — see "Completed" section above
 
-**Remaining Work:**
-- Extract `RoadmapGeneratorService` - AI generation logic (~400 lines)
-- Extract `RoadmapHydrationService` - hydration and enrichment logic
-- Keep `RoadmapsService` as facade/coordinator
-
-**Estimated Impact:** High - enables better testing, reduces cognitive load
+Split into: `roadmap.types.ts`, `roadmap-ai.service.ts`, `roadmap-variants.service.ts` + facade (429 lines)
 
 ---
 
@@ -144,25 +169,22 @@ feature/
 
 ---
 
-### 7. Type Safety Improvements
-**Status:** 🔴 Not Started
+### 7. ~~Type Safety Improvements~~ ✅ DONE (2026-02-14)
+**Status:** ✅ Completed — TypeScript strict mode enabled on backend
 
-**Problem:** Some `any` types and implicit type coercion.
-
-**Proposed Solution:**
-- Enable stricter TypeScript settings
-- Replace `any` with proper types
-- Add runtime validation with Zod for API boundaries
+- `strict: true` in `server/tsconfig.json` (245+ errors fixed)
+- Remaining: frontend strict mode, replace remaining `any` types, Zod validation at API boundaries
 
 ---
 
 ## Implementation Order
 
 1. ✅ **Phase 1:** Fix UI issues, extract configs
-2. 🔴 **Phase 2:** Extract LanguageContext translations
-3. 🔴 **Phase 3:** Refactor SubmissionsService (remaining)
-4. 🔴 **Phase 4:** Split RoadmapPage and RoadmapsService
-5. 🔴 **Phase 5:** Refactor useTaskRunner hook
+2. ✅ **Phase 1.5:** Backend strict mode + monster file decomposition (admin, roadmaps, judge0, payments)
+3. 🔴 **Phase 2:** Extract LanguageContext translations
+4. 🔴 **Phase 3:** Refactor SubmissionsService (remaining)
+5. 🔴 **Phase 4:** Split RoadmapPage component
+6. 🔴 **Phase 5:** Refactor useTaskRunner hook
 
 ---
 

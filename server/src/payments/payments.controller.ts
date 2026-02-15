@@ -21,6 +21,7 @@ import {
   PaymeWebhookDto,
   ClickWebhookDto,
 } from "./dto/payment.dto";
+import { AuthenticatedRequest } from "../common/types";
 
 @Controller("payments")
 export class PaymentsController {
@@ -48,7 +49,7 @@ export class PaymentsController {
    */
   @Get("courses/pricing")
   @UseGuards(JwtAuthGuard)
-  getCoursesPricing(@Request() req) {
+  getCoursesPricing(@Request() req: AuthenticatedRequest) {
     return this.paymentsService.getAllCoursesPricing(req.user.userId);
   }
 
@@ -57,7 +58,10 @@ export class PaymentsController {
    */
   @Get("courses/pricing/:courseId")
   @UseGuards(JwtAuthGuard)
-  getCoursePricing(@Request() req, @Param("courseId") courseId: string) {
+  getCoursePricing(
+    @Request() req: AuthenticatedRequest,
+    @Param("courseId") courseId: string,
+  ) {
     return this.paymentsService.getCoursePricing(courseId, req.user.userId);
   }
 
@@ -66,7 +70,7 @@ export class PaymentsController {
    */
   @Get("courses/purchased")
   @UseGuards(JwtAuthGuard)
-  getPurchasedCourses(@Request() req) {
+  getPurchasedCourses(@Request() req: AuthenticatedRequest) {
     return this.paymentsService.getUserCourseAccesses(req.user.userId);
   }
 
@@ -75,7 +79,7 @@ export class PaymentsController {
    */
   @Get("roadmap-credits")
   @UseGuards(JwtAuthGuard)
-  getRoadmapCredits(@Request() req) {
+  getRoadmapCredits(@Request() req: AuthenticatedRequest) {
     return this.paymentsService.getRoadmapCredits(req.user.userId);
   }
 
@@ -84,7 +88,7 @@ export class PaymentsController {
    */
   @Get("history")
   @UseGuards(JwtAuthGuard)
-  getHistory(@Request() req) {
+  getHistory(@Request() req: AuthenticatedRequest) {
     return this.paymentsService.getPaymentHistory(req.user.userId);
   }
 
@@ -103,7 +107,10 @@ export class PaymentsController {
    */
   @Post("checkout")
   @UseGuards(JwtAuthGuard)
-  createCheckout(@Request() req, @Body() dto: CreateCheckoutDto) {
+  createCheckout(
+    @Request() req: AuthenticatedRequest,
+    @Body() dto: CreateCheckoutDto,
+  ) {
     return this.paymentsService.createCheckout(req.user.userId, dto);
   }
 

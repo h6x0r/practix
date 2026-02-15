@@ -1,7 +1,7 @@
 # Testing Plan - Practix/Practix
 
-> **Last Updated:** 2026-01-16
-> **E2E Framework:** Playwright (planned)
+> **Last Updated:** 2026-02-14
+> **E2E Framework:** Playwright
 
 ## Overview
 
@@ -9,34 +9,33 @@ This document outlines the comprehensive testing strategy for the Practix/Practi
 
 | Layer | Framework | Status | Target Coverage |
 |-------|-----------|--------|-----------------|
-| Backend Unit | Jest | **43 spec files, 1076/1076 tests passing (100%)** | 90%+ ✅ |
+| Backend Unit | Jest | **64 spec files, 1592/1592 tests passing (100%)** | 90%+ ✅ |
 | Backend Integration | Jest + Supertest | 5 e2e spec files | 80%+ |
-| Frontend Unit | Vitest | **8 test files** | 70%+ |
-| Frontend Integration | Vitest + Testing Library | Not started | 60%+ |
-| E2E | Playwright | **Planning complete, setup needed** | Critical paths |
+| Frontend Unit | Vitest | **55 test files, 913/913 tests passing (100%)** | 70%+ ✅ |
+| Frontend Integration | Vitest + Testing Library | Partial (via unit tests) | 60%+ |
+| E2E | Playwright | **263/263 tests passing (100%)** | Critical paths ✅ |
 
 ---
 
 ## Part 1: Backend Testing Strategy
 
-### 1.1 Current State (Updated January 16, 2026)
+### 1.1 Current State (Updated February 14, 2026)
 
 ```
-Test Suites:             43/43 passing (100%)
-Total Tests:             1076/1076 passing (100%)
-Total spec files:        43
+Test Suites:             64/64 passing (100%)
+Total Tests:             1592/1592 passing (100%)
+Total spec files:        64
 Failing tests:           0
 ```
 
-**Status:** All tests passing after mock configuration fixes.
+**Status:** All tests passing. TypeScript strict mode enabled.
 
-**Recent Fixes:**
-- Added `AiService` mock to `submissions.service.spec.ts`
-- Added `CacheService` mock to `roadmaps.service.spec.ts`
-- Updated `accessControlService` mock with `getTaskAccess`
-- Updated `cacheService` mock with `getRunValidation`, `clearRunValidation`
-- Fixed XP values in `gamification.service.spec.ts` (easy=25, medium=50, hard=100)
-- Updated security middleware tests for new patterns (INSERT/UPDATE/DELETE not blocked)
+**Recent Changes (Feb 2026):**
+- Refactored admin.service.ts → 5 sub-services (64 tests preserved)
+- Refactored roadmaps.service.ts → 4 files (69 tests preserved)
+- Refactored judge0.service.ts → 3 files (23 tests preserved)
+- Enabled TypeScript strict mode, fixed 245+ type errors
+- All spec files updated with new service providers
 
 ### 1.2 Testing Priorities
 

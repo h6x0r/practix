@@ -1,6 +1,11 @@
 import { Module } from "@nestjs/common";
 import { AdminController } from "./admin.controller";
 import { AdminService } from "./admin.service";
+import { AdminStatsService } from "./admin-stats.service";
+import { AdminMetricsService } from "./admin-metrics.service";
+import { AdminRetentionService } from "./admin-retention.service";
+import { AdminUsersService } from "./admin-users.service";
+import { AdminPaymentsService } from "./admin-payments.service";
 import { SettingsController } from "./settings/settings.controller";
 import { SettingsService } from "./settings/settings.service";
 import { AuditController } from "./audit/audit.controller";
@@ -18,7 +23,17 @@ import { CacheModule } from "../cache/cache.module";
     AuditController,
     ExportController,
   ],
-  providers: [AdminService, SettingsService, AuditService, ExportService],
+  providers: [
+    AdminService,
+    AdminStatsService,
+    AdminMetricsService,
+    AdminRetentionService,
+    AdminUsersService,
+    AdminPaymentsService,
+    SettingsService,
+    AuditService,
+    ExportService,
+  ],
   exports: [AdminService, SettingsService, AuditService, ExportService],
 })
 export class AdminModule {}

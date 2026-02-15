@@ -13,6 +13,7 @@ import { SnippetsService } from "./snippets.service";
 import { CreateSnippetDto } from "./dto/create-snippet.dto";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { OptionalJwtAuthGuard } from "../auth/guards/optional-jwt.guard";
+import { AuthenticatedRequest } from "../common/types";
 
 @ApiTags("snippets")
 @Controller("snippets")
@@ -22,8 +23,11 @@ export class SnippetsController {
   @Post()
   @UseGuards(OptionalJwtAuthGuard)
   @ApiOperation({ summary: "Create a new code snippet" })
-  async create(@Body() dto: CreateSnippetDto, @Request() req) {
-    const userId = req.user?.id;
+  async create(
+    @Body() dto: CreateSnippetDto,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    const userId = req.user?.userId;
     return this.snippetsService.create(dto, userId);
   }
 
@@ -37,15 +41,18 @@ export class SnippetsController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: "Get current user snippets" })
-  async findMySnippets(@Request() req) {
-    return this.snippetsService.findUserSnippets(req.user.id);
+  async findMySnippets(@Request() req: AuthenticatedRequest) {
+    return this.snippetsService.findUserSnippets(req.user.userId);
   }
 
   @Delete(":shortId")
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: "Delete a snippet" })
-  async delete(@Param("shortId") shortId: string, @Request() req) {
-    return this.snippetsService.delete(shortId, req.user.id);
+  async delete(
+    @Param("shortId") shortId: string,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    return this.snippetsService.delete(shortId, req.user.userId);
   }
 }

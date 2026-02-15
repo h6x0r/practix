@@ -1,8 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { InjectQueue } from '@nestjs/bullmq';
-import { Queue, Job } from 'bullmq';
-import { CODE_EXECUTION_QUEUE, DEAD_LETTER_QUEUE } from './constants';
-import { CodeExecutionJob } from './code-execution.processor';
+import { Injectable, Logger } from "@nestjs/common";
+import { InjectQueue } from "@nestjs/bullmq";
+import { Queue, Job } from "bullmq";
+import { CODE_EXECUTION_QUEUE, DEAD_LETTER_QUEUE } from "./constants";
+import { CodeExecutionJob } from "./code-execution.processor";
 
 /**
  * Dead Letter Job - includes original job data plus failure info
@@ -31,7 +31,7 @@ export class DeadLetterService {
     @InjectQueue(DEAD_LETTER_QUEUE)
     private readonly deadLetterQueue: Queue<DeadLetterJob>,
   ) {
-    this.logger.log('Dead Letter Service initialized');
+    this.logger.log("Dead Letter Service initialized");
   }
 
   /**
@@ -39,23 +39,23 @@ export class DeadLetterService {
    */
   async moveToDeadLetter(job: Job<CodeExecutionJob>): Promise<void> {
     const deadLetterJob: DeadLetterJob = {
-      originalJobId: job.id || 'unknown',
+      originalJobId: job.id || "unknown",
       originalQueue: CODE_EXECUTION_QUEUE,
       originalData: job.data,
-      failedReason: job.failedReason || 'Unknown error',
+      failedReason: job.failedReason || "Unknown error",
       failedAt: new Date().toISOString(),
       attemptsMade: job.attemptsMade,
       stacktrace: job.stacktrace,
     };
 
-    await this.deadLetterQueue.add('failed-job', deadLetterJob, {
+    await this.deadLetterQueue.add("failed-job", deadLetterJob, {
       jobId: `dlq-${job.id}`,
     });
 
-    this.logger.warn(
-      `Job ${job.id} moved to DLQ: ${job.failedReason}`,
-      { taskId: job.data.taskId, userId: job.data.userId },
-    );
+    this.logger.warn(`Job ${job.id} moved to DLQ: ${job.failedReason}`, {
+      taskId: job.data.taskId,
+      userId: job.data.userId,
+    });
   }
 
   /**
@@ -67,11 +67,11 @@ export class DeadLetterService {
     oldestJobAge?: number;
   }> {
     const waiting = await this.deadLetterQueue.getWaitingCount();
-    const jobs = await this.deadLetterQueue.getJobs(['waiting', 'delayed']);
+    const jobs = await this.deadLetterQueue.getJobs(["waiting", "delayed"]);
 
     let oldestJobAge: number | undefined;
     if (jobs.length > 0) {
-      const timestamps = jobs.map(j => j.timestamp);
+      const timestamps = jobs.map((j) => j.timestamp);
       const oldest = Math.min(...timestamps);
       oldestJobAge = Date.now() - oldest;
     }
@@ -89,15 +89,21 @@ export class DeadLetterService {
   async getJobs(
     start = 0,
     end = 20,
-  ): Promise<Array<{
-    id: string;
-    data: DeadLetterJob;
-    timestamp: number;
-  }>> {
-    const jobs = await this.deadLetterQueue.getJobs(['waiting', 'delayed'], start, end);
+  ): Promise<
+    Array<{
+      id: string;
+      data: DeadLetterJob;
+      timestamp: number;
+    }>
+  > {
+    const jobs = await this.deadLetterQueue.getJobs(
+      ["waiting", "delayed"],
+      start,
+      end,
+    );
 
-    return jobs.map(job => ({
-      id: job.id || 'unknown',
+    return jobs.map((job) => ({
+      id: job.id || "unknown",
       data: job.data,
       timestamp: job.timestamp,
     }));
@@ -107,17 +113,19 @@ export class DeadLetterService {
    * Retry a job from DLQ
    * Creates a new job in the original queue
    */
-  async retryJob(dlqJobId: string): Promise<{ success: boolean; newJobId?: string; error?: string }> {
+  async retryJob(
+    dlqJobId: string,
+  ): Promise<{ success: boolean; newJobId?: string; error?: string }> {
     const dlqJob = await this.deadLetterQueue.getJob(dlqJobId);
 
     if (!dlqJob) {
-      return { success: false, error: 'DLQ job not found' };
+      return { success: false, error: "DLQ job not found" };
     }
 
     try {
       // Add back to original queue
       const newJob = await this.executionQueue.add(
-        'execute',
+        "execute",
         dlqJob.data.originalData,
         {
           jobId: `retry-${dlqJob.data.originalJobId}-${Date.now()}`,
@@ -130,7 +138,7 @@ export class DeadLetterService {
       this.logger.log(`Retried DLQ job ${dlqJobId} as ${newJob.id}`);
 
       return { success: true, newJobId: newJob.id };
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(`Failed to retry DLQ job ${dlqJobId}`, error);
       return { success: false, error: error.message };
     }
@@ -156,7 +164,7 @@ export class DeadLetterService {
    * Uses batch processing to avoid blocking event loop
    */
   async clearAll(): Promise<number> {
-    const jobs = await this.deadLetterQueue.getJobs(['waiting', 'delayed']);
+    const jobs = await this.deadLetterQueue.getJobs(["waiting", "delayed"]);
     const count = jobs.length;
 
     if (count === 0) {
@@ -168,11 +176,11 @@ export class DeadLetterService {
     for (let i = 0; i < jobs.length; i += BATCH_SIZE) {
       const batch = jobs.slice(i, i + BATCH_SIZE);
       // Remove jobs in parallel within each batch
-      await Promise.all(batch.map(job => job.remove()));
+      await Promise.all(batch.map((job) => job.remove()));
 
       // Yield to event loop between batches
       if (i + BATCH_SIZE < jobs.length) {
-        await new Promise(resolve => setImmediate(resolve));
+        await new Promise((resolve) => setImmediate(resolve));
       }
     }
 

@@ -1,6 +1,7 @@
 import { Controller, Get, UseGuards, Request, Query } from '@nestjs/common';
 import { GamificationService } from './gamification.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { AuthenticatedRequest } from '../common/types';
 
 @Controller('gamification')
 export class GamificationController {
@@ -11,7 +12,7 @@ export class GamificationController {
    */
   @UseGuards(JwtAuthGuard)
   @Get('me')
-  async getMyStats(@Request() req) {
+  async getMyStats(@Request() req: AuthenticatedRequest) {
     return this.gamificationService.getUserStats(req.user.userId);
   }
 
@@ -20,7 +21,7 @@ export class GamificationController {
    */
   @UseGuards(JwtAuthGuard)
   @Get('me/rank')
-  async getMyRank(@Request() req) {
+  async getMyRank(@Request() req: AuthenticatedRequest) {
     const rank = await this.gamificationService.getUserRank(req.user.userId);
     return { rank };
   }

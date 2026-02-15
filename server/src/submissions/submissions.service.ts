@@ -402,7 +402,7 @@ export class SubmissionsService {
           },
         });
         this.logger.log(`RunResult saved: user=${userId}, task=${task.slug}`);
-      } catch (error) {
+      } catch (error: any) {
         // Don't fail the request if saving run result fails
         this.logger.warn(`Failed to save RunResult: ${error.message}`);
       }
@@ -586,7 +586,7 @@ export class SubmissionsService {
     testsTotal: number;
     testCases: any;
     runtime: string;
-    message: string;
+    message: string | null;
     code: string;
     updatedAt: Date;
   } | null> {

@@ -8,7 +8,7 @@ Learn programming through hands-on coding exercises with real-time code executio
 
 ## Features
 
-- **18 Courses** (Go, Java, Python, Algorithms, AI/ML, Design Patterns) with ~921 tasks
+- **22 Courses** (Go, Java, Python, Algorithms, AI/ML, Design Patterns, Security, Prompt Engineering) with ~1301 tasks
 - **Multi-language** support (EN, RU, UZ)
 - **Real code execution** with Piston + BullMQ (8 languages)
 - **Web IDE Playground** at `/playground`
@@ -44,7 +44,7 @@ make start-docker
 
 | Layer | Technology |
 |-------|------------|
-| Frontend | React 18 + TypeScript + Monaco Editor |
+| Frontend | React 19 + TypeScript + Monaco Editor |
 | Backend | NestJS + Prisma + PostgreSQL |
 | Code Execution | Piston + BullMQ + Redis |
 | AI | Google Gemini 2.0 Flash |

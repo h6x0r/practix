@@ -14,6 +14,7 @@ import {
   SelectRoadmapVariantDto,
 } from "./dto/roadmaps.dto";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { AuthenticatedRequest } from '../common/types';
 
 @Controller("roadmaps")
 @UseGuards(ThrottlerGuard)
@@ -36,7 +37,7 @@ export class RoadmapsController {
    */
   @UseGuards(JwtAuthGuard)
   @Get("can-generate")
-  async canGenerateRoadmap(@Request() req) {
+  async canGenerateRoadmap(@Request() req: AuthenticatedRequest) {
     return this.roadmapsService.canGenerateRoadmap(req.user.userId);
   }
 
@@ -46,7 +47,7 @@ export class RoadmapsController {
    */
   @UseGuards(JwtAuthGuard)
   @Get("me")
-  async getMyRoadmap(@Request() req) {
+  async getMyRoadmap(@Request() req: AuthenticatedRequest) {
     return this.roadmapsService.getUserRoadmap(req.user.userId);
   }
 
@@ -55,7 +56,7 @@ export class RoadmapsController {
    */
   @UseGuards(JwtAuthGuard)
   @Delete("me")
-  async deleteRoadmap(@Request() req) {
+  async deleteRoadmap(@Request() req: AuthenticatedRequest) {
     return this.roadmapsService.deleteRoadmap(req.user.userId);
   }
 
@@ -73,7 +74,7 @@ export class RoadmapsController {
   @Throttle({ default: { limit: 1, ttl: 60000 } }) // 1 request per minute - AI intensive
   @Post("generate-variants")
   async generateVariants(
-    @Request() req,
+    @Request() req: AuthenticatedRequest,
     @Body() dto: GenerateRoadmapVariantsDto,
   ) {
     return this.roadmapsService.generateRoadmapVariants(req.user.userId, dto);
@@ -85,7 +86,7 @@ export class RoadmapsController {
    */
   @UseGuards(JwtAuthGuard)
   @Get("variants")
-  async getMyVariants(@Request() req) {
+  async getMyVariants(@Request() req: AuthenticatedRequest) {
     return this.roadmapsService.getUserVariants(req.user.userId);
   }
 
@@ -95,7 +96,7 @@ export class RoadmapsController {
    */
   @UseGuards(JwtAuthGuard)
   @Post("select-variant")
-  async selectVariant(@Request() req, @Body() dto: SelectRoadmapVariantDto) {
+  async selectVariant(@Request() req: AuthenticatedRequest, @Body() dto: SelectRoadmapVariantDto) {
     return this.roadmapsService.selectRoadmapVariant(req.user.userId, dto);
   }
 }

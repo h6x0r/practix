@@ -1,6 +1,6 @@
 # PRACTIX Platform Roadmap
 
-> Last updated: 2025-12-22
+> Last updated: 2026-02-14
 
 ---
 
@@ -9,21 +9,25 @@
 | Feature | Status | Notes |
 |---------|--------|-------|
 | **Platform Core** | DONE | Courses, Auth, Progress tracking |
-| **7 Courses (Go + Java)** | DONE | ~403 tasks, 3 languages (EN/RU/UZ) |
+| **7 Go + Java Courses** | DONE | 423 tasks, 3 languages (EN/RU/UZ) |
 | **Piston Code Execution** | DONE | 8 languages, BullMQ queue, Redis caching |
-| **Playground (Web IDE)** | DONE | At /playground |
-| **GoF Design Patterns (Go)** | DONE | 23 tasks |
-| **GoF Design Patterns (Java)** | DONE | 23 tasks |
-| **Software Engineering** | DONE | 6 modules, ~65 tasks |
-| **Algo Fundamentals (Python)** | DONE | 7 modules, 41 tasks |
-| **Algo Advanced (Python)** | DONE | 6 modules, 50 tasks |
-| **Python ML Fundamentals** | DONE | 5 modules, 51 tasks |
-| **Python Deep Learning** | DONE | 6 modules, 61 tasks |
-| **Python LLM** | DONE | 5 modules, 51 tasks |
-| **Java ML** | DONE | 5 modules, 51 tasks |
-| **Java NLP** | DONE | 5 modules, 51 tasks |
-| **Go ML Inference** | DONE | 5 modules, 51 tasks |
-| **System Design** | Planned | Phase 3 |
+| **Playground (Web IDE)** | DONE | At /playground with snippets library |
+| **GoF Design Patterns (Go)** | DONE | 3 modules, 30 tasks |
+| **GoF Design Patterns (Java)** | DONE | 3 modules, 30 tasks |
+| **Software Engineering** | DONE | 6 modules, 78 tasks |
+| **Algo Fundamentals (Python)** | DONE | 7 modules, 56 tasks |
+| **Algo Advanced (Python)** | DONE | 6 modules, 63 tasks |
+| **Python ML Fundamentals** | DONE | 5 modules, 106 tasks |
+| **Python Deep Learning** | DONE | 6 modules, 78 tasks |
+| **Python LLM** | DONE | 5 modules, 43 tasks |
+| **Java ML** | DONE | 7 modules, 71 tasks |
+| **Java NLP** | DONE | 8 modules, 59 tasks |
+| **Go ML Inference** | DONE | 7 modules, 52 tasks |
+| **Prompt Engineering** | DONE | 8 modules, 57 tasks |
+| **Python Fundamentals** | DONE | 5 modules, 61 tasks |
+| **Math for Data Science** | DONE | 4 modules, 35 tasks |
+| **Application Security** | DONE | 7 modules, 59 tasks |
+| **System Design** | Planned | Phase 4 |
 
 ---
 
@@ -35,18 +39,19 @@
 3. [Playground (Web IDE)](#playground-web-ide) - **DONE**
 
 ### Courses
-4. [Course Structure](#course-structure) - **DONE** (19 Courses)
+4. [Course Structure](#course-structure) - **DONE** (22 Courses)
 5. [Go Courses](#go-courses) - **Production Ready** (4 Courses)
 6. [Java Courses](#java-courses) - **Production Ready** (3 Courses)
 7. [Design Patterns Courses](#design-patterns-courses) - **DONE** (2 Courses)
 8. [Software Engineering](#software-engineering-course) - **DONE**
 9. [Algorithms Courses](#algorithms-courses) - **DONE** (2 Courses)
 10. [AI/ML Courses](#aiml-courses) - **DONE** (6 Courses)
-11. [Future Courses](#future-courses) - Planned
+11. [New Courses (2026)](#new-courses-2026) - **DONE** (4 Courses)
+12. [Future Courses](#future-courses) - Planned
 
 ### Implementation
-11. [Implementation Priorities](#implementation-priorities)
-12. [Task File Template](#task-file-template)
+13. [Implementation Priorities](#implementation-priorities)
+14. [Task File Template](#task-file-template)
 
 ---
 
@@ -151,158 +156,172 @@ src/features/playground/
 
 ```
 server/prisma/seeds/
-├── types.ts                    # Type definitions
+├── types.ts                       # Type definitions
 ├── courses/
-│   ├── index.ts               # ALL_COURSES export
-│   ├── go-basics/             # Go Basics Course
-│   ├── go-concurrency/        # Go Concurrency Course
-│   ├── go-web-apis/           # Go Web & APIs Course
-│   ├── go-production/         # Go Production Course
-│   ├── java-core/             # Java Core Course
-│   ├── java-modern/           # Java Modern Course
-│   ├── java-advanced/         # Java Advanced Course
-│   ├── go-design-patterns/    # GoF Patterns in Go (NEW)
-│   ├── java-design-patterns/  # GoF Patterns in Java (NEW)
-│   ├── software-engineering/  # Software Engineering (NEW)
-│   ├── algo-fundamentals/     # Algorithms Fundamentals (NEW)
-│   └── algo-advanced/         # Algorithms Advanced (NEW)
+│   ├── index.ts                   # ALL_COURSES export (22 courses)
+│   ├── go-basics/                 # Go Basics Course
+│   ├── go-concurrency/            # Go Concurrency Course
+│   ├── go-web-apis/               # Go Web & APIs Course
+│   ├── go-production/             # Go Production Course
+│   ├── java-core/                 # Java Core Course
+│   ├── java-modern/               # Java Modern Course
+│   ├── java-advanced/             # Java Advanced Course
+│   ├── go-design-patterns/        # GoF Patterns in Go
+│   ├── java-design-patterns/      # GoF Patterns in Java
+│   ├── software-engineering/      # Software Engineering
+│   ├── algo-fundamentals/         # Algorithms Fundamentals (Python)
+│   ├── algo-advanced/             # Algorithms Advanced (Python)
+│   ├── c_python_ml_fundamentals/  # Python ML Fundamentals
+│   ├── c_python_deep_learning/    # Python Deep Learning
+│   ├── c_python_llm/              # Python LLM
+│   ├── c_java_ml/                 # Java ML (DJL + Tribuo)
+│   ├── c_java_nlp/                # Java NLP
+│   ├── c_go_ml_inference/         # Go ML Inference
+│   ├── c_prompt_engineering/      # Prompt Engineering
+│   ├── c_python_fundamentals/     # Python Fundamentals
+│   ├── c_math_for_ds/             # Math for Data Science
+│   └── c_app_security/            # Application Security
 └── shared/
     └── modules/
-        ├── go/                # 25 reusable Go modules
-        └── java/              # 35 reusable Java modules
+        ├── go/                    # 25 reusable Go modules (209 tasks)
+        └── java/                  # 35 reusable Java modules (214 tasks)
 ```
 
 ## Summary
 
 | Course | Modules | Tasks | Status |
 |--------|---------|-------|--------|
-| **Go Basics** | 9 | ~64 | DONE |
-| **Go Concurrency** | 4 | ~48 | DONE |
-| **Go Web & APIs** | 6 | ~54 | DONE |
-| **Go Production** | 6 | ~64 | DONE |
-| **Java Core** | 7 | ~47 | DONE |
-| **Java Modern** | 9 | ~44 | DONE |
-| **Java Advanced** | 19 | ~82 | DONE |
-| **Go Design Patterns** | 3 | 23 | DONE |
-| **Java Design Patterns** | 3 | 23 | DONE |
-| **Software Engineering** | 6 | ~65 | DONE |
-| **Algo Fundamentals** | 7 | 41 | DONE |
-| **Algo Advanced** | 6 | 50 | DONE |
-| **Python ML Fundamentals** | 5 | 51 | DONE |
-| **Python Deep Learning** | 6 | 61 | DONE |
-| **Python LLM** | 5 | 51 | DONE |
-| **Java ML** | 5 | 51 | DONE |
-| **Java NLP** | 5 | 51 | DONE |
-| **Go ML Inference** | 5 | 51 | DONE |
-| **Total** | **116** | **~921** | **Production** |
+| **Go Basics** | 9 | 63 | DONE |
+| **Go Concurrency** | 4 | 42 | DONE |
+| **Go Web & APIs** | 6 | 71 | DONE |
+| **Go Production** | 6 | 33 | DONE |
+| **Java Core** | 7 | 54 | DONE |
+| **Java Modern** | 9 | 56 | DONE |
+| **Java Advanced** | 19 | 104 | DONE |
+| **Go Design Patterns** | 3 | 30 | DONE |
+| **Java Design Patterns** | 3 | 30 | DONE |
+| **Software Engineering** | 6 | 78 | DONE |
+| **Algo Fundamentals** | 7 | 56 | DONE |
+| **Algo Advanced** | 6 | 63 | DONE |
+| **Python ML Fundamentals** | 5 | 106 | DONE |
+| **Python Deep Learning** | 6 | 78 | DONE |
+| **Python LLM** | 5 | 43 | DONE |
+| **Java ML** | 7 | 71 | DONE |
+| **Java NLP** | 8 | 59 | DONE |
+| **Go ML Inference** | 7 | 52 | DONE |
+| **Prompt Engineering** | 8 | 57 | DONE |
+| **Python Fundamentals** | 5 | 61 | DONE |
+| **Math for Data Science** | 4 | 35 | DONE |
+| **Application Security** | 7 | 59 | DONE |
+| **Total** | **146** | **~1301** | **Production** |
 
 ---
 
 # Go Courses
 
 ## Go Basics
-**Modules:** 9 | **Tasks:** ~64 | **Status:** DONE
+**Modules:** 9 | **Tasks:** 63 | **Status:** DONE
 
 | Module | Topics | Tasks |
 |--------|--------|-------|
-| fundamentals | constructors, data-structures, io-interfaces | 17 |
-| error-handling | fundamentals | 8 |
+| fundamentals | constructors, data-structures, io-interfaces | 18 |
+| error-handling | fundamentals | 7 |
 | pointersx | fundamentals | 5 |
 | datastructsx | operations | 5 |
 | encodingx | json-validation | 5 |
-| generics | fundamentals | 8 |
+| generics | fundamentals | 10 |
 | io-interfaces | implementation | 5 |
-| constructor-patterns | implementation | 5 |
-| panic-recovery | implementation | 5 |
+| constructor-patterns | implementation | 4 |
+| panic-recovery | implementation | 4 |
 
 ## Go Concurrency
-**Modules:** 4 | **Tasks:** ~48 | **Status:** DONE
+**Modules:** 4 | **Tasks:** 42 | **Status:** DONE
 
 | Module | Topics | Tasks |
 |--------|--------|-------|
-| concurrency-patterns | context, pipeline, worker-pool | 33 |
-| channels | implementation | 5 |
-| goroutines | implementation | 5 |
-| synchronization | implementation | 5 |
+| concurrency-patterns | context, pipeline, worker-pool | 30 |
+| channels | implementation | 4 |
+| goroutines | implementation | 4 |
+| synchronization | implementation | 4 |
 
 ## Go Web & APIs
-**Modules:** 6 | **Tasks:** ~54 | **Status:** DONE
+**Modules:** 6 | **Tasks:** 71 | **Status:** DONE
 
 | Module | Topics | Tasks |
 |--------|--------|-------|
-| http-middleware | fundamentals, advanced | 20 |
-| grpc-interceptors | interceptors | 6 |
-| database | sql-basics, transactions, connection-pool | 16 |
-| logging | implementation | 5 |
-| config-management | implementation | 5 |
+| http-middleware | fundamentals, advanced | 18 |
+| grpc-interceptors | interceptors | 5 |
+| database | sql-basics, transactions, connection-pool | 20 |
+| logging | implementation | 4 |
+| config-management | implementation | 4 |
 | testing | unit-tests, table-driven, mocking, benchmarks | 20 |
 
 ## Go Production
-**Modules:** 6 | **Tasks:** ~64 | **Status:** DONE
+**Modules:** 6 | **Tasks:** 33 | **Status:** DONE
 
 | Module | Topics | Tasks |
 |--------|--------|-------|
-| circuit-breaker | implementation | 8 |
-| rate-limiting | implementation | 7 |
-| caching | implementation | 7 |
-| retry-patterns | implementation | 6 |
-| metrics | implementation | 6 |
-| profiling | implementation | 5 |
+| circuit-breaker | implementation | 7 |
+| rate-limiting | implementation | 6 |
+| caching | implementation | 6 |
+| retry-patterns | implementation | 5 |
+| metrics | implementation | 5 |
+| profiling | implementation | 4 |
 
 ---
 
 # Java Courses
 
 ## Java Core
-**Modules:** 7 | **Tasks:** ~47 | **Status:** DONE
+**Modules:** 7 | **Tasks:** 54 | **Status:** DONE
 
 | Module | Topics | Tasks |
 |--------|--------|-------|
-| syntax-basics | fundamentals | 5 |
-| oop-core | fundamentals | 6 |
-| interfaces | fundamentals | 6 |
-| exception-handling | fundamentals | 6 |
-| collections-list | fundamentals | 6 |
-| collections-set-map | fundamentals | 6 |
-| collections-queue | fundamentals | 5 |
+| syntax-basics | fundamentals | 7 |
+| oop-core | fundamentals | 8 |
+| interfaces | fundamentals | 8 |
+| exception-handling | fundamentals | 8 |
+| collections-list | fundamentals | 8 |
+| collections-set-map | fundamentals | 8 |
+| collections-queue | fundamentals | 7 |
 
 ## Java Modern
-**Modules:** 9 | **Tasks:** ~44 | **Status:** DONE
+**Modules:** 9 | **Tasks:** 56 | **Status:** DONE
 
 | Module | Topics | Tasks |
 |--------|--------|-------|
-| generics | fundamentals | 6 |
-| lambda-expressions | fundamentals | 4 |
-| stream-api | fundamentals | 4 |
-| optional | fundamentals | 5 |
-| date-time | fundamentals | 5 |
-| records | fundamentals | 4 |
-| sealed-classes | fundamentals | 4 |
+| generics | fundamentals | 9 |
+| lambda-expressions | fundamentals | 9 |
+| stream-api | fundamentals | 6 |
+| optional | fundamentals | 6 |
+| date-time | fundamentals | 7 |
+| records | fundamentals | 5 |
+| sealed-classes | fundamentals | 5 |
 | pattern-matching | fundamentals | 4 |
-| virtual-threads | fundamentals | 4 |
+| virtual-threads | fundamentals | 5 |
 
 ## Java Advanced
-**Modules:** 19 | **Tasks:** ~82 | **Status:** DONE
+**Modules:** 19 | **Tasks:** 104 | **Status:** DONE
 
 | Module | Topics | Tasks |
 |--------|--------|-------|
-| threads-basics | fundamentals | 5 |
+| threads-basics | fundamentals | 8 |
 | executor-service | fundamentals | 5 |
 | concurrent-collections | fundamentals | 5 |
-| completable-future | fundamentals | 5 |
-| locks-advanced | fundamentals | 4 |
-| atomic-operations | fundamentals | 4 |
-| io-streams | fundamentals | 4 |
-| nio | fundamentals | 4 |
-| jdbc | fundamentals | 4 |
+| completable-future | fundamentals | 6 |
+| locks-advanced | fundamentals | 5 |
+| atomic-operations | fundamentals | 6 |
+| io-streams | fundamentals | 7 |
+| nio | fundamentals | 7 |
+| jdbc | fundamentals | 5 |
 | connection-pooling | fundamentals | 4 |
-| design-patterns | fundamentals | 4 |
+| design-patterns | fundamentals | 5 |
 | testing | fundamentals | 5 |
-| logging | fundamentals | 4 |
-| metrics | fundamentals | 4 |
+| logging | fundamentals | 8 |
+| metrics | fundamentals | 7 |
 | config-management | fundamentals | 4 |
 | error-handling | fundamentals | 4 |
-| retry-resilience | fundamentals | 4 |
+| retry-resilience | fundamentals | 5 |
 | caching | fundamentals | 4 |
 | http-clients | fundamentals | 4 |
 
@@ -348,7 +367,7 @@ server/prisma/seeds/
 # Algorithms Courses
 
 ## Algo Fundamentals (Python)
-**Modules:** 7 | **Tasks:** 41 | **Status:** DONE
+**Modules:** 7 | **Tasks:** 56 | **Status:** DONE
 
 | Module | Topics | Tasks |
 |--------|--------|-------|
@@ -361,7 +380,7 @@ server/prisma/seeds/
 | searching | Binary Search & Variations | 6 |
 
 ## Algo Advanced (Python)
-**Modules:** 6 | **Tasks:** 50 | **Status:** DONE
+**Modules:** 6 | **Tasks:** 63 | **Status:** DONE
 
 | Module | Topics | Tasks |
 |--------|--------|-------|
@@ -377,7 +396,7 @@ server/prisma/seeds/
 # AI/ML Courses
 
 ## Python ML Fundamentals
-**Modules:** 5 | **Tasks:** 51 | **Status:** DONE
+**Modules:** 5 | **Tasks:** 106 | **Status:** DONE
 
 | Module | Topics | Tasks |
 |--------|--------|-------|
@@ -388,7 +407,7 @@ server/prisma/seeds/
 | gradient-boosting | XGBoost, LightGBM, CatBoost | 5 |
 
 ## Python Deep Learning
-**Modules:** 6 | **Tasks:** 61 | **Status:** DONE
+**Modules:** 6 | **Tasks:** 78 | **Status:** DONE
 
 | Module | Topics | Tasks |
 |--------|--------|-------|
@@ -400,7 +419,7 @@ server/prisma/seeds/
 | model-deployment | ONNX, TorchServe, Optimization | 7 |
 
 ## Python LLM
-**Modules:** 5 | **Tasks:** 51 | **Status:** DONE
+**Modules:** 5 | **Tasks:** 43 | **Status:** DONE
 
 | Module | Topics | Tasks |
 |--------|--------|-------|
@@ -411,7 +430,7 @@ server/prisma/seeds/
 | rag-systems | Retrieval, Vector Stores | 9 |
 
 ## Java ML (DJL + Tribuo)
-**Modules:** 5 | **Tasks:** 51 | **Status:** DONE
+**Modules:** 7 | **Tasks:** 71 | **Status:** DONE
 
 | Module | Topics | Tasks |
 |--------|--------|-------|
@@ -422,7 +441,7 @@ server/prisma/seeds/
 | ml-pipelines | Training, Evaluation Pipelines | 7 |
 
 ## Java NLP
-**Modules:** 5 | **Tasks:** 51 | **Status:** DONE
+**Modules:** 8 | **Tasks:** 59 | **Status:** DONE
 
 | Module | Topics | Tasks |
 |--------|--------|-------|
@@ -433,7 +452,7 @@ server/prisma/seeds/
 | language-models | Transformers, Fine-tuning | 9 |
 
 ## Go ML Inference
-**Modules:** 5 | **Tasks:** 51 | **Status:** DONE
+**Modules:** 7 | **Tasks:** 52 | **Status:** DONE
 
 | Module | Topics | Tasks |
 |--------|--------|-------|
@@ -445,31 +464,61 @@ server/prisma/seeds/
 
 ---
 
-# Future Courses
+# New Courses (2026)
+
+## Prompt Engineering
+**Modules:** 8 | **Tasks:** 57 | **Status:** DONE
+**Special Feature:** 100 AI Tutor requests/day for this course
+
+| Module | Topics | Tasks |
+|--------|--------|-------|
+| fundamentals | Prompt structure, Context, Instructions | ~7 |
+| zero-few-shot | Zero-shot, Few-shot examples, Formatting | ~8 |
+| chain-of-thought | Step-by-step reasoning, Self-consistency | ~7 |
+| structured-output | JSON mode, Schema definition, Parsing | ~7 |
+| role-playing | System prompts, Personas, Constraints | ~7 |
+| rag-basics | Context injection, Chunking strategies | ~7 |
+| prompt-security | Injection attacks, Jailbreaks, Defense | ~7 |
+| multimodal | Image prompts, Vision analysis | ~7 |
+
+## Python Fundamentals
+**Modules:** 5 | **Tasks:** 61 | **Status:** DONE
+
+| Module | Topics | Tasks |
+|--------|--------|-------|
+| basics | Variables, Types, Control Flow | ~12 |
+| data-structures | Lists, Dicts, Sets, Tuples | ~12 |
+| functions | Functions, Closures, Decorators | ~12 |
+| oop | Classes, Inheritance, Polymorphism | ~12 |
+| advanced | Generators, Context Managers, Itertools | ~13 |
 
 ## Math for Data Science
-**Status:** Planned | **Tasks:** ~50 | **Priority:** Medium
+**Modules:** 4 | **Tasks:** 35 | **Status:** DONE
 **Language:** Python (NumPy, SciPy, SymPy)
 
-```
-math-for-data-science/
-├── linear-algebra/           # Vectors, matrices, eigenvalues, SVD (10-12 tasks)
-├── calculus/                 # Derivatives, integrals, optimization (10-12 tasks)
-├── probability-statistics/   # Distributions, hypothesis testing (10-12 tasks)
-├── numerical-methods/        # Root finding, integration, ODEs (8-10 tasks)
-└── discrete-math/            # Graphs, combinatorics, logic (8-10 tasks)
-```
+| Module | Topics | Tasks |
+|--------|--------|-------|
+| linear-algebra | Vectors, Matrices, Eigenvalues, SVD | ~9 |
+| calculus | Derivatives, Integrals, Optimization | ~9 |
+| probability-statistics | Distributions, Hypothesis Testing | ~9 |
+| numerical-methods | Root Finding, Integration, ODEs | ~8 |
 
-**Execution Strategy:**
-- Uses existing Piston Python runtime (no new infrastructure)
-- NumPy for numerical math, SymPy for symbolic math
-- Standard unit test verification (same as other courses)
-- Visualization support with matplotlib
+## Application Security
+**Modules:** 7 | **Tasks:** 59 | **Status:** DONE
 
-**Sample Task Types:**
-- "Implement matrix multiplication" → NumPy array comparison
-- "Compute derivative symbolically" → SymPy expression comparison
-- "Perform t-test" → Statistical result verification
+| Module | Topics | Tasks |
+|--------|--------|-------|
+| owasp-top-10 | Injection, XSS, CSRF, SSRF | ~9 |
+| authentication | JWT, OAuth, Session Management | ~9 |
+| authorization | RBAC, ABAC, Permission Models | ~8 |
+| cryptography | Hashing, Encryption, Key Management | ~8 |
+| secure-coding | Input Validation, Output Encoding | ~9 |
+| api-security | Rate Limiting, CORS, API Keys | ~8 |
+| security-testing | SAST, DAST, Penetration Testing | ~8 |
+
+---
+
+# Future Courses
 
 ## System Design
 **Status:** Planned | **Tasks:** 30+ | **Priority:** Medium
@@ -498,36 +547,6 @@ data-engineering/
 └── data-modeling/           # Star schema, Normalization, Denormalization (5-6 tasks)
 ```
 
-**Technical Notes:**
-- Python supported via Piston (already available)
-- SQL tasks use SQLite (built into Python, no extra DB needed)
-- Each task returns verifiable output (DataFrame shape, values, etc.)
-
-## Prompt Engineering
-**Status:** HIGH PRIORITY | **Tasks:** 35+ | **Priority:** HIGH
-**Special Feature:** 100 AI Tutor requests/day for this course
-
-```
-prompt-engineering/
-├── fundamentals/            # Prompt structure, Context, Instructions (5-6 tasks)
-├── zero-few-shot/           # Zero-shot, Few-shot examples, Formatting (6-8 tasks)
-├── chain-of-thought/        # Step-by-step reasoning, Self-consistency (4-5 tasks)
-├── structured-output/       # JSON mode, Schema definition, Parsing (5-6 tasks)
-├── role-playing/            # System prompts, Personas, Constraints (4-5 tasks)
-├── rag-basics/              # Context injection, Chunking strategies (5-6 tasks)
-├── prompt-security/         # Injection attacks, Jailbreaks, Defense (4-5 tasks)
-└── multimodal/              # Image prompts, Vision analysis (3-4 tasks)
-```
-
-**Technical Notes:**
-- Requires new task type: "prompt" instead of "code"
-- AI Tutor limit: 100 requests/day (same as Global Premium)
-- Verification options:
-  1. Structure validation (regex, JSON schema)
-  2. LLM-as-judge (uses Gemini for evaluation)
-  3. Output comparison (for deterministic prompts)
-- UI will need prompt-specific input/output panels
-
 ---
 
 # Implementation Priorities
@@ -542,17 +561,21 @@ prompt-engineering/
 - [x] Playground (Web IDE)
 
 ## Phase 2: Content Expansion - DONE
-- [x] GoF Design Patterns (Go) - 23 tasks
-- [x] GoF Design Patterns (Java) - 23 tasks
-- [x] Software Engineering Principles - ~65 tasks
-- [x] Algo Fundamentals (Python) - 41 tasks
-- [x] Algo Advanced (Python) - 50 tasks
+- [x] GoF Design Patterns (Go + Java) - 60 tasks
+- [x] Software Engineering Principles - 78 tasks
+- [x] Algo Fundamentals + Advanced (Python) - 119 tasks
+- [x] AI/ML Courses (6 courses) - 409 tasks
 - [x] Real API data for submissions
 - [x] Progress tracking cleanup
 
-## Phase 3: Advanced Courses - NEXT
+## Phase 3: New Courses - DONE
+- [x] Prompt Engineering - 57 tasks
+- [x] Python Fundamentals - 61 tasks
+- [x] Math for Data Science - 35 tasks
+- [x] Application Security - 59 tasks
+
+## Phase 4: Planned
 - [ ] System Design - 30+ tasks
-- [ ] Real-world case studies
 - [ ] Data Engineering (Python) - 50+ tasks
 
 ## Future: Performance Optimization
@@ -616,44 +639,29 @@ export const task: Task = {
 
 ## Statistics
 
-### Current State (Production)
-| Course | Modules | Tasks | Status |
-|--------|---------|-------|--------|
-| Go Basics | 9 | ~64 | DONE |
-| Go Concurrency | 4 | ~48 | DONE |
-| Go Web & APIs | 6 | ~54 | DONE |
-| Go Production | 6 | ~64 | DONE |
-| Java Core | 7 | ~47 | DONE |
-| Java Modern | 9 | ~44 | DONE |
-| Java Advanced | 19 | ~82 | DONE |
-| Go Design Patterns | 3 | 23 | DONE |
-| Java Design Patterns | 3 | 23 | DONE |
-| Software Engineering | 6 | ~65 | DONE |
-| Algo Fundamentals | 7 | 41 | DONE |
-| Algo Advanced | 6 | 50 | DONE |
-| Python ML Fundamentals | 5 | 51 | DONE |
-| Python Deep Learning | 6 | 61 | DONE |
-| Python LLM | 5 | 51 | DONE |
-| Java ML | 5 | 51 | DONE |
-| Java NLP | 5 | 51 | DONE |
-| Go ML Inference | 5 | 51 | DONE |
-| **Total** | **116** | **~921** | **Production** |
+### Current State (Production) — 22 Courses, ~1301 Tasks
 
-### Target State (with Future Courses)
+| Category | Courses | Modules | Tasks |
+|----------|---------|---------|-------|
+| Go Courses | 4 | 25 | 209 |
+| Java Courses | 3 | 35 | 214 |
+| GoF Design Patterns | 2 | 6 | 60 |
+| Software Engineering | 1 | 6 | 78 |
+| Algorithms (Python) | 2 | 13 | 119 |
+| AI/ML Courses | 6 | 38 | 409 |
+| Prompt Engineering | 1 | 8 | 57 |
+| Python Fundamentals | 1 | 5 | 61 |
+| Math for Data Science | 1 | 4 | 35 |
+| Application Security | 1 | 7 | 59 |
+| **Total** | **22** | **147** | **~1301** |
+
+### Planned (Future Courses)
+
 | Course | Modules | Tasks | Priority |
 |--------|---------|-------|----------|
-| Go Courses (4) | 25 | 230 | Done |
-| Java Courses (3) | 35 | 173 | Done |
-| GoF Patterns (Go + Java) | 6 | 46 | Done |
-| Software Engineering | 6 | 65 | Done |
-| Algorithms (2) | 13 | 91 | Done |
-| AI/ML Courses (6) | 31 | 316 | Done |
-| **Prompt Engineering** | 8 | 35 | **HIGH** |
-| Math for Data Science | TBD | TBD | Medium |
-| System Design | 4 | 30 | Medium |
-| Data Engineering | 8 | 50 | Medium |
-| **Total** | **136+** | **~1100** | - |
+| System Design | 4 | 30+ | Medium |
+| Data Engineering | 8 | 50+ | Medium |
 
 ---
 
-*Last updated: 2026-01-04*
+*Last updated: 2026-02-14*

@@ -3,6 +3,7 @@ import { BugReportsService } from './bugreports.service';
 import { CreateBugReportDto, UpdateBugStatusDto } from './dto/bugreports.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { AdminGuard } from '../auth/guards/admin.guard';
+import { AuthenticatedRequest } from '../common/types';
 
 @Controller('bugreports')
 export class BugReportsController {
@@ -14,7 +15,7 @@ export class BugReportsController {
    */
   @UseGuards(JwtAuthGuard)
   @Post()
-  async create(@Request() req, @Body() createDto: CreateBugReportDto) {
+  async create(@Request() req: AuthenticatedRequest, @Body() createDto: CreateBugReportDto) {
     return this.bugReportsService.create(req.user.userId, createDto);
   }
 
@@ -23,7 +24,7 @@ export class BugReportsController {
    */
   @UseGuards(JwtAuthGuard)
   @Get('my')
-  async findMy(@Request() req) {
+  async findMy(@Request() req: AuthenticatedRequest) {
     return this.bugReportsService.findByUser(req.user.userId);
   }
 

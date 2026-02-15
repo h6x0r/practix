@@ -14,6 +14,7 @@ import { Throttle } from "@nestjs/throttler";
 import { AdminService } from "./admin.service";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { AdminGuard } from "../auth/guards/admin.guard";
+import { AuthenticatedRequest } from '../common/types';
 
 @Controller("admin/analytics")
 @UseGuards(JwtAuthGuard, AdminGuard)
@@ -143,7 +144,7 @@ export class AdminController {
    * Unban a user
    */
   @Post("users/:id/unban")
-  async unbanUser(@Param("id") userId: string, @Request() req) {
+  async unbanUser(@Param("id") userId: string, @Request() req: AuthenticatedRequest) {
     try {
       return await this.adminService.unbanUser(userId, req.user.userId);
     } catch (error) {

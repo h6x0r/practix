@@ -1,6 +1,8 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { ForbiddenException } from "@nestjs/common";
 import { RoadmapsService } from "./roadmaps.service";
+import { RoadmapAIService } from "./roadmap-ai.service";
+import { RoadmapVariantsService } from "./roadmap-variants.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { ConfigService } from "@nestjs/config";
 import { CacheService } from "../cache/cache.service";
@@ -102,6 +104,8 @@ describe("RoadmapsService", () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         RoadmapsService,
+        RoadmapAIService,
+        RoadmapVariantsService,
         { provide: PrismaService, useValue: mockPrismaService },
         { provide: ConfigService, useValue: mockConfigService },
         { provide: CacheService, useValue: mockCacheService },
@@ -994,6 +998,8 @@ describe("RoadmapsService with AI", () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         RoadmapsService,
+        RoadmapAIService,
+        RoadmapVariantsService,
         { provide: PrismaService, useValue: mockPrismaService },
         { provide: ConfigService, useValue: mockConfigServiceWithAI },
         { provide: CacheService, useValue: mockCacheServiceForAI },

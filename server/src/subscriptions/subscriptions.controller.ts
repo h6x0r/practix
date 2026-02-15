@@ -16,6 +16,7 @@ import { SubscriptionsService } from './subscriptions.service';
 import { AccessControlService } from './access-control.service';
 import { CreateSubscriptionDto } from './dto/subscription.dto';
 import { ConfigService } from '@nestjs/config';
+import { AuthenticatedRequest } from '../common/types';
 
 @Controller('subscriptions')
 export class SubscriptionsController {
@@ -50,7 +51,7 @@ export class SubscriptionsController {
    */
   @Get('my')
   @UseGuards(JwtAuthGuard)
-  async getMySubscriptions(@Request() req) {
+  async getMySubscriptions(@Request() req: AuthenticatedRequest) {
     return this.subscriptionsService.getUserSubscriptions(req.user.userId);
   }
 
@@ -60,7 +61,7 @@ export class SubscriptionsController {
   @Get('access/course/:courseId')
   @UseGuards(JwtAuthGuard)
   async getCourseAccess(
-    @Request() req,
+    @Request() req: AuthenticatedRequest,
     @Param('courseId') courseId: string,
   ) {
     return this.accessControlService.getCourseAccess(req.user.userId, courseId);
@@ -72,7 +73,7 @@ export class SubscriptionsController {
   @Get('access/task/:taskId')
   @UseGuards(JwtAuthGuard)
   async getTaskAccess(
-    @Request() req,
+    @Request() req: AuthenticatedRequest,
     @Param('taskId') taskId: string,
   ) {
     return this.accessControlService.getTaskAccess(req.user.userId, taskId);
@@ -86,7 +87,7 @@ export class SubscriptionsController {
   @Post()
   @UseGuards(JwtAuthGuard, AdminGuard)
   async createSubscription(
-    @Request() req,
+    @Request() req: AuthenticatedRequest,
     @Body() dto: CreateSubscriptionDto & { userId?: string },
   ) {
     // Admin can create subscription for any user (if userId provided) or themselves
@@ -125,7 +126,7 @@ export class SubscriptionsController {
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
   async cancelSubscription(
-    @Request() req,
+    @Request() req: AuthenticatedRequest,
     @Param('id') id: string,
   ) {
     return this.subscriptionsService.cancelSubscription(req.user.userId, id);

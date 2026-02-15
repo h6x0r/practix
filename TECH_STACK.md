@@ -1,6 +1,6 @@
 # PRACTIX Tech Stack & Integrations
 
-> Last updated: 2026-02-03
+> Last updated: 2026-02-14
 
 ---
 
@@ -152,7 +152,7 @@ BullMQ automatically distributes jobs across workers.
 
 ## 3. Frontend Stack
 
-### React 18 + TypeScript
+### React 19 + TypeScript
 
 Modern SPA with full type safety.
 
@@ -363,4 +363,4 @@ PORT=8080
 
 ---
 
-*Last updated: 2026-02-03*
+*Last updated: 2026-02-14*

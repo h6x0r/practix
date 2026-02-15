@@ -13,6 +13,7 @@ import {
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { UserCoursesService } from './user-courses.service';
 import { UpdateProgressDto } from './dto/user-courses.dto';
+import { AuthenticatedRequest } from '../common/types';
 
 @Controller('users/me/courses')
 @UseGuards(JwtAuthGuard)
@@ -24,7 +25,7 @@ export class UserCoursesController {
    * Get all courses started by the authenticated user
    */
   @Get()
-  async getUserCourses(@Request() req) {
+  async getUserCourses(@Request() req: AuthenticatedRequest) {
     return this.userCoursesService.getUserCourses(req.user.userId);
   }
 
@@ -34,7 +35,7 @@ export class UserCoursesController {
    */
   @Post(':courseSlug/start')
   @HttpCode(HttpStatus.OK)
-  async startCourse(@Request() req, @Param('courseSlug') courseSlug: string) {
+  async startCourse(@Request() req: AuthenticatedRequest, @Param('courseSlug') courseSlug: string) {
     return this.userCoursesService.startCourse(req.user.userId, courseSlug);
   }
 
@@ -45,7 +46,7 @@ export class UserCoursesController {
   @Patch(':courseSlug/progress')
   @HttpCode(HttpStatus.OK)
   async updateProgress(
-    @Request() req,
+    @Request() req: AuthenticatedRequest,
     @Param('courseSlug') courseSlug: string,
     @Body() dto: UpdateProgressDto
   ) {
@@ -63,7 +64,7 @@ export class UserCoursesController {
   @Patch(':courseSlug/access')
   @HttpCode(HttpStatus.OK)
   async updateLastAccessed(
-    @Request() req,
+    @Request() req: AuthenticatedRequest,
     @Param('courseSlug') courseSlug: string
   ) {
     return this.userCoursesService.updateLastAccessed(

@@ -10,17 +10,23 @@ import {
   HttpCode,
   HttpStatus,
   ForbiddenException,
-} from '@nestjs/common';
-import { Request as ExpressRequest } from 'express';
-import { ThrottlerGuard, Throttle, SkipThrottle } from '@nestjs/throttler';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { OptionalJwtAuthGuard } from '../auth/guards/optional-jwt.guard';
-import { SubmissionsService } from './submissions.service';
-import { CodeExecutionService } from '../queue/code-execution.service';
-import { PlaygroundThrottlerGuard } from '../common/guards/playground-throttler.guard';
-import { CreateSubmissionDto, RunCodeDto, RunTestsDto, SubmitPromptDto } from './dto/submissions.dto';
+} from "@nestjs/common";
+// ExpressRequest no longer needed — using AuthenticatedRequest
+import { ThrottlerGuard, Throttle, SkipThrottle } from "@nestjs/throttler";
+import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { OptionalJwtAuthGuard } from "../auth/guards/optional-jwt.guard";
+import { SubmissionsService } from "./submissions.service";
+import { CodeExecutionService } from "../queue/code-execution.service";
+import { PlaygroundThrottlerGuard } from "../common/guards/playground-throttler.guard";
+import {
+  CreateSubmissionDto,
+  RunCodeDto,
+  RunTestsDto,
+  SubmitPromptDto,
+} from "./dto/submissions.dto";
+import { AuthenticatedRequest } from "../common/types";
 
-@Controller('submissions')
+@Controller("submissions")
 @UseGuards(ThrottlerGuard)
 export class SubmissionsController {
   constructor(
@@ -32,13 +38,13 @@ export class SubmissionsController {
   /**
    * Extract client IP from request (considering proxies)
    */
-  private getClientIp(req: ExpressRequest): string {
-    const forwardedFor = req.headers['x-forwarded-for'];
-    if (typeof forwardedFor === 'string') {
-      const ips = forwardedFor.split(',').map((ip: string) => ip.trim());
+  private getClientIp(req: AuthenticatedRequest): string {
+    const forwardedFor = req.headers["x-forwarded-for"];
+    if (typeof forwardedFor === "string") {
+      const ips = forwardedFor.split(",").map((ip: string) => ip.trim());
       return ips[0];
     }
-    return req.ip || req.socket?.remoteAddress || 'unknown';
+    return req.ip || req.socket?.remoteAddress || "unknown";
   }
 
   /**
@@ -51,14 +57,17 @@ export class SubmissionsController {
   @HttpCode(HttpStatus.OK)
   // TODO: RE-ENABLE AFTER E2E TESTING - restore: limit: 10, ttl: 60000
   @Throttle({ default: { limit: 10000, ttl: 60000 } }) // DISABLED FOR E2E
-  async create(@Request() req, @Body() body: CreateSubmissionDto) {
+  async create(
+    @Request() req: AuthenticatedRequest,
+    @Body() body: CreateSubmissionDto,
+  ) {
     const ip = this.getClientIp(req);
     return this.submissionsService.create(
       req.user.userId,
       body.taskId,
       body.code,
       body.language,
-      ip
+      ip,
     );
   }
 
@@ -69,15 +78,18 @@ export class SubmissionsController {
    * Rate limit: 5 submissions per minute (AI calls are expensive)
    */
   @UseGuards(JwtAuthGuard)
-  @Post('prompt')
+  @Post("prompt")
   @HttpCode(HttpStatus.OK)
   // TODO: RE-ENABLE AFTER E2E TESTING - restore: limit: 5, ttl: 60000
   @Throttle({ default: { limit: 10000, ttl: 60000 } }) // DISABLED FOR E2E
-  async submitPrompt(@Request() req, @Body() body: SubmitPromptDto) {
+  async submitPrompt(
+    @Request() req: AuthenticatedRequest,
+    @Body() body: SubmitPromptDto,
+  ) {
     return this.submissionsService.submitPrompt(
       req.user.userId,
       body.taskId,
-      body.prompt
+      body.prompt,
     );
   }
 
@@ -89,11 +101,14 @@ export class SubmissionsController {
    * - Authenticated: 10 seconds between runs
    * - Premium: 5 seconds between runs
    */
-  @Post('run')
+  @Post("run")
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard)
   @SkipThrottle() // Using custom throttler instead
-  async runCode(@Request() req, @Body() body: RunCodeDto) {
+  async runCode(
+    @Request() req: AuthenticatedRequest,
+    @Body() body: RunCodeDto,
+  ) {
     // Apply custom rate limiting
     await this.playgroundThrottler.canActivate({
       switchToHttp: () => ({
@@ -104,7 +119,13 @@ export class SubmissionsController {
 
     const ip = this.getClientIp(req);
     const userId = req.user.userId;
-    return this.submissionsService.runCode(body.code, body.language, body.stdin, ip, userId);
+    return this.submissionsService.runCode(
+      body.code,
+      body.language,
+      body.stdin,
+      ip,
+      userId,
+    );
   }
 
   /**
@@ -114,11 +135,14 @@ export class SubmissionsController {
    * Requires authentication - only logged-in users can execute code
    * Custom rate limit based on subscription (same as /run)
    */
-  @Post('run-tests')
+  @Post("run-tests")
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard)
   @SkipThrottle() // Using custom throttler instead
-  async runTests(@Request() req, @Body() body: RunTestsDto) {
+  async runTests(
+    @Request() req: AuthenticatedRequest,
+    @Body() body: RunTestsDto,
+  ) {
     // Apply custom rate limiting
     await this.playgroundThrottler.canActivate({
       switchToHttp: () => ({
@@ -134,7 +158,7 @@ export class SubmissionsController {
       body.code,
       body.language,
       ip,
-      userId
+      userId,
     );
   }
 
@@ -143,10 +167,10 @@ export class SubmissionsController {
    * Get rate limit configuration for the current user
    * Used by frontend to display cooldown timers
    */
-  @Get('rate-limit-info')
+  @Get("rate-limit-info")
   @UseGuards(OptionalJwtAuthGuard)
   @SkipThrottle()
-  async getRateLimitInfo(@Request() req) {
+  async getRateLimitInfo(@Request() req: AuthenticatedRequest) {
     const userId = req.user?.userId;
     return this.playgroundThrottler.getRateLimitInfo(userId);
   }
@@ -155,7 +179,7 @@ export class SubmissionsController {
    * GET /submissions/judge/status
    * Get execution engine health and queue status
    */
-  @Get('judge/status')
+  @Get("judge/status")
   @SkipThrottle() // No rate limit for status checks
   async getJudgeStatus() {
     return this.submissionsService.getJudgeStatus();
@@ -165,12 +189,12 @@ export class SubmissionsController {
    * GET /submissions/languages
    * Get list of supported languages
    */
-  @Get('languages')
+  @Get("languages")
   @SkipThrottle() // No rate limit for language list
   getLanguages() {
     return {
       languages: this.codeExecutionService.getSupportedLanguages(),
-      default: 'go',
+      default: "go",
     };
   }
 
@@ -179,8 +203,11 @@ export class SubmissionsController {
    * Get user's recent submissions (requires auth)
    */
   @UseGuards(JwtAuthGuard)
-  @Get('user/recent')
-  async getUserRecent(@Request() req, @Query('limit') limit?: string) {
+  @Get("user/recent")
+  async getUserRecent(
+    @Request() req: AuthenticatedRequest,
+    @Query("limit") limit?: string,
+  ) {
     const limitNum = limit ? parseInt(limit, 10) : 10;
     return this.submissionsService.findRecentByUser(req.user.userId, limitNum);
   }
@@ -190,8 +217,11 @@ export class SubmissionsController {
    * Get user's submissions for a specific task (requires auth)
    */
   @UseGuards(JwtAuthGuard)
-  @Get('task/:taskId')
-  async getByTask(@Request() req, @Param('taskId') taskId: string) {
+  @Get("task/:taskId")
+  async getByTask(
+    @Request() req: AuthenticatedRequest,
+    @Param("taskId") taskId: string,
+  ) {
     return this.submissionsService.findByUserAndTask(req.user.userId, taskId);
   }
 
@@ -202,9 +232,15 @@ export class SubmissionsController {
    * Returns { data: null } if no run result exists (NestJS returns empty body for raw null)
    */
   @UseGuards(JwtAuthGuard)
-  @Get('run-result/:taskId')
-  async getRunResult(@Request() req, @Param('taskId') taskId: string) {
-    const result = await this.submissionsService.getRunResult(req.user.userId, taskId);
+  @Get("run-result/:taskId")
+  async getRunResult(
+    @Request() req: AuthenticatedRequest,
+    @Param("taskId") taskId: string,
+  ) {
+    const result = await this.submissionsService.getRunResult(
+      req.user.userId,
+      taskId,
+    );
     // Wrap in object to avoid NestJS empty body issue with null
     return { data: result };
   }
@@ -215,13 +251,13 @@ export class SubmissionsController {
    * NOTE: Must be LAST - catches all paths not matched above
    */
   @UseGuards(JwtAuthGuard)
-  @Get(':id')
-  async findOne(@Request() req, @Param('id') id: string) {
+  @Get(":id")
+  async findOne(@Request() req: AuthenticatedRequest, @Param("id") id: string) {
     const submission = await this.submissionsService.findOne(id);
 
     // Check ownership - users can only access their own submissions
     if (submission.userId !== req.user.userId) {
-      throw new ForbiddenException('You can only access your own submissions');
+      throw new ForbiddenException("You can only access your own submissions");
     }
 
     return submission;

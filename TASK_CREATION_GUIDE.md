@@ -93,8 +93,8 @@ server/prisma/seeds/
 
 | Category | Count |
 |----------|-------|
-| Total Courses | 18 |
-| Total Tasks | ~921 |
+| Total Courses | 22 |
+| Total Tasks | ~1301 |
 | Languages | Go, Java, Python, TypeScript |
 | Translations | EN, RU, UZ |
 

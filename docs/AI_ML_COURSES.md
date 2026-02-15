@@ -1,5 +1,8 @@
 # AI/ML Courses - Research & Planning
 
+> **Status:** ALL COURSES IMPLEMENTED (as of 2026-02-14)
+> This document is a historical research doc. See ROADMAP.md for current course data.
+
 **Research Date:** December 2024 - January 2025
 **Target Platform:** Practix Coding Education Platform
 

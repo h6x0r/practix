@@ -1,5 +1,10 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { AdminService } from "./admin.service";
+import { AdminStatsService } from "./admin-stats.service";
+import { AdminMetricsService } from "./admin-metrics.service";
+import { AdminRetentionService } from "./admin-retention.service";
+import { AdminUsersService } from "./admin-users.service";
+import { AdminPaymentsService } from "./admin-payments.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { AuditService } from "./audit/audit.service";
 
@@ -52,6 +57,11 @@ describe("AdminService", () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AdminService,
+        AdminStatsService,
+        AdminMetricsService,
+        AdminRetentionService,
+        AdminUsersService,
+        AdminPaymentsService,
         { provide: PrismaService, useValue: mockPrismaService },
         { provide: AuditService, useValue: mockAuditService },
       ],
